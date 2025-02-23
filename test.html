@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flip 7 Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Setup Screen -->
+    <div class="setup-screen">
+        <h1>Flip 7 Setup</h1>
+        <div>
+            <label for="playerCount">Number of Players:</label>
+            <input type="number" id="playerCount" min="2" max="6" value="2">
+            <div class="name-inputs" id="nameInputs"></div>
+            <button id="startGame">Start Game</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div class="game-container">
+        <h1>Flip 7 Championship</h1>
+        <div id="status"></div>
+        <div class="deck-info" id="deckCounter">Cards left: 78</div>
+        
+        <div class="deck" id="deck"></div>
+        <div class="players-container" id="playersContainer"></div>
+        
+        <div>
+            <button id="flipButton">FLIP</button>
+            <button id="standButton">STAND</button>
+            <button id="resetButton">RESET</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
