@@ -22,6 +22,12 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
 }
 
 input {
@@ -29,6 +35,7 @@ input {
     margin: 5px;
     border: 1px solid #ddd;
     border-radius: 5px;
+    width: 200px;
 }
 
 #gameArea {
@@ -43,4 +50,47 @@ input {
     margin: 5px;
     background: #f8f8f8;
     border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.busted {
+    background: #ffebee !important;
+    color: #c62828;
+}
+
+.game-board {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.deck, .discard-pile {
+    width: 100px;
+    height: 140px;
+    border: 2px solid #333;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    cursor: pointer;
+}
+
+.my-cards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.card {
+    width: 60px;
+    height: 80px;
+    border: 1px solid #333;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    font-weight: bold;
 }

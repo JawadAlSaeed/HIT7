@@ -18,45 +18,109 @@
         </div>
 
         <div id="gameArea" style="display: none;">
-            <h2>Players:</h2>
+            <h2>Game Code: <span id="gameCode"></span></h2>
             <div id="playersList"></div>
+            
+            <div class="game-board">
+                <div class="deck" id="deck">DECK</div>
+                <div class="discard-pile" id="discard"></div>
+            </div>
+            
+            <div class="my-cards" id="myCards"></div>
+            <button id="startGame" style="display: none;">Start Game</button>
+            <button id="flipCard" style="display: none;">Flip Card</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        
+        let currentGameId = null;
+
         // Create game
         document.getElementById('createGame').addEventListener('click', () => {
             const playerName = prompt('Enter your name:');
-            socket.emit('create-game', playerName);
+            if (playerName) socket.emit('create-game', playerName);
         });
 
         // Join game
         document.getElementById('joinGame').addEventListener('click', () => {
             const gameId = document.getElementById('gameId').value;
             const playerName = prompt('Enter your name:');
-            socket.emit('join-game', gameId, playerName);
+            if (gameId && playerName) socket.emit('join-game', gameId, playerName);
         });
 
-        // Handle responses
+        // Game created
         socket.on('game-created', (gameId) => {
+            currentGameId = gameId;
+            document.getElementById('gameCode').textContent = gameId;
             document.getElementById('gameArea').style.display = 'block';
             document.querySelector('.lobby').style.display = 'none';
-            alert(`Share this code: ${gameId}`);
+            document.getElementById('startGame').style.display = 'block';
         });
 
+        // Players updated
         socket.on('players-updated', (players) => {
             const list = document.getElementById('playersList');
-            list.innerHTML = players.map(p => 
-                `<div class="player">${p.name}</div>`
-            ).join('');
+            list.innerHTML = players.map(p => `
+                <div class="player ${p.status === 'busted' ? 'busted' : ''}">
+                    ${p.name} ${p.id === socket.id ? '(You)' : ''}
+                    <br>Cards: ${p.cards.length}
+                    ${p.status === 'busted' ? ' - BUSTED!' : ''}
+                </div>
+            `).join('');
+            
+            document.getElementById('startGame').style.display = 
+                players[0].id === socket.id ? 'block' : 'none';
         });
 
+        // Start game
+        document.getElementById('startGame').addEventListener('click', () => {
+            socket.emit('start-game', currentGameId);
+        });
+
+        // Game started
+        socket.on('game-started', (gameState) => {
+            document.getElementById('startGame').style.display = 'none';
+            document.getElementById('flipCard').style.display = 'block';
+            updateGameDisplay(gameState);
+        });
+
+        // Flip card
+        document.getElementById('flipCard').addEventListener('click', () => {
+            socket.emit('flip-card', currentGameId);
+        });
+
+        // Game state update
+        socket.on('game-update', (gameState) => {
+            updateGameDisplay(gameState);
+            document.getElementById('flipCard').style.display = 
+                gameState.players[gameState.currentPlayer].id === socket.id ? 'block' : 'none';
+        });
+
+        // Error handling
         socket.on('error', (message) => {
             alert(`Error: ${message}`);
         });
+
+        // Update game display
+        function updateGameDisplay(gameState) {
+            // Deck count
+            document.getElementById('deck').textContent = `DECK (${gameState.deck.length})`;
+            
+            // Discard pile
+            const discard = document.getElementById('discard');
+            discard.innerHTML = gameState.discardPile.map(card => `
+                <div class="card">${card}</div>
+            `).join('');
+            
+            // Player cards
+            const currentPlayer = gameState.players.find(p => p.id === socket.id);
+            const myCards = document.getElementById('myCards');
+            myCards.innerHTML = currentPlayer.cards.map(card => `
+                <div class="card">${card}</div>
+            `).join('');
+        }
     </script>
 </body>
 </html>

@@ -20,6 +20,7 @@
   "homepage": "https://github.com/JawadAlSaeed/FLIP7#readme",
   "dependencies": {
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
   }
 }
