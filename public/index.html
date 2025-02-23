@@ -8,27 +8,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Lobby Screen -->
     <div class="lobby-screen">
         <div class="game-logo">FLIP 7</div>
+        
+        <!-- Host Code Display -->
+        <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
+            Your Game Code: <span class="game-code" id="hostCode"></span>
+        </div>
+
         <div class="lobby">
             <button id="createGame" class="lobby-button">
-                <span class="button-icon">🕹️</span>
-                Create New Game
+                🕹️ Create New Game
             </button>
             <div class="join-game">
-                <input type="text" id="gameId" placeholder="Enter Game Code">
+                <input type="text" id="gameId" placeholder="Enter Game Code" class="lobby-input">
                 <button id="joinGame" class="lobby-button">
-                    <span class="button-icon">🚪</span>
-                    Join Game
+                    🚪 Join Game
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Game Area -->
     <div id="gameArea" class="game-container">
         <div class="game-header">
-            <div class="game-code">Room: <span id="gameCode">----</span></div>
-            <div class="deck-info">Cards Left: <span id="deckCount">78</span></div>
+            <div class="game-code-display">
+                Room Code: <span class="game-code" id="gameCode"></span>
+            </div>
+            <div class="deck-info">
+                Cards Left: <span id="deckCount">78</span>
+            </div>
         </div>
 
         <div class="game-board">
@@ -43,7 +53,7 @@
             <button id="startGame" class="game-button green">Start Game</button>
             <button id="flipCard" class="game-button blue">Flip Card</button>
             <button id="standButton" class="game-button orange">Stand</button>
-            <button id="resetButton" class="game-button red">Reset</button>
+            <button id="resetButton" class="game-button red">Reset Game</button>
         </div>
     </div>
 

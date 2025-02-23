@@ -11,7 +11,6 @@ app.use(express.static('public'));
 const games = new Map();
 const WINNING_SCORE = 200;
 
-// Deck management
 const createDeck = () => {
     const deck = [];
     for (let number = 1; number <= 12; number++) {
@@ -20,7 +19,7 @@ const createDeck = () => {
     return shuffle(deck);
 };
 
-const shuffle = (array) => {
+const shuffle = array => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
@@ -28,34 +27,15 @@ const shuffle = (array) => {
     return array;
 };
 
-const rebuildDeck = (game) => {
-    game.deck = shuffle([...game.discardPile]);
-    game.discardPile = [];
-};
-
-// Game logic
-const calculateScores = (players) => players.map(player => ({
-    ...player,
-    roundScore: [...new Set(player.cards)].reduce((a, b) => a + b, 0),
-    totalScore: player.totalScore + [...new Set(player.cards)].reduce((a, b) => a + b, 0)
-}));
-
-const checkRoundEnd = (game) => {
-    const activePlayers = game.players.filter(p => p.status === 'active');
-    const allBusted = game.players.every(p => p.status === 'busted');
-    const allStood = game.players.every(p => p.status === 'stood' || p.status === 'busted');
-
-    return game.deck.length === 0 || allBusted || allStood;
-};
-
-io.on('connection', (socket) => {
+io.on('connection', socket => {
     console.log(`User connected: ${socket.id}`);
 
-    socket.on('create-game', (playerName) => {
+    // Create game
+    socket.on('create-game', playerName => {
         const gameId = uuidv4().substr(0, 5).toUpperCase();
         const newGame = {
             id: gameId,
-            hostId: socket.id, // ADD HOST TRACKING
+            hostId: socket.id,
             players: [{
                 id: socket.id,
                 name: playerName,
@@ -63,7 +43,7 @@ io.on('connection', (socket) => {
                 status: 'waiting',
                 roundScore: 0,
                 totalScore: 0,
-                position: 0
+                bustedCard: null
             }],
             deck: createDeck(),
             discardPile: [],
@@ -71,12 +51,12 @@ io.on('connection', (socket) => {
             status: 'lobby',
             roundNumber: 1
         };
-        
         games.set(gameId, newGame);
         socket.join(gameId);
         socket.emit('game-created', gameId);
     });
 
+    // Join game
     socket.on('join-game', (gameId, playerName) => {
         const game = games.get(gameId);
         if (!game) return socket.emit('error', 'Game not found');
@@ -88,47 +68,52 @@ io.on('connection', (socket) => {
             status: 'waiting',
             roundScore: 0,
             totalScore: 0,
-            position: game.players.length
+            bustedCard: null
         });
-        
         socket.join(gameId);
         io.to(gameId).emit('game-update', game);
         socket.emit('game-joined', gameId);
     });
 
-    socket.on('start-game', (gameId) => {
+    // Game logic handlers
+    socket.on('start-game', gameId => {
         const game = games.get(gameId);
         if (!game || game.status !== 'lobby') return;
-        
         game.status = 'playing';
         game.players.forEach(p => p.status = 'active');
         io.to(gameId).emit('game-started', game);
     });
 
-    socket.on('flip-card', (gameId) => {
+    socket.on('flip-card', gameId => {
         const game = games.get(gameId);
         if (!game || game.status !== 'playing') return;
 
         const player = game.players[game.currentPlayer];
         if (player.id !== socket.id || player.status !== 'active') return;
 
-        if (game.deck.length === 0) rebuildDeck(game);
+        if (game.deck.length === 0) {
+            game.deck = shuffle([...game.discardPile]);
+            game.discardPile = [];
+        }
+
         const card = game.deck.pop();
         game.discardPile.push(card);
         
         if (player.cards.includes(card)) {
             player.status = 'busted';
             player.bustedCard = card;
+            player.roundScore = 0;
         } else {
             player.cards.push(card);
+            player.roundScore = [...new Set(player.cards)].reduce((a, b) => a + b, 0);
         }
 
         advanceTurn(game);
-        io.to(gameId).emit('game-update', game);
         checkGameStatus(game);
+        io.to(gameId).emit('game-update', game);
     });
 
-    socket.on('stand', (gameId) => {
+    socket.on('stand', gameId => {
         const game = games.get(gameId);
         if (!game || game.status !== 'playing') return;
 
@@ -136,48 +121,57 @@ io.on('connection', (socket) => {
         if (player.id !== socket.id || player.status !== 'active') return;
 
         player.status = 'stood';
+        player.roundScore = [...new Set(player.cards)].reduce((a, b) => a + b, 0);
         advanceTurn(game);
-        io.to(gameId).emit('game-update', game);
         checkGameStatus(game);
+        io.to(gameId).emit('game-update', game);
     });
 
-    const advanceTurn = (game) => {
+    // Reset game
+    socket.on('reset-game', gameId => {
+        const game = games.get(gameId);
+        if (game && socket.id === game.hostId) {
+            games.delete(gameId);
+            io.to(gameId).emit('game-reset');
+        }
+    });
+
+    // Helper functions
+    const advanceTurn = game => {
         let nextPlayer = (game.currentPlayer + 1) % game.players.length;
         let attempts = 0;
-        
-        while (attempts < game.players.length) {
+        while (attempts++ < game.players.length) {
             if (game.players[nextPlayer].status === 'active') break;
             nextPlayer = (nextPlayer + 1) % game.players.length;
-            attempts++;
         }
-        
         game.currentPlayer = nextPlayer;
     };
 
-    const checkGameStatus = (game) => {
-        if (checkRoundEnd(game)) {
-            const scoredPlayers = calculateScores(game.players);
-            const roundWinner = scoredPlayers.reduce((a, b) => 
-                a.roundScore > b.roundScore ? a : b
-            );
-            
-            const gameWinner = scoredPlayers.find(p => p.totalScore >= WINNING_SCORE);
-            
-            if (gameWinner) {
-                io.to(game.id).emit('game-over', { 
-                    players: scoredPlayers,
-                    winner: gameWinner
-                });
-                game.status = 'finished';
-            } else {
-                startNewRound(game);
-                io.to(game.id).emit('new-round', game);
-            }
+    const checkGameStatus = game => {
+        const activePlayers = game.players.filter(p => p.status === 'active');
+        if (activePlayers.length > 0 && game.deck.length > 0) return;
+
+        game.players.forEach(player => {
+            player.totalScore += player.roundScore;
+        });
+
+        const winner = game.players.find(p => p.totalScore >= WINNING_SCORE);
+        if (winner) {
+            io.to(game.id).emit('game-over', { 
+                players: game.players,
+                winner: winner
+            });
+            game.status = 'finished';
+        } else {
+            startNewRound(game);
+            io.to(game.id).emit('new-round', game);
         }
     };
 
-    const startNewRound = (game) => {
+    const startNewRound = game => {
         game.roundNumber++;
+        game.deck = shuffle([...game.deck, ...game.discardPile]);
+        game.discardPile = [];
         game.players.forEach(player => {
             player.cards = [];
             player.status = 'active';
@@ -185,20 +179,7 @@ io.on('connection', (socket) => {
             player.bustedCard = null;
         });
         game.currentPlayer = 0;
-        if (game.deck.length < 20) rebuildDeck(game);
     };
-
-    socket.on('disconnect', () => {
-        console.log(`User disconnected: ${socket.id}`);
-    });
-});
-
-socket.on('reset-game', (gameId) => {
-    const game = games.get(gameId);
-    if (game && socket.id === game.hostId) {
-        games.delete(gameId);
-        io.to(gameId).emit('game-reset');
-    }
 });
 
 server.listen(3000, () => console.log('Server running on http://localhost:3000'));

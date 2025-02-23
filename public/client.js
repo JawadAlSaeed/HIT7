@@ -1,7 +1,7 @@
 const socket = io();
 let currentGameId = null;
+let isHost = false;
 
-// Initialize DOM event listeners
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('createGame').addEventListener('click', createGame);
     document.getElementById('joinGame').addEventListener('click', joinGame);
@@ -11,100 +11,79 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('resetButton').addEventListener('click', resetGame);
 });
 
-// Socket event handlers
+// Socket handlers
 socket.on('game-created', handleGameCreated);
 socket.on('game-joined', handleGameJoined);
-socket.on('game-update', updateGameDisplay);
+socket.on('game-update', handleGameUpdate);
 socket.on('game-started', handleGameStarted);
 socket.on('new-round', handleNewRound);
 socket.on('game-over', handleGameOver);
-socket.on('error', showError);
+socket.on('game-reset', handleGameReset);
+socket.on('error', handleError);
 
-// Core game functions
+// Core functions
 function createGame() {
-    const playerName = prompt('Enter your name:');
-    if (playerName) socket.emit('create-game', playerName);
+    const name = prompt('Enter your name:');
+    if (name) socket.emit('create-game', name);
 }
 
 function joinGame() {
-    const gameId = document.getElementById('gameId').value.trim().toUpperCase();
-    const playerName = prompt('Enter your name:');
-    if (gameId && playerName) socket.emit('join-game', gameId, playerName);
+    const code = document.getElementById('gameId').value.trim().toUpperCase();
+    const name = prompt('Enter your name:');
+    if (code && name) socket.emit('join-game', code, name);
 }
 
-function startGame() {
-    socket.emit('start-game', currentGameId);
-}
-
-function flipCard() {
-    socket.emit('flip-card', currentGameId);
-}
-
-function stand() {
-    socket.emit('stand', currentGameId);
-}
+function startGame() { socket.emit('start-game', currentGameId); }
+function flipCard() { socket.emit('flip-card', currentGameId); }
+function stand() { socket.emit('stand', currentGameId); }
 
 function resetGame() {
-    window.location.reload();
+    if (confirm('Reset game for all players?')) {
+        socket.emit('reset-game', currentGameId);
+    }
 }
 
-// Game state handlers
+// UI updates
 function handleGameCreated(gameId) {
     currentGameId = gameId;
+    document.getElementById('hostCode').textContent = gameId;
+    document.getElementById('hostCodeDisplay').style.display = 'block';
     document.getElementById('gameCode').textContent = gameId;
-    showGameArea();
     document.getElementById('startGame').style.display = 'block';
-}
-
-function handleGameJoined(gameId) {
-    currentGameId = gameId;
-    document.getElementById('gameCode').textContent = gameId;
+    isHost = true;
     showGameArea();
 }
 
-function handleGameStarted(game) {
-    document.getElementById('startGame').style.display = 'none';
-    toggleActionButtons(true);
+function handleGameUpdate(game) {
+    isHost = socket.id === game.hostId;
     updateGameDisplay(game);
+    document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
 }
 
-function handleNewRound(game) {
-    document.getElementById('flipCard').style.display = 'block';
-    document.getElementById('standButton').style.display = 'block';
-    updateGameDisplay(game);
-}
-
-function handleGameOver({ players, winner }) {
-    toggleActionButtons(false);
-    const container = document.getElementById('playersContainer');
-    container.innerHTML = `
-        <div class="game-over">
-            <h2>🏆 Total Winner: ${winner.name} 🏆</h2>
-            <div class="final-scores">
-                ${players.map(p => `
-                    <div class="player-score ${p.id === socket.id ? 'you' : ''}">
-                        ${p.name}${p.id === socket.id ? ' (You)' : ''} 
-                        - Total: ${p.totalScore}
-                    </div>
-                `).join('')}
-            </div>
-        </div>`;
-}
-
-// UI update functions
 function updateGameDisplay(game) {
-    document.getElementById('deckCount').textContent = game.deck.length;
-    document.getElementById('discard').innerHTML = 
-        game.discardPile.map(card => `<div class="card">${card}</div>`).join('');
+    // Update discard pile
+    const discardCounts = game.discardPile.reduce((acc, card) => {
+        acc[card] = (acc[card] || 0) + 1;
+        return acc;
+    }, {});
+    
+    document.getElementById('discard').innerHTML = Object.entries(discardCounts)
+        .map(([number, count]) => `
+            <div class="discard-card">
+                ${number} <span class="discard-count">[${count}]</span>
+            </div>
+        `).join('');
 
-    const container = document.getElementById('playersContainer');
-    container.innerHTML = game.players.map((player, index) => `
+    // Update players
+    document.getElementById('playersContainer').innerHTML = game.players.map((player, index) => `
         <div class="player ${index === game.currentPlayer ? 'current-turn' : ''} ${player.status}">
             <div class="player-header">
                 <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
                 <div class="player-status">
                     ${getStatusIcon(player.status)}
-                    ${player.bustedCard ? `<div class="busted-card">Busted on: ${player.bustedCard}</div>` : ''}
+                    ${player.bustedCard ? `
+                        <div class="busted-card">Busted on: ${player.bustedCard}</div>
+                    ` : ''}
                 </div>
             </div>
             <div class="scores">
@@ -121,19 +100,13 @@ function updateGameDisplay(game) {
         </div>
     `).join('');
 
-    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
+    document.getElementById('deckCount').textContent = game.deck.length;
 }
 
 // Helper functions
 function showGameArea() {
     document.querySelector('.lobby-screen').style.display = 'none';
     document.getElementById('gameArea').style.display = 'block';
-}
-
-function toggleActionButtons(show) {
-    document.getElementById('flipCard').style.display = show ? 'block' : 'none';
-    document.getElementById('standButton').style.display = show ? 'block' : 'none';
 }
 
 function getStatusIcon(status) {
@@ -146,10 +119,50 @@ function getStatusIcon(status) {
     return `<span class="status-icon">${icons[status]}</span>`;
 }
 
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-    setTimeout(() => errorDiv.remove(), 3000);
+// Event handlers
+function handleGameJoined(gameId) {
+    currentGameId = gameId;
+    document.getElementById('gameCode').textContent = gameId;
+    showGameArea();
+}
+
+function handleGameStarted(game) {
+    document.getElementById('startGame').style.display = 'none';
+    toggleActionButtons(true);
+    updateGameDisplay(game);
+}
+
+function handleNewRound(game) {
+    toggleActionButtons(true);
+    updateGameDisplay(game);
+}
+
+function handleGameOver({ players, winner }) {
+    const container = document.getElementById('playersContainer');
+    container.innerHTML = `
+        <div class="game-over">
+            <h2>🏆 Winner: ${winner.name} (${winner.totalScore} points)</h2>
+            <div class="final-scores">
+                ${players.map(p => `
+                    <div class="player-score ${p.id === socket.id ? 'you' : ''}">
+                        ${p.name}: ${p.totalScore} points
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    toggleActionButtons(false);
+}
+
+function handleGameReset() {
+    alert('Game has been reset by the host!');
+    window.location.reload();
+}
+
+function handleError(message) {
+    alert(message);
+}
+
+function toggleActionButtons(show) {
+    document.getElementById('flipCard').style.display = show ? 'block' : 'none';
+    document.getElementById('standButton').style.display = show ? 'block' : 'none';
 }
