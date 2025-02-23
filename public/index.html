@@ -2,159 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flip 7 Online</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Flip 7 Online</h1>
-        
+    <div class="lobby-screen">
+        <div class="game-logo">FLIP 7</div>
         <div class="lobby">
-            <button id="createGame">Create New Game</button>
+            <button id="createGame" class="lobby-button">
+                <span class="button-icon">🕹️</span>
+                Create New Game
+            </button>
             <div class="join-game">
-                <input type="text" id="gameId" placeholder="Game Code">
-                <button id="joinGame">Join Game</button>
+                <input type="text" id="gameId" placeholder="Enter Game Code">
+                <button id="joinGame" class="lobby-button">
+                    <span class="button-icon">🚪</span>
+                    Join Game
+                </button>
             </div>
         </div>
+    </div>
 
-        <div id="gameArea" style="display: none;">
-            <h2>Game Code: <span id="gameCode"></span></h2>
-            <div id="playersList"></div>
-            
-            <div class="game-board">
+    <div id="gameArea" class="game-container">
+        <div class="game-header">
+            <div class="game-code">Room: <span id="gameCode">----</span></div>
+            <div class="deck-info">Cards Left: <span id="deckCount">78</span></div>
+        </div>
+
+        <div class="game-board">
+            <div class="deck-area">
                 <div class="deck" id="deck">DECK</div>
                 <div class="discard-pile" id="discard"></div>
             </div>
-            
-            <div class="my-cards" id="myCards"></div>
-            <button id="startGame" style="display: none;">Start Game</button>
-            <button id="flipCard" style="display: none;">Flip Card</button>
+            <div id="playersContainer" class="players-container"></div>
+        </div>
+
+        <div class="controls">
+            <button id="startGame" class="game-button green">Start Game</button>
+            <button id="flipCard" class="game-button blue">Flip Card</button>
+            <button id="standButton" class="game-button orange">Stand</button>
+            <button id="resetButton" class="game-button red">Reset</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let currentGameId = null;
-
-        // Event Listeners
-        document.getElementById('createGame').addEventListener('click', createGame);
-        document.getElementById('joinGame').addEventListener('click', joinGame);
-        document.getElementById('startGame').addEventListener('click', startGame);
-        document.getElementById('flipCard').addEventListener('click', flipCard);
-
-        // Handlers
-        function createGame() {
-            const playerName = prompt('Enter your name:');
-            if (playerName) socket.emit('create-game', playerName);
-        }
-
-        function joinGame() {
-            const gameId = document.getElementById('gameId').value;
-            const playerName = prompt('Enter your name:');
-            if (gameId && playerName) socket.emit('join-game', gameId, playerName);
-        }
-
-        function startGame() {
-            socket.emit('start-game', currentGameId);
-        }
-
-        function flipCard() {
-            socket.emit('flip-card', currentGameId);
-        }
-
-        // Socket Listeners
-        socket.on('game-created', handleGameCreated);
-        socket.on('game-joined', handleGameJoined);
-        socket.on('players-updated', updatePlayers);
-        socket.on('game-started', handleGameStart);
-        socket.on('game-update', updateGameDisplay);
-        socket.on('error', showError);
-
-        // Game Created Handler
-        function handleGameCreated(gameId) {
-            currentGameId = gameId;
-            document.getElementById('gameCode').textContent = gameId;
-            showGameArea();
-            document.getElementById('startGame').style.display = 'block';
-        }
-
-        // Game Joined Handler
-        function handleGameJoined(gameState) {
-            currentGameId = gameState.players[0].id === socket.id ? gameId : gameId;
-            document.getElementById('gameCode').textContent = gameId;
-            showGameArea();
-            updateGameDisplay(gameState);
-        }
-
-        // Update Players List
-        function updatePlayers(players) {
-            const list = document.getElementById('playersList');
-            list.innerHTML = players.map(p => `
-                <div class="player 
-                    ${p.status === 'busted' ? 'busted' : ''}
-                    ${p.id === socket.id ? 'you' : ''}"
-                >
-                    ${p.name} ${p.id === socket.id ? '(You)' : ''}
-                    <br>Cards: ${p.cards.length}
-                    ${p.status === 'busted' ? ' - BUSTED!' : ''}
-                </div>
-            `).join('');
-            
-            document.getElementById('startGame').style.display = 
-                players[0].id === socket.id ? 'block' : 'none';
-        }
-
-        // Game Started Handler
-        function handleGameStart(gameState) {
-            document.getElementById('startGame').style.display = 'none';
-            updateGameDisplay(gameState);
-        }
-
-        // Update Game Display
-        function updateGameDisplay(gameState) {
-            // Update deck and discard
-            document.getElementById('deck').textContent = `DECK (${gameState.deck.length})`;
-            document.getElementById('discard').innerHTML = gameState.discardPile
-                .map(card => `<div class="card">${card}</div>`)
-                .join('');
-
-            // Update player list
-            const list = document.getElementById('playersList');
-            list.innerHTML = gameState.players.map((player, index) => `
-                <div class="player 
-                    ${player.status === 'busted' ? 'busted' : ''}
-                    ${index === gameState.currentPlayer ? 'current-turn' : ''}
-                    ${player.id === socket.id ? 'you' : ''}"
-                >
-                    ${player.name} ${player.id === socket.id ? '(You)' : ''}
-                    <br>Cards: ${player.cards.length}
-                    ${player.status === 'busted' ? ' - BUSTED!' : ''}
-                </div>
-            `).join('');
-
-            // Update current player's cards
-            const currentPlayer = gameState.players.find(p => p.id === socket.id);
-            document.getElementById('myCards').innerHTML = currentPlayer.cards
-                .map(card => `<div class="card">${card}</div>`)
-                .join('');
-
-            // Show/hide flip button
-            document.getElementById('flipCard').style.display = 
-                gameState.status === 'playing' && 
-                gameState.players[gameState.currentPlayer].id === socket.id 
-                ? 'block' : 'none';
-        }
-
-        // UI Helpers
-        function showGameArea() {
-            document.getElementById('gameArea').style.display = 'block';
-            document.querySelector('.lobby').style.display = 'none';
-        }
-
-        function showError(message) {
-            alert(`Error: ${message}`);
-        }
-    </script>
+    <script src="client.js"></script>
 </body>
 </html>
