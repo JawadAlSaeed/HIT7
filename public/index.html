@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flip 7 Online</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Flip 7 Online</h1>
+        
+        <div class="lobby">
+            <button id="createGame">Create New Game</button>
+            <div class="join-game">
+                <input type="text" id="gameId" placeholder="Game Code">
+                <button id="joinGame">Join Game</button>
+            </div>
+        </div>
+
+        <div id="gameArea" style="display: none;">
+            <h2>Players:</h2>
+            <div id="playersList"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        // Create game
+        document.getElementById('createGame').addEventListener('click', () => {
+            const playerName = prompt('Enter your name:');
+            socket.emit('create-game', playerName);
+        });
+
+        // Join game
+        document.getElementById('joinGame').addEventListener('click', () => {
+            const gameId = document.getElementById('gameId').value;
+            const playerName = prompt('Enter your name:');
+            socket.emit('join-game', gameId, playerName);
+        });
+
+        // Handle responses
+        socket.on('game-created', (gameId) => {
+            document.getElementById('gameArea').style.display = 'block';
+            document.querySelector('.lobby').style.display = 'none';
+            alert(`Share this code: ${gameId}`);
+        });
+
+        socket.on('players-updated', (players) => {
+            const list = document.getElementById('playersList');
+            list.innerHTML = players.map(p => 
+                `<div class="player">${p.name}</div>`
+            ).join('');
+        });
+
+        socket.on('error', (message) => {
+            alert(`Error: ${message}`);
+        });
+    </script>
+</body>
+</html>
