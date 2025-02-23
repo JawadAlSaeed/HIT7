@@ -376,3 +376,36 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+.info-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--secondary);
+    padding: 2rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    z-index: 1000;
+    animation: popupIn 0.4s ease;
+    border: 3px solid var(--danger);
+    max-width: 300px;
+}
+
+.info-popup h2 {
+    color: var(--danger);
+    font-size: 1.8rem;
+    margin: 0 0 1rem;
+}
+
+.popup-countdown {
+    font-size: 1.4rem;
+    color: var(--text-light);
+    margin: 0;
+}
+
+@keyframes popupIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}

@@ -11,6 +11,7 @@ app.use(express.static('public'));
 const games = new Map();
 const WINNING_SCORE = 200;
 
+// Deck creation and shuffling
 const createDeck = () => {
     const deck = [];
     for (let number = 1; number <= 12; number++) {
@@ -30,7 +31,7 @@ const shuffle = array => {
 io.on('connection', socket => {
     console.log(`User connected: ${socket.id}`);
 
-    // Create game
+    // Game creation
     socket.on('create-game', playerName => {
         const gameId = uuidv4().substr(0, 5).toUpperCase();
         const newGame = {
@@ -56,7 +57,7 @@ io.on('connection', socket => {
         socket.emit('game-created', gameId);
     });
 
-    // Join game
+    // Game joining
     socket.on('join-game', (gameId, playerName) => {
         const game = games.get(gameId);
         if (!game) return socket.emit('error', 'Game not found');
@@ -75,10 +76,11 @@ io.on('connection', socket => {
         socket.emit('game-joined', gameId);
     });
 
-    // Game logic handlers
+    // Game actions
     socket.on('start-game', gameId => {
         const game = games.get(gameId);
         if (!game || game.status !== 'lobby') return;
+        
         game.status = 'playing';
         game.players.forEach(p => p.status = 'active');
         io.to(gameId).emit('game-started', game);
@@ -136,7 +138,7 @@ io.on('connection', socket => {
         }
     });
 
-    // Helper functions
+    // Game logic helpers
     const advanceTurn = game => {
         let nextPlayer = (game.currentPlayer + 1) % game.players.length;
         let attempts = 0;
@@ -149,22 +151,32 @@ io.on('connection', socket => {
 
     const checkGameStatus = game => {
         const activePlayers = game.players.filter(p => p.status === 'active');
+        const allBusted = game.players.every(p => p.status === 'busted');
+
         if (activePlayers.length > 0 && game.deck.length > 0) return;
 
-        game.players.forEach(player => {
-            player.totalScore += player.roundScore;
-        });
-
-        const winner = game.players.find(p => p.totalScore >= WINNING_SCORE);
-        if (winner) {
-            io.to(game.id).emit('game-over', { 
-                players: game.players,
-                winner: winner
-            });
-            game.status = 'finished';
+        if (allBusted) {
+            io.to(game.id).emit('all-busted');
+            setTimeout(() => {
+                startNewRound(game);
+                io.to(game.id).emit('new-round', game);
+            }, 3000);
         } else {
-            startNewRound(game);
-            io.to(game.id).emit('new-round', game);
+            game.players.forEach(player => {
+                player.totalScore += player.roundScore;
+            });
+
+            const winner = game.players.find(p => p.totalScore >= WINNING_SCORE);
+            if (winner) {
+                io.to(game.id).emit('game-over', { 
+                    players: game.players,
+                    winner: winner
+                });
+                game.status = 'finished';
+            } else {
+                startNewRound(game);
+                io.to(game.id).emit('new-round', game);
+            }
         }
     };
 

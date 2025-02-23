@@ -19,6 +19,7 @@ socket.on('game-started', handleGameStarted);
 socket.on('new-round', handleNewRound);
 socket.on('game-over', handleGameOver);
 socket.on('game-reset', handleGameReset);
+socket.on('all-busted', handleAllBusted);
 socket.on('error', handleError);
 
 // Core functions
@@ -128,15 +129,12 @@ function toggleActionButtons(active) {
     const flipBtn = document.getElementById('flipCard');
     const standBtn = document.getElementById('standButton');
     
-    flipBtn.disabled = !active;
-    standBtn.disabled = !active;
-    
     if (active) {
-        flipBtn.classList.remove('disabled');
-        standBtn.classList.remove('disabled');
+        flipBtn.style.display = 'block';
+        standBtn.style.display = 'block';
     } else {
-        flipBtn.classList.add('disabled');
-        standBtn.classList.add('disabled');
+        flipBtn.style.display = 'none';
+        standBtn.style.display = 'none';
     }
 }
 
@@ -156,6 +154,27 @@ function handleGameStarted(game) {
 function handleNewRound(game) {
     toggleActionButtons(true);
     updateGameDisplay(game);
+}
+
+function handleAllBusted() {
+    const popup = document.createElement('div');
+    popup.className = 'info-popup';
+    popup.innerHTML = `
+        <h2>💥 ALL PLAYERS BUSTED! 💥</h2>
+        <p class="popup-countdown">Starting new round in 3...</p>
+    `;
+    document.body.appendChild(popup);
+    
+    let count = 2;
+    const countdown = setInterval(() => {
+        popup.querySelector('.popup-countdown').textContent = 
+            `Starting new round in ${count}...`;
+        if (count <= 0) {
+            clearInterval(countdown);
+            popup.remove();
+        }
+        count--;
+    }, 1000);
 }
 
 function showWinnerPopup(winner) {
