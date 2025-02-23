@@ -1,6 +1,7 @@
 const socket = io();
 let currentGameId = null;
 let isHost = false;
+const MAX_REGULAR_CARDS = 7;
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('createGame').addEventListener('click', createGame);
@@ -11,18 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('resetButton').addEventListener('click', resetGame);
 });
 
-// Socket handlers
 socket.on('game-created', handleGameCreated);
 socket.on('game-joined', handleGameJoined);
 socket.on('game-update', handleGameUpdate);
 socket.on('game-started', handleGameStarted);
 socket.on('new-round', handleNewRound);
 socket.on('game-over', handleGameOver);
-socket.on('game-reset', handleGameReset);
 socket.on('all-busted', handleAllBusted);
+socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 
-// Core functions
 function createGame() {
     const name = prompt('Enter your name:');
     if (name) socket.emit('create-game', name);
@@ -44,7 +43,6 @@ function resetGame() {
     }
 }
 
-// UI updates
 function handleGameCreated(gameId) {
     currentGameId = gameId;
     document.getElementById('hostCode').textContent = gameId;
@@ -66,39 +64,52 @@ function handleGameUpdate(game) {
 }
 
 function updateGameDisplay(game) {
-    // Update discard pile
     const discardCounts = game.discardPile.reduce((acc, card) => {
         acc[card] = (acc[card] || 0) + 1;
         return acc;
     }, {});
     
     document.getElementById('discard').innerHTML = Object.entries(discardCounts)
-        .map(([number, count]) => `
-            <div class="discard-card">
-                ${number} <span class="discard-count">[${count}]</span>
+        .map(([card, count]) => `
+            <div class="card ${typeof card === 'string' ? 
+                (card.endsWith('x') ? 'special multiplier' : 'special adder') : ''}">
+                ${card}${typeof card === 'number' ? `<small class="discard-count">x${count}</small>` : ''}
             </div>
         `).join('');
 
-    // Update players
     document.getElementById('playersContainer').innerHTML = game.players.map((player, index) => `
         <div class="player ${index === game.currentPlayer ? 'current-turn' : ''} ${player.status}">
             <div class="player-header">
                 <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
                 <div class="player-status">
                     ${getStatusIcon(player.status)}
-                    <span class="status-text">${player.status.toUpperCase()}</span>
                     ${player.bustedCard ? `
                         <div class="busted-card">BUSTED ON ${player.bustedCard}</div>
                     ` : ''}
                 </div>
             </div>
             <div class="scores">
-                <div>Round: ${player.roundScore}</div>
-                <div>Total: ${player.totalScore}</div>
+                <div class="score-box">
+                    <div>Round Score</div>
+                    <div class="score-value">${player.roundScore}</div>
+                </div>
+                <div class="score-box">
+                    <div>Total Score</div>
+                    <div class="score-value">${player.totalScore}</div>
+                </div>
+                <div class="score-box">
+                    <div>Cards</div>
+                    <div class="score-value">${player.regularCards.length}/${MAX_REGULAR_CARDS}</div>
+                </div>
             </div>
             <div class="card-grid">
-                ${player.cards.map(card => `
-                    <div class="card ${player.cards.filter(c => c === card).length > 1 ? 'bust' : ''}">
+                ${player.regularCards.map(card => `
+                    <div class="card ${player.regularCards.filter(c => c === card).length > 1 ? 'bust' : ''}">
+                        ${card}
+                    </div>
+                `).join('')}
+                ${player.specialCards.map(card => `
+                    <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
                         ${card}
                     </div>
                 `).join('')}
@@ -109,7 +120,6 @@ function updateGameDisplay(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
 }
 
-// Helper functions
 function showGameArea() {
     document.querySelector('.lobby-screen').style.display = 'none';
     document.getElementById('gameArea').style.display = 'block';
@@ -138,7 +148,6 @@ function toggleActionButtons(active) {
     }
 }
 
-// Event handlers
 function handleGameJoined(gameId) {
     currentGameId = gameId;
     document.getElementById('gameCode').textContent = gameId;

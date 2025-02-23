@@ -10,14 +10,17 @@ const io = new Server(server);
 app.use(express.static('public'));
 const games = new Map();
 const WINNING_SCORE = 200;
+const MAX_REGULAR_CARDS = 7;
 
-// Deck creation and shuffling
 const createDeck = () => {
     const deck = [];
+    // Regular cards (1-12)
     for (let number = 1; number <= 12; number++) {
         for (let i = 0; i < number; i++) deck.push(number);
     }
-    return shuffle(deck);
+    // Special cards (6 total)
+    ['2+', '4+', '6+', '8+', '10+', '2x'].forEach(card => deck.push(card));
+    return shuffle(deck); // Total 84 cards (78+6)
 };
 
 const shuffle = array => {
@@ -31,7 +34,6 @@ const shuffle = array => {
 io.on('connection', socket => {
     console.log(`User connected: ${socket.id}`);
 
-    // Game creation
     socket.on('create-game', playerName => {
         const gameId = uuidv4().substr(0, 5).toUpperCase();
         const newGame = {
@@ -40,7 +42,8 @@ io.on('connection', socket => {
             players: [{
                 id: socket.id,
                 name: playerName,
-                cards: [],
+                regularCards: [],
+                specialCards: [],
                 status: 'waiting',
                 roundScore: 0,
                 totalScore: 0,
@@ -57,7 +60,6 @@ io.on('connection', socket => {
         socket.emit('game-created', gameId);
     });
 
-    // Game joining
     socket.on('join-game', (gameId, playerName) => {
         const game = games.get(gameId);
         if (!game) return socket.emit('error', 'Game not found');
@@ -65,7 +67,8 @@ io.on('connection', socket => {
         game.players.push({
             id: socket.id,
             name: playerName,
-            cards: [],
+            regularCards: [],
+            specialCards: [],
             status: 'waiting',
             roundScore: 0,
             totalScore: 0,
@@ -76,7 +79,6 @@ io.on('connection', socket => {
         socket.emit('game-joined', gameId);
     });
 
-    // Game actions
     socket.on('start-game', gameId => {
         const game = games.get(gameId);
         if (!game || game.status !== 'lobby') return;
@@ -100,15 +102,34 @@ io.on('connection', socket => {
 
         const card = game.deck.pop();
         game.discardPile.push(card);
-        
-        if (player.cards.includes(card)) {
-            player.status = 'busted';
-            player.bustedCard = card;
-            player.roundScore = 0;
+
+        if (typeof card === 'number') {
+            if (player.regularCards.includes(card)) {
+                player.status = 'busted';
+                player.bustedCard = card;
+                player.roundScore = 0;
+            } else {
+                player.regularCards.push(card);
+                if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+                    player.status = 'stood';
+                }
+            }
         } else {
-            player.cards.push(card);
-            player.roundScore = [...new Set(player.cards)].reduce((a, b) => a + b, 0);
+            player.specialCards.push(card);
         }
+
+        // Calculate scores
+        const base = [...new Set(player.regularCards)].reduce((a, b) => a + b, 0);
+        const add = player.specialCards
+            .filter(c => c.endsWith('+'))
+            .map(c => parseInt(c))
+            .reduce((a, b) => a + b, 0);
+        const multiply = player.specialCards
+            .filter(c => c.endsWith('x'))
+            .map(c => parseInt(c))
+            .reduce((a, b) => a * b, 1);
+
+        player.roundScore = (base + add) * (multiply || 1);
 
         advanceTurn(game);
         checkGameStatus(game);
@@ -123,13 +144,11 @@ io.on('connection', socket => {
         if (player.id !== socket.id || player.status !== 'active') return;
 
         player.status = 'stood';
-        player.roundScore = [...new Set(player.cards)].reduce((a, b) => a + b, 0);
         advanceTurn(game);
         checkGameStatus(game);
         io.to(gameId).emit('game-update', game);
     });
 
-    // Reset game
     socket.on('reset-game', gameId => {
         const game = games.get(gameId);
         if (game && socket.id === game.hostId) {
@@ -138,7 +157,6 @@ io.on('connection', socket => {
         }
     });
 
-    // Game logic helpers
     const advanceTurn = game => {
         let nextPlayer = (game.currentPlayer + 1) % game.players.length;
         let attempts = 0;
@@ -155,6 +173,10 @@ io.on('connection', socket => {
 
         if (activePlayers.length > 0 && game.deck.length > 0) return;
 
+        game.players.forEach(player => {
+            player.totalScore += player.roundScore;
+        });
+
         if (allBusted) {
             io.to(game.id).emit('all-busted');
             setTimeout(() => {
@@ -162,10 +184,6 @@ io.on('connection', socket => {
                 io.to(game.id).emit('new-round', game);
             }, 3000);
         } else {
-            game.players.forEach(player => {
-                player.totalScore += player.roundScore;
-            });
-
             const winner = game.players.find(p => p.totalScore >= WINNING_SCORE);
             if (winner) {
                 io.to(game.id).emit('game-over', { 
@@ -182,10 +200,9 @@ io.on('connection', socket => {
 
     const startNewRound = game => {
         game.roundNumber++;
-        game.deck = shuffle([...game.deck, ...game.discardPile]);
-        game.discardPile = [];
         game.players.forEach(player => {
-            player.cards = [];
+            player.regularCards = [];
+            player.specialCards = [];
             player.status = 'active';
             player.roundScore = 0;
             player.bustedCard = null;
