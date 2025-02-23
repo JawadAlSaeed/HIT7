@@ -56,7 +56,11 @@ function handleGameCreated(gameId) {
 
 function handleGameUpdate(game) {
     isHost = socket.id === game.hostId;
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    const canAct = isCurrentPlayer && game.status === 'playing';
+    
     updateGameDisplay(game);
+    toggleActionButtons(canAct);
     document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
 }
 
@@ -81,8 +85,9 @@ function updateGameDisplay(game) {
                 <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
                 <div class="player-status">
                     ${getStatusIcon(player.status)}
+                    <span class="status-text">${player.status.toUpperCase()}</span>
                     ${player.bustedCard ? `
-                        <div class="busted-card">Busted on: ${player.bustedCard}</div>
+                        <div class="busted-card">BUSTED ON ${player.bustedCard}</div>
                     ` : ''}
                 </div>
             </div>
@@ -111,12 +116,28 @@ function showGameArea() {
 
 function getStatusIcon(status) {
     const icons = {
-        active: '⭐ Playing',
-        stood: '🛑 Stood',
-        busted: '💥 Busted',
-        waiting: '⏳ Waiting'
+        active: '⭐',
+        stood: '🛑',
+        busted: '💥',
+        waiting: '⏳'
     };
     return `<span class="status-icon">${icons[status]}</span>`;
+}
+
+function toggleActionButtons(active) {
+    const flipBtn = document.getElementById('flipCard');
+    const standBtn = document.getElementById('standButton');
+    
+    flipBtn.disabled = !active;
+    standBtn.disabled = !active;
+    
+    if (active) {
+        flipBtn.classList.remove('disabled');
+        standBtn.classList.remove('disabled');
+    } else {
+        flipBtn.classList.add('disabled');
+        standBtn.classList.add('disabled');
+    }
 }
 
 // Event handlers
@@ -137,20 +158,25 @@ function handleNewRound(game) {
     updateGameDisplay(game);
 }
 
+function showWinnerPopup(winner) {
+    const popup = document.createElement('div');
+    popup.className = 'winner-popup';
+    popup.innerHTML = `
+        <h2>🏆 TOTAL WINNER! 🏆</h2>
+        <div class="winner-name">${winner.name}</div>
+        <div class="winner-score">${winner.totalScore} Points</div>
+        <button onclick="window.location.reload()" class="game-button green">
+            Play Again
+        </button>
+    `;
+    document.body.appendChild(popup);
+}
+
 function handleGameOver({ players, winner }) {
-    const container = document.getElementById('playersContainer');
-    container.innerHTML = `
-        <div class="game-over">
-            <h2>🏆 Winner: ${winner.name} (${winner.totalScore} points)</h2>
-            <div class="final-scores">
-                ${players.map(p => `
-                    <div class="player-score ${p.id === socket.id ? 'you' : ''}">
-                        ${p.name}: ${p.totalScore} points
-                    </div>
-                `).join('')}
-            </div>
-        </div>`;
     toggleActionButtons(false);
+    showWinnerPopup(winner);
+    const container = document.getElementById('playersContainer');
+    container.innerHTML = '';
 }
 
 function handleGameReset() {
@@ -160,9 +186,4 @@ function handleGameReset() {
 
 function handleError(message) {
     alert(message);
-}
-
-function toggleActionButtons(show) {
-    document.getElementById('flipCard').style.display = show ? 'block' : 'none';
-    document.getElementById('standButton').style.display = show ? 'block' : 'none';
 }

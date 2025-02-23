@@ -22,7 +22,10 @@
                 🕹️ Create New Game
             </button>
             <div class="join-game">
-                <input type="text" id="gameId" placeholder="Enter Game Code" class="lobby-input">
+                <input type="text" id="gameId" 
+                    placeholder="Enter Game Code" 
+                    class="lobby-input"
+                    autocapitalize="characters">
                 <button id="joinGame" class="lobby-button">
                     🚪 Join Game
                 </button>
@@ -56,6 +59,9 @@
             <button id="resetButton" class="game-button red">Reset Game</button>
         </div>
     </div>
+
+    <!-- Popup Container -->
+    <div id="popupContainer"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script>
