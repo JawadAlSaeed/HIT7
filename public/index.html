@@ -37,33 +37,64 @@
         const socket = io();
         let currentGameId = null;
 
-        // Create game
-        document.getElementById('createGame').addEventListener('click', () => {
+        // Event Listeners
+        document.getElementById('createGame').addEventListener('click', createGame);
+        document.getElementById('joinGame').addEventListener('click', joinGame);
+        document.getElementById('startGame').addEventListener('click', startGame);
+        document.getElementById('flipCard').addEventListener('click', flipCard);
+
+        // Handlers
+        function createGame() {
             const playerName = prompt('Enter your name:');
             if (playerName) socket.emit('create-game', playerName);
-        });
+        }
 
-        // Join game
-        document.getElementById('joinGame').addEventListener('click', () => {
+        function joinGame() {
             const gameId = document.getElementById('gameId').value;
             const playerName = prompt('Enter your name:');
             if (gameId && playerName) socket.emit('join-game', gameId, playerName);
-        });
+        }
 
-        // Game created
-        socket.on('game-created', (gameId) => {
+        function startGame() {
+            socket.emit('start-game', currentGameId);
+        }
+
+        function flipCard() {
+            socket.emit('flip-card', currentGameId);
+        }
+
+        // Socket Listeners
+        socket.on('game-created', handleGameCreated);
+        socket.on('game-joined', handleGameJoined);
+        socket.on('players-updated', updatePlayers);
+        socket.on('game-started', handleGameStart);
+        socket.on('game-update', updateGameDisplay);
+        socket.on('error', showError);
+
+        // Game Created Handler
+        function handleGameCreated(gameId) {
             currentGameId = gameId;
             document.getElementById('gameCode').textContent = gameId;
-            document.getElementById('gameArea').style.display = 'block';
-            document.querySelector('.lobby').style.display = 'none';
+            showGameArea();
             document.getElementById('startGame').style.display = 'block';
-        });
+        }
 
-        // Players updated
-        socket.on('players-updated', (players) => {
+        // Game Joined Handler
+        function handleGameJoined(gameState) {
+            currentGameId = gameState.players[0].id === socket.id ? gameId : gameId;
+            document.getElementById('gameCode').textContent = gameId;
+            showGameArea();
+            updateGameDisplay(gameState);
+        }
+
+        // Update Players List
+        function updatePlayers(players) {
             const list = document.getElementById('playersList');
             list.innerHTML = players.map(p => `
-                <div class="player ${p.status === 'busted' ? 'busted' : ''}">
+                <div class="player 
+                    ${p.status === 'busted' ? 'busted' : ''}
+                    ${p.id === socket.id ? 'you' : ''}"
+                >
                     ${p.name} ${p.id === socket.id ? '(You)' : ''}
                     <br>Cards: ${p.cards.length}
                     ${p.status === 'busted' ? ' - BUSTED!' : ''}
@@ -72,54 +103,57 @@
             
             document.getElementById('startGame').style.display = 
                 players[0].id === socket.id ? 'block' : 'none';
-        });
+        }
 
-        // Start game
-        document.getElementById('startGame').addEventListener('click', () => {
-            socket.emit('start-game', currentGameId);
-        });
-
-        // Game started
-        socket.on('game-started', (gameState) => {
+        // Game Started Handler
+        function handleGameStart(gameState) {
             document.getElementById('startGame').style.display = 'none';
-            document.getElementById('flipCard').style.display = 'block';
             updateGameDisplay(gameState);
-        });
+        }
 
-        // Flip card
-        document.getElementById('flipCard').addEventListener('click', () => {
-            socket.emit('flip-card', currentGameId);
-        });
-
-        // Game state update
-        socket.on('game-update', (gameState) => {
-            updateGameDisplay(gameState);
-            document.getElementById('flipCard').style.display = 
-                gameState.players[gameState.currentPlayer].id === socket.id ? 'block' : 'none';
-        });
-
-        // Error handling
-        socket.on('error', (message) => {
-            alert(`Error: ${message}`);
-        });
-
-        // Update game display
+        // Update Game Display
         function updateGameDisplay(gameState) {
-            // Deck count
+            // Update deck and discard
             document.getElementById('deck').textContent = `DECK (${gameState.deck.length})`;
-            
-            // Discard pile
-            const discard = document.getElementById('discard');
-            discard.innerHTML = gameState.discardPile.map(card => `
-                <div class="card">${card}</div>
+            document.getElementById('discard').innerHTML = gameState.discardPile
+                .map(card => `<div class="card">${card}</div>`)
+                .join('');
+
+            // Update player list
+            const list = document.getElementById('playersList');
+            list.innerHTML = gameState.players.map((player, index) => `
+                <div class="player 
+                    ${player.status === 'busted' ? 'busted' : ''}
+                    ${index === gameState.currentPlayer ? 'current-turn' : ''}
+                    ${player.id === socket.id ? 'you' : ''}"
+                >
+                    ${player.name} ${player.id === socket.id ? '(You)' : ''}
+                    <br>Cards: ${player.cards.length}
+                    ${player.status === 'busted' ? ' - BUSTED!' : ''}
+                </div>
             `).join('');
-            
-            // Player cards
+
+            // Update current player's cards
             const currentPlayer = gameState.players.find(p => p.id === socket.id);
-            const myCards = document.getElementById('myCards');
-            myCards.innerHTML = currentPlayer.cards.map(card => `
-                <div class="card">${card}</div>
-            `).join('');
+            document.getElementById('myCards').innerHTML = currentPlayer.cards
+                .map(card => `<div class="card">${card}</div>`)
+                .join('');
+
+            // Show/hide flip button
+            document.getElementById('flipCard').style.display = 
+                gameState.status === 'playing' && 
+                gameState.players[gameState.currentPlayer].id === socket.id 
+                ? 'block' : 'none';
+        }
+
+        // UI Helpers
+        function showGameArea() {
+            document.getElementById('gameArea').style.display = 'block';
+            document.querySelector('.lobby').style.display = 'none';
+        }
+
+        function showError(message) {
+            alert(`Error: ${message}`);
         }
     </script>
 </body>

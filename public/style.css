@@ -53,9 +53,18 @@ input {
     border: 1px solid #ddd;
 }
 
-.busted {
-    background: #ffebee !important;
+.player.current-turn {
+    border: 2px solid #2196F3;
+    background: #e3f2fd;
+}
+
+.player.busted {
+    background: #ffebee;
     color: #c62828;
+}
+
+.you {
+    font-weight: bold;
 }
 
 .game-board {

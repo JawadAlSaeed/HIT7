@@ -8,13 +8,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files
 app.use(express.static('public'));
 
-// Store active games
 const games = new Map();
 
-// Deck functions
 function createDeck() {
   const deck = [];
   for (let number = 1; number <= 12; number++) {
@@ -33,23 +30,23 @@ function shuffle(array) {
   return array;
 }
 
-// Socket.io handlers
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Create game
   socket.on('create-game', (playerName) => {
     const gameId = uuidv4().substr(0, 5).toUpperCase();
     const deck = createDeck();
     
+    const initialPlayers = [{
+      id: socket.id,
+      name: playerName,
+      cards: [],
+      score: 0,
+      status: 'waiting'
+    }];
+
     games.set(gameId, {
-      players: [{
-        id: socket.id,
-        name: playerName,
-        cards: [],
-        score: 0,
-        status: 'waiting'
-      }],
+      players: initialPlayers,
       deck: deck,
       discardPile: [],
       currentPlayer: 0,
@@ -60,40 +57,44 @@ io.on('connection', (socket) => {
     socket.emit('game-created', gameId);
   });
 
-  // Join game
   socket.on('join-game', (gameId, playerName) => {
     const game = games.get(gameId);
     if (!game) return socket.emit('error', 'Game not found');
     
-    game.players.push({
+    const newPlayer = {
       id: socket.id,
       name: playerName,
       cards: [],
       score: 0,
       status: 'waiting'
-    });
+    };
     
+    game.players.push(newPlayer);
     socket.join(gameId);
+    
+    socket.emit('game-joined', game);
     io.to(gameId).emit('players-updated', game.players);
     io.to(gameId).emit('game-update', game);
   });
 
-  // Start game
   socket.on('start-game', (gameId) => {
     const game = games.get(gameId);
     if (!game || game.status !== 'lobby') return;
     
     game.status = 'playing';
+    game.players.forEach(p => p.status = 'active');
     io.to(gameId).emit('game-started', game);
   });
 
-  // Flip card
   socket.on('flip-card', (gameId) => {
     const game = games.get(gameId);
     if (!game || game.status !== 'playing') return;
     
     const currentPlayer = game.players[game.currentPlayer];
-    if (socket.id !== currentPlayer.id) return;
+    if (socket.id !== currentPlayer.id) {
+      socket.emit('error', 'Not your turn!');
+      return;
+    }
 
     const card = game.deck.pop();
     game.discardPile.push(card);
@@ -105,13 +106,22 @@ io.on('connection', (socket) => {
       player.cards.push(card);
     }
 
-    // Update current player
-    game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
-    
+    // Advance turn
+    if (player.status !== 'busted') {
+      do {
+        game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+      } while (game.players[game.currentPlayer].status === 'busted');
+    }
+
+    // Check game end
+    const activePlayers = game.players.filter(p => p.status !== 'busted');
+    if (activePlayers.length === 0) {
+      game.status = 'finished';
+    }
+
     io.to(gameId).emit('game-update', game);
   });
 
-  // Disconnect handler
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
   });
