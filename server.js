@@ -2,16 +2,61 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const helmet = require('helmet');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// Heroku-specific WebSocket configuration
+const io = new Server(server, {
+  cors: {
+    origin: [
+      process.env.PRODUCTION_URL || 'https://your-app-name.herokuapp.com',
+      ...(process.env.NODE_ENV === 'development' 
+        ? ['http://localhost:3000'] 
+        : [])
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'] // Required for Heroku
+});
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", ...(process.env.PRODUCTION_URL 
+        ? [process.env.PRODUCTION_URL] 
+        : ['ws://localhost:3000'])]
+    }
+  }
+}));
+app.use(cors());
 
 app.use(express.static('public'));
 const games = new Map();
 const WINNING_SCORE = 200;
 const MAX_REGULAR_CARDS = 7;
 
+// WebSocket keep-alive for Heroku
+setInterval(() => {
+  io.emit('ping', Date.now());
+}, 55000);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: Date.now(),
+    activeGames: games.size
+  });
+});
+
+// Existing game logic
 const createDeck = () => {
     const deck = [];
     // Regular cards (1-12)
@@ -20,7 +65,7 @@ const createDeck = () => {
     }
     // Special cards (6 total)
     ['2+', '4+', '6+', '8+', '10+', '2x'].forEach(card => deck.push(card));
-    return shuffle(deck); // Total 84 cards (78+6)
+    return shuffle(deck);
 };
 
 const shuffle = array => {
@@ -34,6 +79,7 @@ const shuffle = array => {
 io.on('connection', socket => {
     console.log(`User connected: ${socket.id}`);
 
+    // Existing game event handlers
     socket.on('create-game', playerName => {
         const gameId = uuidv4().substr(0, 5).toUpperCase();
         const newGame = {
@@ -211,4 +257,8 @@ io.on('connection', socket => {
     };
 });
 
-server.listen(3000, () => console.log('Server running on http://localhost:3000'));
+// Heroku port configuration
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+});
