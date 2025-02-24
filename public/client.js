@@ -60,6 +60,10 @@ function handleGameUpdate(game) {
     
     updateGameDisplay(game);
     toggleActionButtons(canAct);
+    
+    // Fix start button visibility
+    const startBtn = document.getElementById('startGame');
+    startBtn.style.display = isHost && game.status === 'lobby' ? 'block' : 'none';
     document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
 }
 
@@ -113,8 +117,7 @@ function updateGameDisplay(game) {
                 <div class="special-cards-container">
                     ${player.specialCards.map(card => `
                         <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
-                            ${card}
-                            ${card.endsWith('x') ? '✖️' : '➕'}
+                            ${card.replace('+', '').replace('x', '')}
                         </div>
                     `).join('')}
                 </div>
@@ -131,13 +134,16 @@ function showGameArea() {
 }
 
 function getStatusIcon(status) {
-    const icons = {
-        active: '⭐',
-        stood: '🛑',
-        busted: '💥',
-        waiting: '⏳'
+    const statusMap = {
+        active: ['⭐', 'ACTIVE'],
+        stood: ['🛑', 'STOOD'], 
+        busted: ['💥', 'BUSTED'],
+        waiting: ['⏳', 'WAITING']
     };
-    return `<span class="status-icon">${icons[status]}</span>`;
+    return `
+        <span class="status-icon">${statusMap[status][0]}</span>
+        <span class="status-text">${statusMap[status][1]}</span>
+    `;
 }
 
 function toggleActionButtons(active) {

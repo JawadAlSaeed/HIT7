@@ -144,6 +144,14 @@ body {
     z-index: 1;
 }
 
+.game-logo.header-logo {
+    font-size: 2.5rem;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+}
+
 .deck-info {
     font-size: 1.2rem;
     background: rgba(0,0,0,0.15);
@@ -182,7 +190,7 @@ body {
 
 .discard-card {
     background: var(--text-light);
-    color: var(--text-dark);
+    color: var (--text-dark);
     padding: 0.5rem 1rem;
     border-radius: 6px;
     display: flex;
@@ -194,6 +202,10 @@ body {
 .discard-count {
     color: var (--danger);
     font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255,255,255,0.1);
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
 }
 
 /* Players */
@@ -311,6 +323,10 @@ body {
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--highlight);
 }
 
 .busted-card {
@@ -439,6 +455,10 @@ body {
     font-size: 0.9rem;
     opacity: 0.8;
     margin-bottom: 0.5rem;
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
 }
 
 /* Controls */
@@ -546,6 +566,11 @@ body {
     .deck-info, .game-code-display {
         width: 100%;
         justify-content: center;
+    }
+    
+    .game-logo.header-logo {
+        position: static;
+        transform: none;
     }
 }
 
