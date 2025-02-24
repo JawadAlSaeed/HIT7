@@ -117,7 +117,7 @@ function updateGameDisplay(game) {
                 <div class="special-cards-container">
                     ${player.specialCards.map(card => `
                         <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
-                            ${card.replace('+', '').replace('x', '')}
+                            ${card.replace('+', '')}${card.endsWith('x') ? '✕' : '+'}
                         </div>
                     `).join('')}
                 </div>
