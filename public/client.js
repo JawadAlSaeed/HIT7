@@ -73,12 +73,19 @@ function updateGameDisplay(game) {
         return acc;
     }, {});
     
+    // In updateGameDisplay function:
+    document.getElementById('deckCount').textContent = game.deck.length;
+
     document.getElementById('discard').innerHTML = Object.entries(discardCounts).map(([cardStr, count]) => {
         const isNumber = !isNaN(cardStr);
+        const cardValue = isNumber ? parseInt(cardStr, 10) : cardStr.replace(/[^0-9]/g, '');
+        const cardType = cardStr.endsWith('x') ? 'multiplier' : 'adder';
+        
         return `
-            <div class="card ${isNumber ? '' : (cardStr.endsWith('x') ? 'special multiplier' : 'special adder')}">
-                ${isNumber ? parseInt(cardStr, 10) : cardStr}
-                ${isNumber ? `<small class="discard-count">x${count}</small>` : ''}
+            <div class="discard-card ${isNumber ? '' : 'special ' + cardType}">
+                ${cardValue}
+                <span class="discard-count">x${count}</span>
+                ${!isNumber ? (cardStr.endsWith('x') ? '×' : '+') : ''}
             </div>
         `;
     }).join('');

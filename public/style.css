@@ -175,6 +175,7 @@ body {
     justify-content: center;
     gap: 2rem;
     margin-bottom: 3rem;
+    align-items: center;
 }
 
 .discard-pile {
@@ -186,26 +187,38 @@ body {
     border-radius: 12px;
     min-height: 100px;
     align-content: flex-start;
+    min-width: 300px;
 }
 
 .discard-card {
     background: var(--text-light);
-    color: var (--text-dark);
+    color: var(--text-dark);
     padding: 0.5rem 1rem;
     border-radius: 6px;
     display: flex;
     gap: 0.5rem;
     align-items: center;
     font-size: 1.1rem;
+    width: 50px;
+    height: 70px;
+    justify-content: center;
+    position: relative;
 }
 
 .discard-count {
-    color: var (--danger);
+    color: var(--danger);
     font-weight: bold;
     font-size: 1.2rem;
     background: rgba(255,255,255,0.1);
     padding: 0.8rem 1.2rem;
     border-radius: 8px;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.8rem;
+    background: rgba(0,0,0,0.2);
+    padding: 2px 5px;
+    border-radius: 3px;
 }
 
 /* Players */
@@ -323,8 +336,6 @@ body {
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    text-transform: uppercase;
-    font-weight: bold;
     font-size: 0.9rem;
     color: var(--highlight);
 }
@@ -394,6 +405,8 @@ body {
     overflow: hidden;
     border: 2px solid;
     animation: card-glow 1.5s ease-in-out infinite alternate;
+    font-size: 1.4rem;
+    flex-direction: column;
 }
 
 .card.special::before {
@@ -422,6 +435,8 @@ body {
         rgba(255,255,255,0.1) 100%);
     opacity: 0.3;
     z-index: 1;
+    font-size: 1rem;
+    margin-top: -0.5rem;
 }
 
 .card.special.adder {
@@ -430,10 +445,18 @@ body {
     color: white;
 }
 
+.card.special.adder::after {
+    content: "+";
+}
+
 .card.special.multiplier {
     background: linear-gradient(45deg, #f1c40f, #f39c12);
     border-color: #f1c40f;
     color: var(--text-dark);
+}
+
+.card.special.multiplier::after {
+    content: "×";
 }
 
 @keyframes card-glow {
@@ -607,27 +630,85 @@ body {
     to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
-/* Deck Area */
-.deck-area {
+/* Discard Pile Fixes */
+.discard-pile {
     display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 3rem;
+    flex-wrap: wrap;
+    gap: 0.8rem;
     align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--secondary);
+    border-radius: 12px;
+    min-height: 120px;
 }
 
-.discard-info {
+.discard-card {
+    width: 50px;
+    height: 70px;
+    background: var(--text-light);
+    color: var(--text-dark);
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    background: rgba(255,255,255,0.1);
-    padding: 1rem 2rem;
-    border-radius: 12px;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .discard-count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: rgba(0,0,0,0.2);
+    color: var(--text-light);
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 3px;
+    line-height: 1;
+}
+
+/* Special Cards in Discard Pile */
+.discard-card.special {
+    color: white;
+    font-size: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.discard-card.special.adder {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+}
+
+.discard-card.special.multiplier {
+    background: linear-gradient(45deg, #f1c40f, #f39c12);
+}
+
+.discard-card.special::after {
+    content: "+";
+    font-size: 0.9rem;
+    margin-top: -5px;
+}
+
+.discard-card.special.multiplier::after {
+    content: "×";
+}
+
+/* Discard Area */
+.discard-info {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.deck-count {
     font-size: 1.3rem;
-    font-weight: bold;
+    background: rgba(255,255,255,0.1);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
     color: var(--highlight);
 }
 
@@ -635,58 +716,21 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 0.8rem;
+    align-items: center;
+    padding: 1rem;
     background: var(--secondary);
-    padding: 1.2rem;
     border-radius: 12px;
-    min-height: 100px;
-    align-content: flex-start;
-    min-width: 300px;
-}
-
-.discard-pile {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    align-items: center;
-    justify-content: center;
-}
-
-.discard-card {
-    width: 50px;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
+    min-height: 120px;
 }
 
 .discard-count {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
-    font-size: 0.8rem;
-    background: rgba(0,0,0,0.2);
+    bottom: 3px;
+    right: 3px;
+    font-size: 0.7rem;
+    background: rgba(0,0,0,0.3);
+    color: white;
     padding: 2px 5px;
     border-radius: 3px;
-}
-
-.card.special {
-    font-size: 1.4rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.card.special::after {
-    font-size: 1rem;
-    margin-top: -0.5rem;
-}
-
-.card.special.adder::after {
-    content: "+";
-}
-
-.card.special.multiplier::after {
-    content: "×";
+    line-height: 1;
 }
