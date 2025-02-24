@@ -59,12 +59,12 @@ app.get('/health', (req, res) => {
 // Existing game logic
 const createDeck = () => {
     const deck = [];
-    // Regular cards (1-12)
+    // Regular cards (1-12) - 84 total
     for (let number = 1; number <= 12; number++) {
         for (let i = 0; i < number; i++) deck.push(number);
     }
-    // Special cards (6 total)
-    ['2+', '4+', '6+', '8+', '10+', '2x'].forEach(card => deck.push(card));
+    // Special cards - Now 3 Second Chance + existing 6 = 9 total
+    ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC'].forEach(card => deck.push(card));
     return shuffle(deck);
 };
 
@@ -77,11 +77,20 @@ const shuffle = array => {
 };
 
 io.on('connection', socket => {
-    console.log(`User connected: ${socket.id}`);
+    console.log(`New connection: ${socket.id}`);
+    
+    socket.on('error', (error) => {
+        console.error(`Socket error (${socket.id}):`, error);
+    });
 
-    // Existing game event handlers
     socket.on('create-game', playerName => {
+        if (!playerName || playerName.length < 3) {
+            return socket.emit('error', 'Name must be at least 3 characters!');
+        }
+        
         const gameId = uuidv4().substr(0, 5).toUpperCase();
+        console.log(`[Game Created] ${gameId} by ${playerName}`);
+        
         const newGame = {
             id: gameId,
             hostId: socket.id,
@@ -93,7 +102,8 @@ io.on('connection', socket => {
                 status: 'waiting',
                 roundScore: 0,
                 totalScore: 0,
-                bustedCard: null
+                bustedCard: null,
+                hasSecondChance: false // Add this
             }],
             deck: createDeck(),
             discardPile: [],
@@ -107,9 +117,15 @@ io.on('connection', socket => {
     });
 
     socket.on('join-game', (gameId, playerName) => {
-        const game = games.get(gameId);
-        if (!game) return socket.emit('error', 'Game not found');
+        console.log(`[Join Attempt] Game ID: ${gameId} | Player: ${playerName}`);
         
+        const game = games.get(gameId);
+        if (!game) {
+            console.log(`[Join Failed] Game not found: ${gameId}`);
+            return socket.emit('error', `Game ${gameId} not found!`);
+        }
+        
+        console.log(`[Join Success] Adding ${playerName} to ${gameId}`);
         game.players.push({
             id: socket.id,
             name: playerName,
@@ -118,9 +134,12 @@ io.on('connection', socket => {
             status: 'waiting',
             roundScore: 0,
             totalScore: 0,
-            bustedCard: null
+            bustedCard: null,
+            hasSecondChance: false
         });
+        
         socket.join(gameId);
+        console.log(`[Players] Game ${gameId} now has ${game.players.length} players`);
         io.to(gameId).emit('game-update', game);
         socket.emit('game-joined', gameId);
     });
@@ -149,11 +168,28 @@ io.on('connection', socket => {
         const card = game.deck.pop();
         game.discardPile.push(card);
 
+        if (card === 'SC') {
+            player.hasSecondChance = true;
+            game.discardPile.push(card);
+            advanceTurn(game);
+            return io.to(gameId).emit('game-update', game);
+        }
+
         if (typeof card === 'number') {
             if (player.regularCards.includes(card)) {
-                player.status = 'busted';
-                player.bustedCard = card;
-                player.roundScore = 0;
+                if (player.hasSecondChance) {
+                    // Use second chance
+                    player.hasSecondChance = false;
+                    game.discardPile = game.discardPile.filter(c => c !== 'SC');
+                    game.discardPile.push('SC-USED');
+                    io.to(gameId).emit('game-update', game);
+                    return;
+                } else {
+                    // Normal bust handling
+                    player.status = 'busted';
+                    player.bustedCard = card;
+                    player.roundScore = 0;
+                }
             } else {
                 player.regularCards.push(card);
                 if (player.regularCards.length >= MAX_REGULAR_CARDS) {
@@ -286,3 +322,12 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
+
+setInterval(() => {
+    games.forEach((game, id) => {
+        if (game.players.length === 0) {
+            console.log(`Cleaning up empty game: ${id}`);
+            games.delete(id);
+        }
+    });
+}, 60000); // Cleanup every minute

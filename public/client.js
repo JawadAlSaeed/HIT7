@@ -22,15 +22,38 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 
+// Add connection status listeners
+socket.on('connect', () => {
+    console.log('Connected to server');
+});
+
+socket.on('disconnect', () => {
+    alert('Lost connection to server!');
+});
+
 function createGame() {
     const name = prompt('Enter your name:');
     if (name) socket.emit('create-game', name);
 }
 
 function joinGame() {
-    const code = document.getElementById('gameId').value.trim().toUpperCase();
+    const gameIdInput = document.getElementById('gameId');
+    const code = gameIdInput.value.trim().toUpperCase();
+    
+    if (code.length !== 5) {
+        alert('Game code must be 5 characters!');
+        gameIdInput.focus();
+        return;
+    }
+    
     const name = prompt('Enter your name:');
-    if (code && name) socket.emit('join-game', code, name);
+    if (!name) {
+        alert('Please enter a name!');
+        return;
+    }
+    
+    console.log(`Attempting to join game: ${code}`);
+    socket.emit('join-game', code, name);
 }
 
 function startGame() { socket.emit('start-game', currentGameId); }
@@ -94,12 +117,7 @@ function updateGameDisplay(game) {
         <div class="player ${index === game.currentPlayer ? 'current-turn' : ''} ${player.status}">
             <div class="player-header">
                 <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
-                <div class="player-status">
-                    ${getStatusIcon(player.status)}
-                    ${player.bustedCard ? `
-                        <div class="busted-card">BUSTED ON ${player.bustedCard}</div>
-                    ` : ''}
-                </div>
+                ${playerTemplate(player)}
             </div>
             <div class="scores">
                 <div class="score-box">
@@ -124,7 +142,7 @@ function updateGameDisplay(game) {
                 <div class="special-cards-container">
                     ${player.specialCards.map(card => `
                         <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
-                            ${card.replace('+', '')}${card.endsWith('x') ? '✕' : '+'}
+                            ${card.replace('+', '')}${card.endsWith('x') ? '' : '+'}
                         </div>
                     `).join('')}
                 </div>
@@ -134,6 +152,18 @@ function updateGameDisplay(game) {
 
     document.getElementById('deckCount').textContent = game.deck.length;
 }
+
+const playerTemplate = player => `
+    <div class="player-status">
+        ${getStatusIcon(player.status)}
+        ${player.bustedCard ? `
+            <div class="busted-card">BUSTED ON ${player.bustedCard}</div>
+        ` : ''}
+        ${player.hasSecondChance ? `
+            <div class="second-chance-indicator">🛡️ SECOND CHANCE</div>
+        ` : ''}
+    </div>
+`;
 
 function showGameArea() {
     document.querySelector('.lobby-screen').style.display = 'none';

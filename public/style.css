@@ -459,6 +459,20 @@ body {
     content: "×";
 }
 
+/* Second Chance Card Styling */
+.card.special.second-chance {
+    background: linear-gradient(45deg, #2ecc71, #3498db);
+    position: relative;
+}
+
+.card.special.second-chance::after {
+    content: "🛡️";
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 1rem;
+}
+
 @keyframes card-glow {
     from { box-shadow: 0 0 5px rgba(255,255,255,0.2); }
     to { box-shadow: 0 0 15px rgba(255,255,255,0.4); }
@@ -696,6 +710,17 @@ body {
     content: "×";
 }
 
+/* Used Second Chance Card */
+.discard-card.special.sc-used {
+    background: #7f8c8d;
+    opacity: 0.7;
+}
+
+.discard-card.special.sc-used::after {
+    content: "🛡️❌";
+    font-size: 1.2rem;
+}
+
 /* Discard Area */
 .discard-info {
     display: flex;
@@ -733,4 +758,17 @@ body {
     padding: 2px 5px;
     border-radius: 3px;
     line-height: 1;
+}
+
+/* Second Chance Indicator */
+.second-chance-indicator {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
 }
