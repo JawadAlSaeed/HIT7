@@ -112,13 +112,54 @@ body {
 }
 
 .game-header {
+    background: linear-gradient(145deg, #34495e, #2c3e50);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: rgba(255,255,255,0.1);
-    border-radius: 12px;
+    gap: 2rem;
+}
+
+.game-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(255,255,255,0.03) 0%, 
+        rgba(255,255,255,0.06) 50%, 
+        rgba(255,255,255,0.03) 100%);
+}
+
+.game-header > * {
+    position: relative;
+    z-index: 1;
+}
+
+.deck-info {
+    font-size: 1.2rem;
+    background: rgba(0,0,0,0.15);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.game-code-display {
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    background: rgba(0,0,0,0.15);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
 }
 
 .deck-area {
@@ -151,7 +192,7 @@ body {
 }
 
 .discard-count {
-    color: var(--danger);
+    color: var (--danger);
     font-weight: bold;
 }
 
@@ -164,12 +205,32 @@ body {
 }
 
 .player {
-    background: var(--secondary);
+    background: linear-gradient(145deg, #34495e, #2c3e50);
     padding: 1.5rem;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
+    border-radius: 15px;
+    margin: 1rem 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    border: 2px solid rgba(255,255,255,0.1);
     position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.player::after {
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .player.current-turn::before {
@@ -203,13 +264,27 @@ body {
 }
 
 .scores {
-    display: flex;
-    gap: 2rem;
-    font-size: 1.2rem;
-    margin: 1.2rem 0;
-    background: rgba(0,0,0,0.2);
-    padding: 0.8rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    background: rgba(0,0,0,0.15);
+    padding: 1rem;
+    border-radius: 10px;
+    margin: 1rem 0;
+}
+
+.score-box {
+    text-align: center;
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.05);
     border-radius: 8px;
+}
+
+.score-value {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--highlight);
+    margin-top: 0.5rem;
 }
 
 .player-status {
@@ -239,6 +314,10 @@ body {
 }
 
 .busted-card {
+    background: rgba(231,76,60,0.15);
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin-top: 0.5rem;
     color: var(--danger);
     font-weight: bold;
     margin: 0.8rem 0 0;
@@ -250,9 +329,18 @@ body {
 
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(55px, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    gap: 0.8rem;
     margin-top: 1.5rem;
+}
+
+.card-grid::before {
+    content: "Regular Cards";
+    grid-column: 1 / -1;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
 }
 
 .card {
@@ -278,6 +366,79 @@ body {
     0% { transform: scale(1); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
+}
+
+/* Special Card Styling */
+.card.special {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2; /* Ensure content stays above glow effects */
+    overflow: hidden;
+    border: 2px solid;
+    animation: card-glow 1.5s ease-in-out infinite alternate;
+}
+
+.card.special::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 6px;
+    background: inherit;
+    z-index: -1;
+}
+
+.card.special::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(255,255,255,0.1) 0%, 
+        rgba(255,255,255,0.3) 50%, 
+        rgba(255,255,255,0.1) 100%);
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.card.special.adder {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+    border-color: #27ae60;
+    color: white;
+}
+
+.card.special.multiplier {
+    background: linear-gradient(45deg, #f1c40f, #f39c12);
+    border-color: #f1c40f;
+    color: var(--text-dark);
+}
+
+@keyframes card-glow {
+    from { box-shadow: 0 0 5px rgba(255,255,255,0.2); }
+    to { box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+}
+
+/* Special Cards Section */
+.special-cards-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(255,255,255,0.1);
+}
+
+.special-cards-container::before {
+    content: "Special Cards";
+    display: block;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
 }
 
 /* Controls */
@@ -374,6 +535,17 @@ body {
 
     .players-container {
         grid-template-columns: 1fr;
+    }
+
+    .game-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .deck-info, .game-code-display {
+        width: 100%;
+        justify-content: center;
     }
 }
 

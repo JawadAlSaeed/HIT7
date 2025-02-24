@@ -69,13 +69,15 @@ function updateGameDisplay(game) {
         return acc;
     }, {});
     
-    document.getElementById('discard').innerHTML = Object.entries(discardCounts)
-        .map(([card, count]) => `
-            <div class="card ${typeof card === 'string' ? 
-                (card.endsWith('x') ? 'special multiplier' : 'special adder') : ''}">
-                ${card}${typeof card === 'number' ? `<small class="discard-count">x${count}</small>` : ''}
+    document.getElementById('discard').innerHTML = Object.entries(discardCounts).map(([cardStr, count]) => {
+        const isNumber = !isNaN(cardStr);
+        return `
+            <div class="card ${isNumber ? '' : (cardStr.endsWith('x') ? 'special multiplier' : 'special adder')}">
+                ${isNumber ? parseInt(cardStr, 10) : cardStr}
+                ${isNumber ? `<small class="discard-count">x${count}</small>` : ''}
             </div>
-        `).join('');
+        `;
+    }).join('');
 
     document.getElementById('playersContainer').innerHTML = game.players.map((player, index) => `
         <div class="player ${index === game.currentPlayer ? 'current-turn' : ''} ${player.status}">
@@ -104,16 +106,19 @@ function updateGameDisplay(game) {
             </div>
             <div class="card-grid">
                 ${player.regularCards.map(card => `
-                    <div class="card ${player.regularCards.filter(c => c === card).length > 1 ? 'bust' : ''}">
-                        ${card}
-                    </div>
-                `).join('')}
-                ${player.specialCards.map(card => `
-                    <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
-                        ${card}
-                    </div>
+                    <div class="card">${card}</div>
                 `).join('')}
             </div>
+            ${player.specialCards.length > 0 ? `
+                <div class="special-cards-container">
+                    ${player.specialCards.map(card => `
+                        <div class="card special ${card.endsWith('x') ? 'multiplier' : 'adder'}">
+                            ${card}
+                            ${card.endsWith('x') ? '✖️' : '➕'}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
         </div>
     `).join('');
 

@@ -214,29 +214,53 @@ io.on('connection', socket => {
     };
 
     const checkGameStatus = game => {
+        // Check for instant win condition first
+        const potentialWinner = game.players.find(p => 
+            p.status === 'stood' && p.totalScore + p.roundScore >= WINNING_SCORE
+        );
+
+        if (potentialWinner) {
+            potentialWinner.totalScore += potentialWinner.roundScore;
+            io.to(game.id).emit('game-over', { 
+                players: game.players,
+                winner: potentialWinner
+            });
+            game.status = 'finished';
+            return;
+        }
+
+        // Original game flow
         const activePlayers = game.players.filter(p => p.status === 'active');
         const allBusted = game.players.every(p => p.status === 'busted');
 
         if (activePlayers.length > 0 && game.deck.length > 0) return;
 
+        // Replace the existing players.forEach with:
         game.players.forEach(player => {
-            player.totalScore += player.roundScore;
+            if (player.status !== 'busted') {
+                player.totalScore += player.roundScore;
+            } else {
+                player.roundScore = 0; // Clear busted round score
+            }
         });
 
-        if (allBusted) {
-            io.to(game.id).emit('all-busted');
-            setTimeout(() => {
-                startNewRound(game);
-                io.to(game.id).emit('new-round', game);
-            }, 3000);
+        // Check for final winner after round ends
+        const winner = game.players.reduce((max, p) => 
+            p.totalScore > max.totalScore ? p : max, { totalScore: -1 });
+
+        if (winner.totalScore >= WINNING_SCORE) {
+            io.to(game.id).emit('game-over', { 
+                players: game.players,
+                winner: winner
+            });
+            game.status = 'finished';
         } else {
-            const winner = game.players.find(p => p.totalScore >= WINNING_SCORE);
-            if (winner) {
-                io.to(game.id).emit('game-over', { 
-                    players: game.players,
-                    winner: winner
-                });
-                game.status = 'finished';
+            if (allBusted) {
+                io.to(game.id).emit('all-busted');
+                setTimeout(() => {
+                    startNewRound(game);
+                    io.to(game.id).emit('new-round', game);
+                }, 3000);
             } else {
                 startNewRound(game);
                 io.to(game.id).emit('new-round', game);
