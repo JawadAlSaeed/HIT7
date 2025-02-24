@@ -33,8 +33,8 @@ body {
 .game-logo {
     font-size: 4rem;
     color: var(--highlight);
-    margin: 2rem 0;
-    font-family: 'Luckiest Guy', cursive;
+    margin: 1rem 0;
+    font-family: "Cairo Play", serif;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
@@ -605,4 +605,40 @@ body {
 @keyframes popupIn {
     from { opacity: 0; transform: translate(-50%, -60%); }
     to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* Deck Area */
+.deck-area {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 3rem;
+    align-items: center;
+}
+
+.discard-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: rgba(255,255,255,0.1);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+}
+
+.discard-count {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--highlight);
+}
+
+.discard-pile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    background: var(--secondary);
+    padding: 1.2rem;
+    border-radius: 12px;
+    min-height: 100px;
+    align-content: flex-start;
+    min-width: 300px;
 }
