@@ -465,6 +465,16 @@ body {
     filter: grayscale(1);
 }
 
+.card.special.freeze {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    border-color: #3498db;
+}
+
+.card.special.freeze::after {
+    content: "❄️";
+    font-size: 1.8rem;
+}
+
 @keyframes card-glow {
     from { box-shadow: 0 0 5px rgba(255,255,255,0.2); }
     to { box-shadow: 0 0 15px rgba(255,255,255,0.4); }
@@ -941,4 +951,47 @@ body {
     display: flex;
     gap: 1rem;
     margin-left: auto;
+}
+
+/* Freeze popup styling */
+.freeze-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--secondary);
+    padding: 2rem;
+    border-radius: 15px;
+    z-index: 1000;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    border: 3px solid #3498db;
+}
+
+.freeze-popup .popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.freeze-popup button {
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.freeze-popup .freeze-target {
+    background: #3498db;
+    color: white;
+}
+
+.freeze-popup .cancel-freeze {
+    background: var(--danger);
+    color: white;
+    margin-top: 1rem;
+}
+
+.freeze-popup button:hover {
+    transform: translateY(-2px);
 }

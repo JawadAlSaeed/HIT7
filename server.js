@@ -52,8 +52,8 @@ const createDeck = () => {
     for (let i = 0; i < number; i++) deck.push(number);
   }
 
-  // Special cards = 9 cards (total 87)
-  ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC'].forEach(c => deck.push(c));
+  // Special cards = 12 cards (total 90)
+  ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC', 'Freeze', 'Freeze', 'Freeze'].forEach(c => deck.push(c));
   
   return shuffle(deck);
 };
@@ -141,6 +141,17 @@ io.on('connection', socket => {
       return io.to(gameId).emit('game-update', game);
     }
 
+    // Handle Freeze card
+    if (card === 'Freeze') {
+      player.specialCards.push(card);
+      // Only show active players except yourself
+      const targets = game.players.filter(p => 
+        p.id !== socket.id && p.status === 'active'
+      );
+      socket.emit('select-freeze-target', game.id, targets);
+      return;  // Stop further processing
+    }
+
     // Handle number cards
     if (typeof card === 'number') {
       handleNumberCard(game, player, card);
@@ -172,6 +183,24 @@ io.on('connection', socket => {
     if (game && socket.id === game.hostId) {
       games.delete(gameId);
       io.to(gameId).emit('game-reset');
+    }
+  });
+
+  socket.on('freeze-player', (gameId, targetId) => {
+    const game = games.get(gameId);
+    if (!game || game.status !== 'playing') return;
+    
+    const player = game.players.find(p => p.id === socket.id);
+    const target = game.players.find(p => p.id === targetId);
+    
+    if (player && target && player.specialCards.includes('Freeze')) {
+      // Remove Freeze card and apply effect
+      player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
+      target.status = 'stood';
+      game.discardPile.push('Freeze');
+      
+      io.to(gameId).emit('game-update', game);
+      checkGameStatus(game);
     }
   });
 

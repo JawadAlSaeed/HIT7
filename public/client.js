@@ -23,6 +23,40 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
+socket.on('select-freeze-target', showFreezePopup);
+socket.on('cancel-freeze', () => {
+  const popup = document.getElementById('freezePopup');
+  if (popup) popup.remove();
+});
+
+socket.on('select-freeze-target', (gameId, targets) => {
+  const popup = document.createElement('div');
+  popup.className = 'freeze-popup';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>❄️ Select player to freeze:</h3>
+      ${targets.map(p => `
+        <button class="freeze-target" data-id="${p.id}">
+          ${p.name}
+        </button>
+      `).join('')}
+      <button class="cancel-freeze">Cancel</button>
+    </div>
+  `;
+
+  popup.querySelectorAll('.freeze-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('use-freeze', gameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
+    popup.remove();
+  });
+
+  document.body.appendChild(popup);
+});
 
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
@@ -79,6 +113,9 @@ function handleGameUpdate(game) {
     document.getElementById('startGame').style.display = 
         isHost && game.status === 'lobby' ? 'block' : 'none';
     document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
+
+    // Remove any existing freeze popups when game updates
+    document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
 }
 
 // Display updates
@@ -176,12 +213,15 @@ function scoreBox(label, value) {
 }
 
 function getSpecialCardClass(card) {
-    return card === 'SC' ? 'second-chance' : 
-        card.endsWith('x') ? 'multiplier' : 'adder';
+  return card === 'SC' ? 'second-chance' :
+    card === 'Freeze' ? 'freeze' :
+    card.endsWith('x') ? 'multiplier' : 'adder';
 }
 
 function getSpecialCardDisplay(card) {
-    return card === 'SC' ? '🛡️' : card.replace(/[^0-9]/g, '');
+  return card === 'SC' ? '🛡️' :
+    card === 'Freeze' ? '❄️' :
+    card.replace(/[^0-9]/g, '');
 }
 
 function getStatusIcon(status) {
@@ -327,4 +367,35 @@ function handleRoundSummary({ players, allBusted }) {
         }
         count--;
     }, 1000);
+}
+
+function showFreezePopup(gameId, targets) {
+  const popup = document.createElement('div');
+  popup.id = 'freezePopup';
+  popup.className = 'freeze-popup';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Select a player to freeze:</h3>
+      ${targets.map(t => `
+        <button class="freeze-target" data-id="${t.id}">
+          ${t.name}
+        </button>
+      `).join('')}
+      <button class="cancel-freeze">Cancel</button>
+    </div>
+  `;
+
+  popup.querySelectorAll('.freeze-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('freeze-player', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
+    socket.emit('cancel-freeze', currentGameId);
+    popup.remove();
+  });
+
+  document.body.appendChild(popup);
 }
