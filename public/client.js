@@ -97,7 +97,7 @@ function updateDiscardPile(discardPile) {
     document.getElementById('discard').innerHTML = Object.entries(discardCounts)
         .map(([cardStr, count]) => {
             const isNumber = !isNaN(cardStr);
-            const isSpecial = cardStr.includes('+') || cardStr.includes('x') || cardStr === 'SC';
+            const isSC = cardStr === 'SC';
 
             if (isNumber) {
                 return `
@@ -114,10 +114,10 @@ function updateDiscardPile(discardPile) {
                 'SC': 'second-chance'
             };
             const cardType = Object.entries(typeMap).find(([key]) => cardStr.includes(key))?.[1];
-            const displayValue = cardStr.replace(/[^0-9SC]/g, '').replace('SC', '🛡️');
+            const displayValue = isSC ? '🛡️' : cardStr.replace(/[^0-9]/g, '');
 
             return `
-                <div class="discard-card special ${cardType} ${cardStr.endsWith('USED') ? 'sc-used' : ''}">
+                <div class="discard-card special ${cardType}">
                     ${displayValue}
                     ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
                 </div>
