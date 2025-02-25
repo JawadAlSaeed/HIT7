@@ -212,7 +212,7 @@ function getStatusIcon(status) {
         stood: ['🛑', 'STOOD'], 
         busted: ['💥', 'BUSTED'],
         waiting: ['⏳', 'WAITING'],
-        frozen: ['❄️', 'FROZEN']
+        frozen: ['❄️', 'FROZEN'] // Add frozen status
     };
     return `
         <span class="status-icon">${statusMap[status][0]}</span>

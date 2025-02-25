@@ -197,7 +197,7 @@ io.on('connection', socket => {
     if (player && target && player.specialCards.includes('Freeze')) {
       // Remove Freeze card and apply effect
       player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
-      target.status = 'stood';
+      target.status = 'frozen'; // Set target status to frozen
       game.discardPile.push('Freeze');
       
       io.to(gameId).emit('game-update', game);
