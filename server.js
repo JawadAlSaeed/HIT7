@@ -280,7 +280,7 @@ const handleNumberCard = (game, player, card) => {
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
-      game.discardPile.push('SC-USED');
+      game.discardPile.push('SC');
     } else {
       player.status = 'busted';
       player.bustedCard = card;
