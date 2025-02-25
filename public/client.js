@@ -22,6 +22,7 @@ socket.on('game-over', handleGameOver);
 socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
+socket.on('round-summary', handleRoundSummary);
 
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
@@ -196,6 +197,16 @@ function getStatusIcon(status) {
     `;
 }
 
+function getStatusText(status) {
+    const statusMap = {
+        active: 'ACTIVE',
+        stood: 'STOOD', 
+        busted: 'BUSTED',
+        waiting: 'WAITING'
+    };
+    return statusMap[status];
+}
+
 // UI controls
 function showGameArea() {
     document.querySelector('.lobby-screen').style.display = 'none';
@@ -207,6 +218,7 @@ function toggleActionButtons(active) {
     document.getElementById('standButton').style.display = active ? 'block' : 'none';
 }
 
+// Game event handlers
 function handleGameJoined(gameId) {
     currentGameId = gameId;
     document.getElementById('gameCode').textContent = gameId;
@@ -273,4 +285,41 @@ function handleGameReset() {
 
 function handleError(message) {
     alert(message);
+}
+
+function handleRoundSummary({ players, allBusted }) {
+    const popup = document.createElement('div');
+    popup.className = 'round-summary-popup';
+    
+    const playerList = players.map(player => `
+        <div class="player-summary ${player.status}">
+            <span class="player-name">${player.name}</span>
+            <div class="status-badge">${getStatusText(player.status)}</div>
+            <div class="scores">
+                <span class="score">Round: ${player.roundScore}</span>
+                <span class="score">Total: ${player.totalScore}</span>
+            </div>
+        </div>
+    `).join('');
+
+    popup.innerHTML = `
+        <div class="popup-content">
+            <h2>${allBusted ? '💥 ALL PLAYERS BUSTED! 💥' : '🏁 ROUND SUMMARY 🏁'}</h2>
+            <div class="player-list">${playerList}</div>
+            <p class="countdown">Next round starting in <span id="countdown">5</span>...</p>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+    
+    let count = 4;
+    const countdownElement = popup.querySelector('#countdown');
+    const interval = setInterval(() => {
+        countdownElement.textContent = count;
+        if (count <= 0) {
+            clearInterval(interval);
+            popup.remove();
+        }
+        count--;
+    }, 1000);
 }

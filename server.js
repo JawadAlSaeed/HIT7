@@ -9,7 +9,7 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 
-// Heroku-specific WebSocket configuration
+// Configuration
 const io = new Server(server, {
   cors: {
     origin: [
@@ -21,10 +21,10 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling'] // Required for Heroku
+  transports: ['websocket', 'polling']
 });
 
-// Security middleware
+// Middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -36,319 +36,278 @@ app.use(helmet({
   }
 }));
 app.use(cors());
-
 app.use(express.static('public'));
+
+// Game state
 const games = new Map();
 const WINNING_SCORE = 200;
 const MAX_REGULAR_CARDS = 7;
 
-// WebSocket keep-alive for Heroku
-setInterval(() => {
-  io.emit('ping', Date.now());
-}, 55000);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'healthy', 
-    timestamp: Date.now(),
-    activeGames: games.size
-  });
-});
-
-// Existing game logic
+// Helper functions
 const createDeck = () => {
-    const deck = [];
-    
-    // Regular cards (1-12)
-    for (let number = 1; number <= 12; number++) {
-        for (let i = 0; i < number; i++) {
-            deck.push(number);
-        }
-    }
-    
-    // Special cards (6 existing + 3 Second Chance)
-    const specialCards = [
-        '2+', '4+', '6+', '8+', '10+',  // 5 adders
-        '2x',                            // 1 multiplier
-        'SC', 'SC', 'SC'                // 3 second chance
-    ];
-    
-    specialCards.forEach(card => deck.push(card));
-    
-    return shuffle(deck);
+  const deck = [];
+  
+  // Regular cards (1-12) = 78 cards
+  for (let number = 1; number <= 12; number++) {
+    for (let i = 0; i < number; i++) deck.push(number);
+  }
+
+  // Special cards = 9 cards (total 87)
+  ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC'].forEach(c => deck.push(c));
+  
+  return shuffle(deck);
 };
 
 const shuffle = array => {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 };
 
+// Game logic
 io.on('connection', socket => {
-    console.log(`New connection: ${socket.id}`);
+  console.log(`New connection: ${socket.id}`);
+
+  socket.on('create-game', playerName => {
+    if (!playerName || playerName.length < 3) {
+      return socket.emit('error', 'Name must be at least 3 characters!');
+    }
+
+    const gameId = uuidv4().substr(0, 5).toUpperCase();
+    const newGame = {
+      id: gameId,
+      hostId: socket.id,
+      players: [createPlayer(socket.id, playerName)],
+      deck: createDeck(),
+      discardPile: [],
+      currentPlayer: 0,
+      status: 'lobby',
+      roundNumber: 1
+    };
     
-    socket.on('error', (error) => {
-        console.error(`Socket error (${socket.id}):`, error);
-    });
+    games.set(gameId, newGame);
+    socket.join(gameId);
+    socket.emit('game-created', gameId);
+  });
 
-    socket.on('create-game', playerName => {
-        if (!playerName || playerName.length < 3) {
-            return socket.emit('error', 'Name must be at least 3 characters!');
-        }
-        
-        const gameId = uuidv4().substr(0, 5).toUpperCase();
-        console.log(`[Game Created] ${gameId} by ${playerName}`);
-        
-        const newGame = {
-            id: gameId,
-            hostId: socket.id,
-            players: [{
-                id: socket.id,
-                name: playerName,
-                regularCards: [],
-                specialCards: [],
-                status: 'waiting',
-                roundScore: 0,
-                totalScore: 0,
-                bustedCard: null,
-                hasSecondChance: false // Add this
-            }],
-            deck: createDeck(),
-            discardPile: [],
-            currentPlayer: 0,
-            status: 'lobby',
-            roundNumber: 1
-        };
-        games.set(gameId, newGame);
-        socket.join(gameId);
-        socket.emit('game-created', gameId);
-    });
+  socket.on('join-game', (gameId, playerName) => {
+    const game = games.get(gameId);
+    if (!game) return socket.emit('error', `Game ${gameId} not found!`);
 
-    socket.on('join-game', (gameId, playerName) => {
-        console.log(`[Join Attempt] Game ID: ${gameId} | Player: ${playerName}`);
-        
-        const game = games.get(gameId);
-        if (!game) {
-            console.log(`[Join Failed] Game not found: ${gameId}`);
-            return socket.emit('error', `Game ${gameId} not found!`);
-        }
-        
-        console.log(`[Join Success] Adding ${playerName} to ${gameId}`);
-        game.players.push({
-            id: socket.id,
-            name: playerName,
-            regularCards: [],
-            specialCards: [],
-            status: 'waiting',
-            roundScore: 0,
-            totalScore: 0,
-            bustedCard: null,
-            hasSecondChance: false
-        });
-        
-        socket.join(gameId);
-        console.log(`[Players] Game ${gameId} now has ${game.players.length} players`);
-        io.to(gameId).emit('game-update', game);
-        socket.emit('game-joined', gameId);
-    });
+    game.players.push(createPlayer(socket.id, playerName));
+    socket.join(gameId);
+    io.to(gameId).emit('game-update', game);
+    socket.emit('game-joined', gameId);
+  });
 
-    socket.on('start-game', gameId => {
-        const game = games.get(gameId);
-        if (!game || game.status !== 'lobby') return;
-        
-        game.status = 'playing';
-        game.players.forEach(p => p.status = 'active');
-        io.to(gameId).emit('game-started', game);
-    });
+  socket.on('start-game', gameId => {
+    const game = games.get(gameId);
+    if (!game || game.status !== 'lobby' || socket.id !== game.hostId) return;
 
-    socket.on('flip-card', gameId => {
-        const game = games.get(gameId);
-        const player = game.players[game.currentPlayer];
-        
-        // Add this check first
-        if (game.deck.length === 0 && game.discardPile.length === 0) {
-            return socket.emit('error', 'No cards left to flip!');
-        }
+    game.status = 'playing';
+    game.players.forEach(p => p.status = 'active');
+    io.to(gameId).emit('game-started', game);
+  });
 
-        if (player.id !== socket.id || player.status !== 'active') return;
+  socket.on('flip-card', gameId => {
+    const game = games.get(gameId);
+    if (!game || game.status !== 'playing') return;
 
-        if (game.deck.length === 0) {
-            game.deck = shuffle([...game.discardPile]);
-            game.discardPile = [];
-        }
+    const player = game.players[game.currentPlayer];
+    if (player.id !== socket.id || player.status !== 'active') return;
 
-        const card = game.deck.pop();
-        game.discardPile.push(card);
+    if (game.deck.length === 0) {
+      game.deck = shuffle([...game.discardPile]);
+      game.discardPile = [];
+    }
 
-        if (card === 'SC') {
-            // Add to player's special cards
-            player.specialCards.push(card);
-            io.to(gameId).emit('game-update', game);
-            return advanceTurn(game);
-        }
+    const card = game.deck.pop();
+    game.discardPile.push(card);
 
-        if (typeof card === 'number') {
-            if (player.regularCards.includes(card)) {
-                // Check for Second Chance in special cards
-                const scIndex = player.specialCards.indexOf('SC');
-                if (scIndex > -1) {
-                    // Use Second Chance
-                    player.specialCards.splice(scIndex, 1);
-                    game.discardPile.push('SC-USED');
-                    io.to(gameId).emit('game-update', game);
-                    return;
-                } else {
-                    // Normal bust handling
-                    player.status = 'busted';
-                    player.bustedCard = card;
-                    player.roundScore = 0;
-                }
-            } else {
-                player.regularCards.push(card);
-                if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-                    player.status = 'stood';
-                }
-            }
-        } else {
-            player.specialCards.push(card);
-        }
+    // Handle Second Chance card
+    if (card === 'SC') {
+      player.specialCards.push(card);
+      advanceTurn(game);
+      return io.to(gameId).emit('game-update', game);
+    }
 
-        // Calculate scores
-        const base = [...new Set(player.regularCards)].reduce((a, b) => a + b, 0);
-        const add = player.specialCards
-            .filter(c => c.endsWith('+'))
-            .map(c => parseInt(c))
-            .reduce((a, b) => a + b, 0);
-        const multiply = player.specialCards
-            .filter(c => c.endsWith('x'))
-            .map(c => parseInt(c))
-            .reduce((a, b) => a * b, 1);
+    // Handle number cards
+    if (typeof card === 'number') {
+      handleNumberCard(game, player, card);
+    } else {
+      player.specialCards.push(card);
+    }
 
-        player.roundScore = (base + add) * (multiply || 1);
+    updatePlayerScore(player);
+    advanceTurn(game);
+    checkGameStatus(game);
+    io.to(gameId).emit('game-update', game);
+  });
 
-        advanceTurn(game);
-        checkGameStatus(game);
-        io.to(gameId).emit('game-update', game);
-    });
+  socket.on('stand', gameId => {
+    const game = games.get(gameId);
+    if (!game || game.status !== 'playing') return;
 
-    socket.on('stand', gameId => {
-        const game = games.get(gameId);
-        if (!game || game.status !== 'playing') return;
+    const player = game.players[game.currentPlayer];
+    if (player.id !== socket.id || player.status !== 'active') return;
 
-        const player = game.players[game.currentPlayer];
-        if (player.id !== socket.id || player.status !== 'active') return;
+    player.status = 'stood';
+    advanceTurn(game);
+    checkGameStatus(game);
+    io.to(gameId).emit('game-update', game);
+  });
 
-        player.status = 'stood';
-        advanceTurn(game);
-        checkGameStatus(game);
-        io.to(gameId).emit('game-update', game);
-    });
+  socket.on('reset-game', gameId => {
+    const game = games.get(gameId);
+    if (game && socket.id === game.hostId) {
+      games.delete(gameId);
+      io.to(gameId).emit('game-reset');
+    }
+  });
 
-    socket.on('reset-game', gameId => {
-        const game = games.get(gameId);
-        if (game && socket.id === game.hostId) {
-            games.delete(gameId);
-            io.to(gameId).emit('game-reset');
-        }
-    });
+  // Game status checking
+  const checkGameStatus = game => {
+    // Check for instant winner
+    const potentialWinner = game.players.find(p => 
+      p.status === 'stood' && p.totalScore + p.roundScore >= WINNING_SCORE
+    );
 
-    const advanceTurn = game => {
-        let nextPlayer = game.currentPlayer;
-        let attempts = 0;
-        
-        do {
-            nextPlayer = (nextPlayer + 1) % game.players.length;
-            attempts++;
-        } while (
-            attempts <= game.players.length && 
-            game.players[nextPlayer].status !== 'active'
-        );
-        
-        game.currentPlayer = nextPlayer;
-    };
+    if (potentialWinner) {
+      potentialWinner.totalScore += potentialWinner.roundScore;
+      endGame(game, potentialWinner);
+      return;
+    }
 
-    const checkGameStatus = game => {
-        // Check for instant win condition first
-        const potentialWinner = game.players.find(p => 
-            p.status === 'stood' && p.totalScore + p.roundScore >= WINNING_SCORE
-        );
+    const activePlayers = game.players.filter(p => p.status === 'active');
+    const allBusted = game.players.every(p => p.status === 'busted');
 
-        if (potentialWinner) {
-            potentialWinner.totalScore += potentialWinner.roundScore;
-            io.to(game.id).emit('game-over', { 
-                players: game.players,
-                winner: potentialWinner
-            });
-            game.status = 'finished';
-            return;
-        }
+    if (activePlayers.length === 0 || game.deck.length === 0) {
+      io.to(game.id).emit('round-summary', {
+        players: game.players,
+        allBusted: allBusted
+      });
 
-        // Original game flow
-        const activePlayers = game.players.filter(p => p.status === 'active');
-        const allBusted = game.players.every(p => p.status === 'busted');
-
-        if (activePlayers.length > 0 && game.deck.length > 0) return;
-
-        // Replace the existing players.forEach with:
+      setTimeout(() => {
         game.players.forEach(player => {
-            if (player.status !== 'busted') {
-                player.totalScore += player.roundScore;
-            } else {
-                player.roundScore = 0; // Clear busted round score
-            }
+          if (player.status !== 'busted') {
+            player.totalScore += player.roundScore;
+          }
         });
 
-        // Check for final winner after round ends
-        const winner = game.players.reduce((max, p) => 
-            p.totalScore > max.totalScore ? p : max, { totalScore: -1 });
-
-        if (winner.totalScore >= WINNING_SCORE) {
-            io.to(game.id).emit('game-over', { 
-                players: game.players,
-                winner: winner
-            });
-            game.status = 'finished';
+        if (allBusted) {
+          startNewRound(game);
         } else {
-            if (allBusted) {
-                io.to(game.id).emit('all-busted');
-                setTimeout(() => {
-                    startNewRound(game);
-                    io.to(game.id).emit('new-round', game);
-                }, 3000);
-            } else {
-                startNewRound(game);
-                io.to(game.id).emit('new-round', game);
-            }
+          checkFinalWinner(game);
         }
-    };
 
-    const startNewRound = game => {
-        game.roundNumber++;
-        game.players.forEach(player => {
-            player.regularCards = [];
-            player.specialCards = [];
-            player.status = 'active';
-            player.roundScore = 0;
-            player.bustedCard = null;
-        });
-        game.currentPlayer = 0;
-    };
+        io.to(game.id).emit('new-round', game);
+      }, 5000);
+    }
+  };
+
+  const endGame = (game, winner) => {
+    game.status = 'finished';
+    io.to(game.id).emit('game-over', {
+      players: game.players,
+      winner: winner
+    });
+  };
+
+  const checkFinalWinner = game => {
+    const winner = game.players.reduce((max, p) => 
+      p.totalScore > max.totalScore ? p : max, { totalScore: -1 });
+
+    if (winner.totalScore >= WINNING_SCORE) {
+      endGame(game, winner);
+    } else {
+      startNewRound(game);
+    }
+  };
+
+  const startNewRound = game => {
+    game.roundNumber++;
+    game.deck = createDeck();
+    game.discardPile = [];
+    game.players.forEach(player => {
+      player.regularCards = [];
+      player.specialCards = [];
+      player.status = 'active';
+      player.roundScore = 0;
+      player.bustedCard = null;
+    });
+    game.currentPlayer = 0;
+  };
 });
 
-// Heroku port configuration
+// Helper functions
+const createPlayer = (id, name) => ({
+  id,
+  name,
+  regularCards: [],
+  specialCards: [],
+  status: 'waiting',
+  roundScore: 0,
+  totalScore: 0,
+  bustedCard: null
+});
+
+const advanceTurn = game => {
+  let nextPlayer = game.currentPlayer;
+  let attempts = 0;
+  
+  do {
+    nextPlayer = (nextPlayer + 1) % game.players.length;
+    attempts++;
+  } while (
+    attempts <= game.players.length && 
+    game.players[nextPlayer].status !== 'active'
+  );
+  
+  game.currentPlayer = nextPlayer;
+};
+
+const handleNumberCard = (game, player, card) => {
+  if (player.regularCards.includes(card)) {
+    const scIndex = player.specialCards.indexOf('SC');
+    if (scIndex > -1) {
+      player.specialCards.splice(scIndex, 1);
+      game.discardPile.push('SC-USED');
+    } else {
+      player.status = 'busted';
+      player.bustedCard = card;
+      player.roundScore = 0;
+    }
+  } else {
+    player.regularCards.push(card);
+    if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+      player.status = 'stood';
+    }
+  }
+};
+
+const updatePlayerScore = player => {
+  const base = [...new Set(player.regularCards)].reduce((a, b) => a + b, 0);
+  const add = player.specialCards
+    .filter(c => c.endsWith('+'))
+    .reduce((a, c) => a + parseInt(c), 0);
+  const multiply = player.specialCards
+    .filter(c => c.endsWith('x'))
+    .reduce((a, c) => a * parseInt(c), 1);
+
+  player.roundScore = (base + add) * (multiply || 1);
+};
+
+// Server startup
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
+// Cleanup empty games
 setInterval(() => {
-    games.forEach((game, id) => {
-        if (game.players.length === 0) {
-            console.log(`Cleaning up empty game: ${id}`);
-            games.delete(id);
-        }
-    });
-}, 60000); // Cleanup every minute
+  games.forEach((game, id) => {
+    if (game.players.length === 0) games.delete(id);
+  });
+}, 60000);

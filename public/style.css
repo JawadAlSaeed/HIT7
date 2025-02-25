@@ -364,6 +364,9 @@ body {
     animation: card-glow 1.5s ease-in-out infinite alternate;
     font-size: 1.4rem;
     flex-direction: column;
+    width: 50px;
+    height: 70px;
+    margin: 0 3px;
 }
 
 .card.special::before {
@@ -484,6 +487,10 @@ body {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 2px solid rgba(255,255,255,0.1);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
 }
 
 .special-cards-container::before {
@@ -823,4 +830,115 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 1.4rem;
+}
+
+/* Round Summary Popup */
+.round-summary-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.popup-content {
+    background: var(--primary);
+    padding: 2rem;
+    border-radius: 15px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+
+.player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.player-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.player-summary.busted {
+    opacity: 0.7;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.status-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.player-summary.active .status-badge { background: #3498db; }
+.player-summary.stood .status-badge { background: #2ecc71; }
+.player-summary.busted .status-badge { background: #e74c3c; }
+
+.countdown {
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--highlight);
+    margin-top: 1.5rem;
+}
+
+/* Special Cards Layout Fix */
+.special-cards-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.special-cards-container::before {
+    content: "Special Cards";
+    width: 100%;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.card.special {
+    width: 50px;
+    height: 70px;
+    margin: 0 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Discard Pile Layout */
+.discard-pile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    min-height: 100px;
+}
+
+.discard-card.special {
+    position: relative;
+    padding-top: 15px;
+}
+
+.discard-card.special::before {
+    content: attr(data-value);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
 }
