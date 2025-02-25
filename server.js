@@ -118,9 +118,17 @@ io.on('connection', socket => {
     const player = game.players[game.currentPlayer];
     if (player.id !== socket.id || player.status !== 'active') return;
 
+    // Handle deck replenishment
     if (game.deck.length === 0) {
-      game.deck = shuffle([...game.discardPile]);
-      game.discardPile = [];
+        if (game.discardPile.length === 0) {
+            // Complete reshuffle when both deck and discard are empty
+            game.deck = createDeck();
+            shuffle(game.deck);
+        } else {
+            // Normal discard pile reshuffle
+            game.deck = shuffle([...game.discardPile]);
+            game.discardPile = [];
+        }
     }
 
     const card = game.deck.pop();
@@ -228,14 +236,13 @@ io.on('connection', socket => {
 
   const startNewRound = game => {
     game.roundNumber++;
-    game.deck = createDeck();
-    game.discardPile = [];
+    // Only reset player states, not the deck/discard
     game.players.forEach(player => {
-      player.regularCards = [];
-      player.specialCards = [];
-      player.status = 'active';
-      player.roundScore = 0;
-      player.bustedCard = null;
+        player.regularCards = [];
+        player.specialCards = [];
+        player.status = 'active';
+        player.roundScore = 0;
+        player.bustedCard = null;
     });
     game.currentPlayer = 0;
   };
