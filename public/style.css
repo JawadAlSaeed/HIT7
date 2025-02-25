@@ -178,49 +178,6 @@ body {
     align-items: center;
 }
 
-.discard-pile {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    background: var(--secondary);
-    padding: 1.2rem;
-    border-radius: 12px;
-    min-height: 100px;
-    align-content: flex-start;
-    min-width: 300px;
-}
-
-.discard-card {
-    background: var(--text-light);
-    color: var(--text-dark);
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    font-size: 1.1rem;
-    width: 50px;
-    height: 70px;
-    justify-content: center;
-    position: relative;
-}
-
-.discard-count {
-    color: var(--danger);
-    font-weight: bold;
-    font-size: 1.2rem;
-    background: rgba(255,255,255,0.1);
-    padding: 0.8rem 1.2rem;
-    border-radius: 8px;
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    font-size: 0.8rem;
-    background: rgba(0,0,0,0.2);
-    padding: 2px 5px;
-    border-radius: 3px;
-}
-
 /* Players */
 .players-container {
     display: grid;
@@ -460,17 +417,61 @@ body {
 }
 
 /* Second Chance Card Styling */
-.card.special.second-chance {
-    background: linear-gradient(45deg, #2ecc71, #3498db);
+.card.special.second-chance, 
+.discard-card.special.second-chance {
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
+    color: white;
     position: relative;
 }
 
-.card.special.second-chance::after {
+.card.special.second-chance::after,
+.discard-card.special.second-chance::after {
     content: "🛡️";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 1rem;
+    font-size: 1.8rem;
+    display: block;
+    margin-top: -5px;
+}
+
+/* Used State for Both */
+.card.special.sc-used,
+.discard-card.special.sc-used {
+    background: #95a5a6;
+    opacity: 0.7;
+}
+
+.card.special.sc-used::after,
+.discard-card.special.sc-used::after {
+    content: "🛡️❌";
+    filter: grayscale(1);
+}
+
+/* Player & Discard Shared Styles */
+.card.special.second-chance, 
+.discard-card.special.second-chance {
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
+    color: white;
+    position: relative;
+}
+
+.card.special.second-chance::after,
+.discard-card.special.second-chance::after {
+    content: "🛡️";
+    font-size: 1.8rem;
+    display: block;
+    margin-top: -5px;
+}
+
+/* Used State for Both */
+.card.special.sc-used,
+.discard-card.special.sc-used {
+    background: #95a5a6;
+    opacity: 0.7;
+}
+
+.card.special.sc-used::after,
+.discard-card.special.sc-used::after {
+    content: "🛡️❌";
+    filter: grayscale(1);
 }
 
 @keyframes card-glow {
@@ -644,122 +645,6 @@ body {
     to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
-/* Discard Pile Fixes */
-.discard-pile {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: var(--secondary);
-    border-radius: 12px;
-    min-height: 120px;
-}
-
-.discard-card {
-    width: 50px;
-    height: 70px;
-    background: var(--text-light);
-    color: var(--text-dark);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    position: relative;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.discard-count {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    background: rgba(0,0,0,0.2);
-    color: var(--text-light);
-    font-size: 0.7rem;
-    padding: 2px 5px;
-    border-radius: 3px;
-    line-height: 1;
-}
-
-/* Special Cards in Discard Pile */
-.discard-card.special {
-    color: white;
-    font-size: 1.2rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.discard-card.special.adder {
-    background: linear-gradient(45deg, #27ae60, #2ecc71);
-}
-
-.discard-card.special.multiplier {
-    background: linear-gradient(45deg, #f1c40f, #f39c12);
-}
-
-.discard-card.special::after {
-    content: "+";
-    font-size: 0.9rem;
-    margin-top: -5px;
-}
-
-.discard-card.special.multiplier::after {
-    content: "×";
-}
-
-/* Used Second Chance Card */
-.discard-card.special.sc-used {
-    background: #7f8c8d;
-    opacity: 0.7;
-}
-
-.discard-card.special.sc-used::after {
-    content: "🛡️❌";
-    font-size: 1.2rem;
-}
-
-/* Discard Area */
-.discard-info {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 1rem;
-}
-
-.deck-count {
-    font-size: 1.3rem;
-    background: rgba(255,255,255,0.1);
-    padding: 0.8rem 1.5rem;
-    border-radius: 8px;
-    color: var(--highlight);
-}
-
-.discard-pile {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    align-items: center;
-    padding: 1rem;
-    background: var(--secondary);
-    border-radius: 12px;
-    min-height: 120px;
-}
-
-.discard-count {
-    position: absolute;
-    bottom: 3px;
-    right: 3px;
-    font-size: 0.7rem;
-    background: rgba(0,0,0,0.3);
-    color: white;
-    padding: 2px 5px;
-    border-radius: 3px;
-    line-height: 1;
-}
-
 /* Second Chance Indicator */
 .second-chance-indicator {
     background: rgba(46, 204, 113, 0.2);
@@ -771,4 +656,171 @@ body {
     align-items: center;
     gap: 0.5rem;
     margin-left: auto;
+}
+
+
+/* Discard Pile Container */
+.discard-info {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 800px;
+}
+
+/* Cards Left Counter */
+.deck-count {
+    font-size: 1.4rem;
+    color: var(--highlight);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.8rem 1.5rem;
+    border-radius: 10px;
+    min-width: 150px;
+    text-align: center;
+    order: -1; /* Ensures count appears first */
+}
+
+/* Discard Pile Cards Container */
+.discard-pile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100px;
+    padding: 1rem;
+    background: var(--secondary);
+    border-radius: 12px;
+    flex-grow: 1;
+}
+
+/* Individual Discard Cards */
+.discard-card {
+    width: 50px;
+    height: 70px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Regular Number Cards */
+.discard-card:not(.special) {
+    background: var(--text-light);
+    color: var(--text-dark);
+    font-size: 1.2rem;
+}
+
+/* Special Cards */
+.discard-card.special {
+    color: white;
+    font-size: 1.4rem;
+    font-weight: bold;
+    padding-top: 10px; /* Make space for symbol */
+}
+
+/* Adder Cards (+ cards) */
+.discard-card.adder {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+}
+
+/* Multiplier Cards (x cards) */
+.discard-card.multiplier {
+    background: linear-gradient(45deg, #f1c40f, #f39c12);
+}
+
+/* Second Chance Card */
+.discard-card.second-chance {
+    background: linear-gradient(45deg, #e74c3c, #c0392b);
+    position: relative;
+}
+
+/* Second Chance Icon */
+.discard-card.second-chance::after {
+    content: "🛡️";
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 1rem;
+}
+
+/* Card Count Badge */
+.discard-count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 3px;
+    line-height: 1;
+}
+
+/* Used Second Chance Card */
+.discard-card.sc-used {
+    background: #7f8c8d;
+    opacity: 0.7;
+}
+
+.discard-card.sc-used::after {
+    content: "❌";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+}
+
+/* Regular Number Cards */
+.discard-card:not(.special) {
+    background: #ffffff !important; /* White background */
+    color: var(--text-dark) !important; /* Dark text */
+    font-size: 1.2rem;
+    border: 2px solid var(--secondary);
+}
+
+/* Special Cards Symbols */
+.discard-card.adder::after {
+    content: "+";
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.discard-card.multiplier::after {
+    content: "×";
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+/* Second Chance Card */
+.discard-card.second-chance::after {
+    content: "🛡️";
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 1rem;
+}
+
+/* Number in Special Cards */
+.discard-card.special::before {
+    content: attr(data-value);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.4rem;
 }

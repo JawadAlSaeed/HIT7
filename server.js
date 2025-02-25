@@ -59,12 +59,23 @@ app.get('/health', (req, res) => {
 // Existing game logic
 const createDeck = () => {
     const deck = [];
-    // Regular cards (1-12) - 84 total
+    
+    // Regular cards (1-12)
     for (let number = 1; number <= 12; number++) {
-        for (let i = 0; i < number; i++) deck.push(number);
+        for (let i = 0; i < number; i++) {
+            deck.push(number);
+        }
     }
-    // Special cards - Now 3 Second Chance + existing 6 = 9 total
-    ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC'].forEach(card => deck.push(card));
+    
+    // Special cards (6 existing + 3 Second Chance)
+    const specialCards = [
+        '2+', '4+', '6+', '8+', '10+',  // 5 adders
+        '2x',                            // 1 multiplier
+        'SC', 'SC', 'SC'                // 3 second chance
+    ];
+    
+    specialCards.forEach(card => deck.push(card));
+    
     return shuffle(deck);
 };
 
@@ -155,9 +166,13 @@ io.on('connection', socket => {
 
     socket.on('flip-card', gameId => {
         const game = games.get(gameId);
-        if (!game || game.status !== 'playing') return;
-
         const player = game.players[game.currentPlayer];
+        
+        // Add this check first
+        if (game.deck.length === 0 && game.discardPile.length === 0) {
+            return socket.emit('error', 'No cards left to flip!');
+        }
+
         if (player.id !== socket.id || player.status !== 'active') return;
 
         if (game.deck.length === 0) {
@@ -169,18 +184,19 @@ io.on('connection', socket => {
         game.discardPile.push(card);
 
         if (card === 'SC') {
-            player.hasSecondChance = true;
-            game.discardPile.push(card);
-            advanceTurn(game);
-            return io.to(gameId).emit('game-update', game);
+            // Add to player's special cards
+            player.specialCards.push(card);
+            io.to(gameId).emit('game-update', game);
+            return advanceTurn(game);
         }
 
         if (typeof card === 'number') {
             if (player.regularCards.includes(card)) {
-                if (player.hasSecondChance) {
-                    // Use second chance
-                    player.hasSecondChance = false;
-                    game.discardPile = game.discardPile.filter(c => c !== 'SC');
+                // Check for Second Chance in special cards
+                const scIndex = player.specialCards.indexOf('SC');
+                if (scIndex > -1) {
+                    // Use Second Chance
+                    player.specialCards.splice(scIndex, 1);
                     game.discardPile.push('SC-USED');
                     io.to(gameId).emit('game-update', game);
                     return;
@@ -240,12 +256,17 @@ io.on('connection', socket => {
     });
 
     const advanceTurn = game => {
-        let nextPlayer = (game.currentPlayer + 1) % game.players.length;
+        let nextPlayer = game.currentPlayer;
         let attempts = 0;
-        while (attempts++ < game.players.length) {
-            if (game.players[nextPlayer].status === 'active') break;
+        
+        do {
             nextPlayer = (nextPlayer + 1) % game.players.length;
-        }
+            attempts++;
+        } while (
+            attempts <= game.players.length && 
+            game.players[nextPlayer].status !== 'active'
+        );
+        
         game.currentPlayer = nextPlayer;
     };
 
