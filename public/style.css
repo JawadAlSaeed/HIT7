@@ -245,6 +245,15 @@ body {
     100% { background: var(--secondary); }
 }
 
+/* Frozen Status */
+.player.frozen {
+  border-color: #3498db;
+  background: linear-gradient(to bottom right, var(--secondary), #2c3e50);
+}
+
+.status-icon.frozen { color: #3498db; }
+.player-summary.frozen .status-badge { background: #3498db; }
+
 .scores {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -467,7 +476,7 @@ body {
 
 .card.special.freeze {
     background: linear-gradient(45deg, #3498db, #2980b9);
-    border-color: #3498db;
+    color: white;
 }
 
 .card.special.freeze::after {
@@ -828,6 +837,15 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 1.4rem;
+}
+
+.discard-card.special.freeze {
+  background: linear-gradient(45deg, #3498db, #2980b9) !important;
+}
+
+.discard-card.special.freeze::after {
+  content: "❄️" !important;
+  font-size: 1.4rem;
 }
 
 /* Round Summary Popup */

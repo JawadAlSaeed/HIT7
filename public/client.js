@@ -2,6 +2,7 @@ const socket = io();
 let currentGameId = null;
 let isHost = false;
 const MAX_REGULAR_CARDS = 7;
+let activeFreezePopup = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('createGame').addEventListener('click', createGame);
@@ -25,37 +26,17 @@ socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
 socket.on('select-freeze-target', showFreezePopup);
 socket.on('cancel-freeze', () => {
-  const popup = document.getElementById('freezePopup');
-  if (popup) popup.remove();
+  if (activeFreezePopup) {
+    activeFreezePopup.remove();
+    activeFreezePopup = null;
+  }
 });
 
-socket.on('select-freeze-target', (gameId, targets) => {
-  const popup = document.createElement('div');
-  popup.className = 'freeze-popup';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3>❄️ Select player to freeze:</h3>
-      ${targets.map(p => `
-        <button class="freeze-target" data-id="${p.id}">
-          ${p.name}
-        </button>
-      `).join('')}
-      <button class="cancel-freeze">Cancel</button>
-    </div>
-  `;
-
-  popup.querySelectorAll('.freeze-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      socket.emit('use-freeze', gameId, btn.dataset.id);
-      popup.remove();
-    });
-  });
-
-  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
-    popup.remove();
-  });
-
-  document.body.appendChild(popup);
+socket.on('game-update', () => {
+  if (activeFreezePopup) {
+    activeFreezePopup.remove();
+    activeFreezePopup = null;
+  }
 });
 
 socket.on('connect', () => console.log('Connected to server'));
@@ -115,7 +96,10 @@ function handleGameUpdate(game) {
     document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
 
     // Remove any existing freeze popups when game updates
-    document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
+    if (activeFreezePopup) {
+      activeFreezePopup.remove();
+      activeFreezePopup = null;
+    }
 }
 
 // Display updates
@@ -126,40 +110,38 @@ function updateGameDisplay(game) {
 }
 
 function updateDiscardPile(discardPile) {
-    const discardCounts = discardPile.reduce((acc, card) => {
-        acc[card] = (acc[card] || 0) + 1;
-        return acc;
-    }, {});
+  const discardCounts = discardPile.reduce((acc, card) => {
+    const key = card.toString(); // Preserve original card type
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
-    document.getElementById('discard').innerHTML = Object.entries(discardCounts)
-        .map(([cardStr, count]) => {
-            const isNumber = !isNaN(cardStr);
-            const isSC = cardStr === 'SC';
+  document.getElementById('discard').innerHTML = Object.entries(discardCounts)
+    .map(([cardStr, count]) => {
+      // Determine card type
+      const typeMap = {
+        'SC': 'second-chance',
+        'Freeze': 'freeze',
+        '+': 'adder',
+        'x': 'multiplier'
+      };
+      
+      const cardType = Object.keys(typeMap).find(k => cardStr === k) ? 
+        typeMap[cardStr] : 
+        cardStr.match(/[+x]/) ? typeMap[cardStr.slice(-1)] : '';
 
-            if (isNumber) {
-                return `
-                    <div class="discard-card">
-                        ${cardStr}
-                        ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
-                    </div>
-                `;
-            }
+      const displayValue = {
+        'SC': '🛡️',
+        'Freeze': '❄️'
+      }[cardStr] || cardStr.replace(/[^0-9]/g, '');
 
-            const typeMap = {
-                '+': 'adder',
-                'x': 'multiplier',
-                'SC': 'second-chance'
-            };
-            const cardType = Object.entries(typeMap).find(([key]) => cardStr.includes(key))?.[1];
-            const displayValue = isSC ? '🛡️' : cardStr.replace(/[^0-9]/g, '');
-
-            return `
-                <div class="discard-card special ${cardType}">
-                    ${displayValue}
-                    ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
-                </div>
-            `;
-        }).join('');
+      return `
+        <div class="discard-card ${cardType ? 'special ' + cardType : ''}">
+          ${displayValue}
+          ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
+        </div>
+      `;
+    }).join('');
 }
 
 function renderPlayers(game) {
@@ -229,7 +211,8 @@ function getStatusIcon(status) {
         active: ['⭐', 'ACTIVE'],
         stood: ['🛑', 'STOOD'], 
         busted: ['💥', 'BUSTED'],
-        waiting: ['⏳', 'WAITING']
+        waiting: ['⏳', 'WAITING'],
+        frozen: ['❄️', 'FROZEN']
     };
     return `
         <span class="status-icon">${statusMap[status][0]}</span>
@@ -238,13 +221,13 @@ function getStatusIcon(status) {
 }
 
 function getStatusText(status) {
-    const statusMap = {
+    return {
         active: 'ACTIVE',
         stood: 'STOOD', 
         busted: 'BUSTED',
-        waiting: 'WAITING'
-    };
-    return statusMap[status];
+        waiting: 'WAITING',
+        frozen: 'FROZEN'
+    }[status];
 }
 
 // UI controls
@@ -370,10 +353,17 @@ function handleRoundSummary({ players, allBusted }) {
 }
 
 function showFreezePopup(gameId, targets) {
-  const popup = document.createElement('div');
-  popup.id = 'freezePopup';
-  popup.className = 'freeze-popup';
-  popup.innerHTML = `
+  // Cleanup any existing popup
+  if (activeFreezePopup) {
+    activeFreezePopup.remove();
+    activeFreezePopup = null;
+  }
+
+  // Create new popup
+  activeFreezePopup = document.createElement('div');
+  activeFreezePopup.id = 'freezePopup';
+  activeFreezePopup.className = 'freeze-popup';
+  activeFreezePopup.innerHTML = `
     <div class="popup-content">
       <h3>Select a player to freeze:</h3>
       ${targets.map(t => `
@@ -385,17 +375,32 @@ function showFreezePopup(gameId, targets) {
     </div>
   `;
 
-  popup.querySelectorAll('.freeze-target').forEach(btn => {
+  activeFreezePopup.querySelectorAll('.freeze-target').forEach(btn => {
     btn.addEventListener('click', () => {
       socket.emit('freeze-player', currentGameId, btn.dataset.id);
-      popup.remove();
+      activeFreezePopup.remove();
+      activeFreezePopup = null;
     });
   });
 
-  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
+  activeFreezePopup.querySelector('.cancel-freeze').addEventListener('click', () => {
     socket.emit('cancel-freeze', currentGameId);
-    popup.remove();
+    activeFreezePopup.remove();
+    activeFreezePopup = null;
   });
 
-  document.body.appendChild(popup);
+  document.body.appendChild(activeFreezePopup);
+
+  // Add auto-removal listeners
+  const cleanup = () => {
+    if (activeFreezePopup) {
+      activeFreezePopup.remove();
+      activeFreezePopup = null;
+    }
+    socket.off('game-update', cleanup);
+    socket.off('cancel-freeze', cleanup);
+  };
+
+  socket.once('game-update', cleanup);
+  socket.once('cancel-freeze', cleanup);
 }

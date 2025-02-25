@@ -144,6 +144,7 @@ io.on('connection', socket => {
     // Handle Freeze card
     if (card === 'Freeze') {
       player.specialCards.push(card);
+      game.discardPile = game.discardPile.filter(c => c !== 'Freeze'); // Remove previous temp entry
       // Only show active players except yourself
       const targets = game.players.filter(p => 
         p.id !== socket.id && p.status === 'active'
@@ -198,6 +199,26 @@ io.on('connection', socket => {
       player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
       target.status = 'stood';
       game.discardPile.push('Freeze');
+      
+      io.to(gameId).emit('game-update', game);
+      checkGameStatus(game);
+    }
+  });
+
+  socket.on('use-freeze', (gameId, targetId) => {
+    const game = games.get(gameId);
+    if (!game) return;
+  
+    const player = game.players.find(p => p.id === socket.id);
+    const target = game.players.find(p => p.id === targetId);
+  
+    if (player && target && player.specialCards.includes('Freeze')) {
+      // Remove freeze card from player
+      player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
+      
+      // Freeze the target player
+      target.status = 'frozen';
+      game.discardPile.push('Freeze'); // Add exactly one instance
       
       io.to(gameId).emit('game-update', game);
       checkGameStatus(game);
