@@ -294,7 +294,12 @@ function handleRoundSummary({ players, allBusted }) {
     const playerList = players.map(player => `
         <div class="player-summary ${player.status}">
             <span class="player-name">${player.name}</span>
-            <div class="status-badge">${getStatusText(player.status)}</div>
+            <div class="status-info">
+                <div class="status-badge">${getStatusText(player.status)}</div>
+                ${player.bustedCard ? `
+                    <div class="busted-card">Busted on ${player.bustedCard}</div>
+                ` : ''}
+            </div>
             <div class="scores">
                 <span class="score">Round: ${player.roundScore}</span>
                 <span class="score">Total: ${player.totalScore}</span>

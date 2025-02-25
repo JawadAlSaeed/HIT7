@@ -302,10 +302,11 @@ body {
     padding: 0.5rem;
     border-radius: 5px;
     margin-top: 0.5rem;
+    font-size: 0.9rem;
     color: var(--danger);
     font-weight: bold;
     margin: 0.8rem 0 0;
-    padding: 0.4rem 0.8rem;
+    padding: 0.3rem 0.6rem;
     background: rgba(231,76,60,0.1);
     border-radius: 5px;
     display: inline-block;
@@ -928,4 +929,16 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 1.2rem;
+}
+
+.status-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.player-summary .scores {
+    display: flex;
+    gap: 1rem;
+    margin-left: auto;
 }
