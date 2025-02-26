@@ -334,15 +334,22 @@ const handleSocketConnection = (io) => {
 
     const startNewRound = game => {
       game.roundNumber++;
-      // Only reset player states, not the deck/discard
+      // Reset player states, but keep total scores
       game.players.forEach(player => {
           player.regularCards = [];
           player.specialCards = [];
           player.status = 'active';
           player.roundScore = 0;
           player.bustedCard = null;
+          player.drawThreeRemaining = 0;
       });
-      game.currentPlayer = 0;
+      
+      // Set starting player based on round number (cycling through players)
+      game.currentPlayer = (game.roundNumber - 1) % game.players.length;
+      game.status = 'playing'; // Ensure game status is set to playing
+      
+      // Immediately emit game update to ensure clients get the new state
+      io.to(game.id).emit('game-update', game);
     };
   });
 };
@@ -363,14 +370,18 @@ const createPlayer = (id, name) => ({
 const advanceTurn = game => {
   let nextPlayer = game.currentPlayer;
   let attempts = 0;
+  const playerCount = game.players.length;
   
   do {
-    nextPlayer = (nextPlayer + 1) % game.players.length;
+    nextPlayer = (nextPlayer + 1) % playerCount;
     attempts++;
-  } while (
-    attempts <= game.players.length && 
-    game.players[nextPlayer].status !== 'active'
-  );
+    
+    // If we've checked all players and found no active ones, break
+    if (attempts >= playerCount) {
+      nextPlayer = game.currentPlayer; // Keep current player if no active players found
+      break;
+    }
+  } while (game.players[nextPlayer].status !== 'active');
   
   game.currentPlayer = nextPlayer;
 };

@@ -351,19 +351,21 @@ function toggleActionButtons(active) {
     const flipCardBtn = document.getElementById('flipCard');
     const standButton = document.getElementById('standButton');
     
-    // Get current player object
+    // Get current player object from container
     const game = getCurrentGameState();
-    const currentPlayer = game?.players[game.currentPlayer];
-    const isCurrentPlayersTurn = currentPlayer?.id === socket.id;
+    const currentPlayer = game?.players.find(p => p.id === socket.id);
     
-    // Show flip card button if it's player's turn and they're active
-    flipCardBtn.style.display = active ? 'block' : 'none';
+    // Show buttons only if:
+    // 1. It's the player's turn (active is true)
+    // 2. Player exists
+    // 3. Game is in playing state
+    const showButtons = active && currentPlayer;
     
-    // Show stand button if:
-    // 1. It's player's turn
-    // 2. They're active
-    // 3. They're not in the middle of a Draw Three
-    standButton.style.display = (active && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) ? 'block' : 'none';
+    flipCardBtn.style.display = showButtons ? 'block' : 'none';
+    standButton.style.display = 
+        (showButtons && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) 
+        ? 'block' 
+        : 'none';
 }
 
 // Add this helper function to get current game state
@@ -402,8 +404,14 @@ function handleGameStarted(game) {
 }
 
 function handleNewRound(game) {
-    toggleActionButtons(true);
+    // Update game display first
     updateGameDisplay(game);
+    
+    // Check if it's the current player's turn
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    
+    // Toggle action buttons based on current player
+    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
 }
 
 function handleAllBusted() {
