@@ -1,3 +1,6 @@
+/* Import Poppins font for the game */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 :root {
     --primary: #2c3e50;
     --secondary: #34495e;
@@ -10,7 +13,7 @@
 }
 
 body {
-    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    font-family: 'Poppins', sans-serif;
     background: var(--primary);
     color: var(--text-light);
     margin: 0;
@@ -34,27 +37,30 @@ body {
     font-size: 4rem;
     color: var(--highlight);
     margin: 1rem 0;
-    font-family: "Cairo Play", serif;
+    font-family: "Cairo Play", serif !important;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .lobby-button {
     background: var(--highlight);
     color: var(--text-light);
-    padding: 1.2rem 2rem;
+    padding: 0 2rem;
     border: none;
     border-radius: 12px;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin: 0.8rem 0;
-    display: inline-flex;
+    margin: 0;
+    display: flex;
     align-items: center;
     gap: 0.8rem;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     width: 100%;
     max-width: 280px;
     justify-content: center;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    height: 50px;
 }
 
 .lobby-button:hover {
@@ -65,7 +71,7 @@ body {
 
 .lobby-input {
     width: 100%;
-    max-width: 250px;
+    max-width: 280px;
     padding: 1.2rem;
     margin: 1rem 0;
     border: 2px solid var(--highlight);
@@ -75,6 +81,9 @@ body {
     font-size: 1.2rem;
     text-transform: uppercase;
     text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    height: 50px;
 }
 
 .lobby-input:focus {
@@ -394,18 +403,13 @@ body {
 }
 
 .card.special::after {
-    content: "";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 1rem;
-    line-height: 1;
+    content: none !important;
 }
 
 .card.special.adder::after { content: "+"; }
 .card.special.multiplier::after { content: "×"; }
-.card.special.second-chance::after { content: "🛡️"; }
-.card.special.freeze::after { content: "❄️"; }
+.card.special.second-chance::before { content: "🛡️"; }
+.card.special.freeze::before { content: "❄️"; }
 
 .card.special.adder {
     background: #27ae60 !important; /* Solid green for adder */
@@ -436,8 +440,8 @@ body {
     position: relative;
 }
 
-.card.special.second-chance::after,
-.discard-card.special.second-chance::after {
+.card.special.second-chance::before,
+.discard-card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "🛡️";
@@ -454,8 +458,8 @@ body {
     position: relative;
 }
 
-.card.special.second-chance::after,
-.discard-card.special.second-chance::after {
+.card.special.second-chance::before,
+.discard-card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "🛡️";
@@ -471,14 +475,14 @@ body {
     opacity: 0.7;
 }
 
-.card.special.sc-used::after,
-.discard-card.special.sc-used::after {
+.card.special.sc-used::before,
+.discard-card.special.sc-used::before {
     content: "🛡️❌";
     filter: grayscale(1);
 }
 
-.card.special.freeze::after,
-.discard-card.special.freeze::after {
+.card.special.freeze::before,
+.discard-card.special.freeze::before {
     content: "❄️" !important; /* Single emoji */
     font-size: 1.8rem;
     position: absolute;
@@ -527,6 +531,8 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin: 0.5rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
 }
 
 .game-button:hover:not(:disabled) {
@@ -776,7 +782,7 @@ body {
 }
 
 /* Second Chance Icon */
-.discard-card.second-chance::after {
+.discard-card.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "🛡️";
@@ -805,7 +811,7 @@ body {
     opacity: 0.7;
 }
 
-.discard-card.sc-used::after {
+.discard-card.sc-used::before {
     content: "❌";
     position: absolute;
     top: 50%;
@@ -842,7 +848,7 @@ body {
 }
 
 /* Second Chance Card */
-.discard-card.second-chance::after {
+.discard-card.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "🛡️";
@@ -867,7 +873,7 @@ body {
   color: white !important;
 }
 
-.discard-card.special.freeze::after {
+.discard-card.special.freeze::before {
   text-shadow: none !important;
   filter: none !important;
   content: "❄️" !important;
@@ -1045,6 +1051,8 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 1.1rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
 }
 
 .freeze-popup .freeze-target:hover {
@@ -1062,6 +1070,8 @@ body {
     transition: all 0.2s ease;
     margin-top: 0.5rem;
     font-size: 1.1rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
 }
 
 .freeze-popup .cancel-freeze:hover {
@@ -1083,13 +1093,13 @@ body {
   border-color: #2980b9 !important;
 }
 
-.card.special.second-chance::after,
-.discard-card.special.second-chance::after {
+.card.special.second-chance::before,
+.discard-card.special.second-chance::before {
   content: "🛡️" !important;
 }
 
-.card.special.freeze::after,
-.discard-card.special.freeze::after {
+.card.special.freeze::before,
+.discard-card.special.freeze::before {
   content: "❄️" !important;
 }
 
@@ -1099,7 +1109,7 @@ body {
   padding-top: 0 !important;
 }
 
-.discard-card.special::after {
+.discard-card.special::before {
   position: absolute;
   bottom: 5px;
   right: 5px;
@@ -1157,6 +1167,8 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: transform 0.2s, background-color 0.2s;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
 }
 
 .draw-three-target:hover {
@@ -1228,9 +1240,189 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 1.1rem;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
 }
 
 .draw-three-popup .draw-three-target:hover {
   background: #8e44ad;
   transform: translateY(-2px);
+}
+
+/* Enhanced Menu Styling */
+.menu-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.join-game {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.lobby-button, .lobby-input {
+    width: 100%;
+    max-width: none;
+    height: 50px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.tutorial-button {
+    background: #9b59b6 !important;
+    align-self: stretch;
+    margin: 0;
+}
+
+.tutorial-button:hover {
+    background: #8e44ad !important;
+    transform: translateY(-2px);
+}
+
+/* Tutorial Popup Styling */
+.tutorial-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--secondary);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 20px;
+    padding: 2rem;
+    z-index: 1000;
+    overflow-y: auto;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+    border: 3px solid #9b59b6;
+    font-family: 'Poppins', sans-serif;
+}
+
+.tutorial-popup .close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.tutorial-popup .close-button:hover {
+    transform: scale(1.1);
+}
+
+.tutorial-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.tutorial-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 15px;
+    padding: 1.5rem;
+}
+
+.tutorial-section h2 {
+    color: #9b59b6;
+    margin: 0 0 1rem 0;
+    font-size: 1.8rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.card-example {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.card-example .card {
+    width: 40px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.card-explanation {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+}
+
+/* Rules Section */
+.rules-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rules-list li {
+    padding: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rules-list li:last-child {
+    border-bottom: none;
+}
+
+.tutorial-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tab-button {
+    padding: 0.8rem 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+
+.tab-button.active {
+    background: #9b59b6;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
 }

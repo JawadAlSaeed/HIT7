@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo+Play:wght@200..1000&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo+Play:wght@200..1000&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
         <title>قلّب الورق</title>
         <link rel="stylesheet" href="style.css">
         <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
@@ -15,23 +15,29 @@
         <div class="lobby-screen">
             <div class="game-logo">قلّب الورق</div>
             
-            <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
-                Your Game Code: <span class="game-code" id="hostCode"></span>
-            </div>
-
-            <div class="lobby">
-                <button id="createGame" class="lobby-button">
-                    🕹️ Create New Game
-                </button>
-                <div class="join-game">
-                    <input type="text" id="gameId" 
-                        placeholder="Enter Game Code" 
-                        class="lobby-input"
-                        autocapitalize="characters">
-                    <button id="joinGame" class="lobby-button">
-                        🚪 Join Game
+            <div class="menu-container">
+                <div class="menu-buttons">
+                    <button id="createGame" class="lobby-button">
+                        🎮 Create New Game
+                    </button>
+                    <div class="join-game">
+                        <input type="text" id="gameId" 
+                            placeholder="Enter Game Code" 
+                            class="lobby-input"
+                            autocapitalize="characters"
+                            maxlength="5">
+                        <button id="joinGame" class="lobby-button">
+                            🚪 Join Game
+                        </button>
+                    </div>
+                    <button id="tutorialButton" class="lobby-button tutorial-button">
+                        📖 How To Play
                     </button>
                 </div>
+            </div>
+
+            <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
+                Your Game Code: <span class="game-code" id="hostCode"></span>
             </div>
         </div>
 

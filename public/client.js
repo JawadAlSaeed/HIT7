@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('flipCard').addEventListener('click', flipCard);
     document.getElementById('standButton').addEventListener('click', stand);
     document.getElementById('resetButton').addEventListener('click', resetGame);
+    document.getElementById('tutorialButton').addEventListener('click', showTutorial);
 });
 
 // Socket event listeners
@@ -525,4 +526,113 @@ function showFreezePopup(gameId, targets) {
 
   socket.once('game-update', cleanup);
   socket.once('cancel-freeze', cleanup);
+}
+
+function showTutorial() {
+    // Remove any existing popup first
+    const existingPopup = document.querySelector('.tutorial-popup');
+    if (existingPopup) existingPopup.remove();
+
+    const popup = document.createElement('div');
+    popup.className = 'tutorial-popup';
+    popup.innerHTML = `
+        <button class="close-button">×</button>
+        <div class="tutorial-content">
+            <div class="tutorial-tabs">
+                <button class="tab-button active" data-tab="cards">Cards</button>
+                <button class="tab-button" data-tab="rules">Rules</button>
+            </div>
+
+            <div class="tab-content active" id="cards-tab">
+                <div class="tutorial-section">
+                    <h2>Regular Cards (1-12)</h2>
+                    <p>Regular cards from 1 to 12, each appearing as many times as its value.</p>
+                    <div class="cards-grid">
+                        <div class="card-example">
+                            <div class="card">7</div>
+                            <div class="card-explanation">
+                                Example: Number 7 appears 7 times in the deck
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tutorial-section">
+                    <h2>Special Cards</h2>
+                    <div class="cards-grid">
+                        <div class="card-example">
+                            <div class="card special second-chance">🛡️</div>
+                            <div class="card-explanation">
+                                Second Chance: Protects you from busting once
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special freeze">❄️</div>
+                            <div class="card-explanation">
+                                Freeze: Skip a player's turn
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special draw-three">🎯</div>
+                            <div class="card-explanation">
+                                Draw Three: Force a player to draw 3 cards
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special adder">4+</div>
+                            <div class="card-explanation">
+                                Add Card: Adds value to your total score
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special multiplier">2×</div>
+                            <div class="card-explanation">
+                                Multiply Card: Multiplies your total score
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="rules-tab">
+                <div class="tutorial-section">
+                    <h2>Game Rules</h2>
+                    <ul class="rules-list">
+                        <li>Players take turns drawing cards</li>
+                        <li>Each player can hold up to 7 regular number cards</li>
+                        <li>Drawing a duplicate number card will bust you unless you have a Second Chance</li>
+                        <li>Special cards don't count toward the 7-card limit</li>
+                        <li>First player to reach 200 points wins</li>
+                        <li>If all players bust, the round is restarted</li>
+                        <li>Your score is calculated as: (Sum of unique numbers + Adder cards) × Multiplier cards</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add event listeners for tabs
+    popup.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            popup.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            popup.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            button.classList.add('active');
+            popup.querySelector(`#${button.dataset.tab}-tab`).classList.add('active');
+        });
+    });
+
+    // Close button functionality
+    popup.querySelector('.close-button').addEventListener('click', () => {
+        popup.remove();
+    });
+
+    // Close on clicking outside
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
+
+    document.body.appendChild(popup);
 }

@@ -123,11 +123,9 @@ const handleSocketConnection = (io) => {
       // Handle deck replenishment
       if (game.deck.length === 0) {
           if (game.discardPile.length === 0) {
-              // Complete reshuffle when both deck and discard are empty
               game.deck = createDeck();
               shuffle(game.deck);
           } else {
-              // Normal discard pile reshuffle
               game.deck = shuffle([...game.discardPile]);
               game.discardPile = [];
           }
@@ -135,14 +133,10 @@ const handleSocketConnection = (io) => {
 
       const card = game.deck.pop();
       
-      // Don't add special cards to discard pile immediately
-      if (typeof card === 'number') {
-        game.discardPile.push(card);
-      }
-
-      // Handle number cards first
+      // Handle number cards
       if (typeof card === 'number') {
         handleNumberCard(game, player, card);
+        game.discardPile.push(card); // Move this here - only add number cards once
         
         // If player busted, clear draw three state and advance turn
         if (player.status === 'busted') {
@@ -166,10 +160,8 @@ const handleSocketConnection = (io) => {
         else {
           advanceTurn(game);
         }
-        
-        game.discardPile.push(card);
       }
-      // Handle Draw Three card
+      // Handle special cards - don't add to discard pile until they're used
       else if (card === 'D3') {
         player.specialCards.push(card);
         if (player.drawThreeRemaining === 0) {
@@ -183,21 +175,17 @@ const handleSocketConnection = (io) => {
           if (player.drawThreeRemaining === 0) {
             advanceTurn(game);
           }
-          game.discardPile.push(card);
         }
-        return;
       }
       // Handle Freeze card
       else if (card === 'Freeze') {
         player.specialCards.push(card);
-        const targets = game.players.filter(p => p.status === 'active'); // Remove the self-exclusion
+        const targets = game.players.filter(p => p.status === 'active');
         socket.emit('select-freeze-target', game.id, targets);
-        return;
       }
       // Handle other special cards
       else {
         player.specialCards.push(card);
-        game.discardPile.push(card);
         if (player.drawThreeRemaining === 0) {
           advanceTurn(game);
         }
@@ -239,9 +227,9 @@ const handleSocketConnection = (io) => {
       if (player && target && player.specialCards.includes('Freeze')) {
         player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
         target.status = 'frozen';
+        // Add Freeze to discard only when used
         game.discardPile.push('Freeze');
         
-        // Advance turn after freezing
         advanceTurn(game);
         checkGameStatus(game);
         io.to(gameId).emit('game-update', game);
@@ -273,13 +261,12 @@ const handleSocketConnection = (io) => {
       if (player && target && player.specialCards.includes('D3')) {
         player.specialCards = player.specialCards.filter(c => c !== 'D3');
         
-        // Calculate how many cards the target can actually draw
         const remainingSpace = MAX_REGULAR_CARDS - target.regularCards.length;
         target.drawThreeRemaining = Math.min(3, remainingSpace);
         
+        // Add Draw Three to discard only when used
         game.discardPile.push('D3');
         
-        // Make target the current player
         game.currentPlayer = game.players.findIndex(p => p.id === target.id);
         
         io.to(gameId).emit('game-update', game);
@@ -393,7 +380,7 @@ const handleNumberCard = (game, player, card) => {
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
-      game.discardPile.push('SC'); // Only add to discard when used
+      game.discardPile.push('SC'); // Add SC to discard only when used
     } else {
       player.status = 'busted';
       player.bustedCard = card;
