@@ -1074,6 +1074,7 @@ body {
   font-size: 1.4rem;
   padding-top: 0 !important;
 }
+
 .discard-card.special::after {
   position: absolute;
   bottom: 5px;

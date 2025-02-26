@@ -1,71 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo+Play:wght@200..1000&display=swap" rel="stylesheet">
-    <title>قلّب الورق</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
-</head>
-<body>
-    <!-- Lobby Screen -->
-    <div class="lobby-screen">
-        <div class="game-logo">قلّب الورق</div>
-        
-        <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
-            Your Game Code: <span class="game-code" id="hostCode"></span>
-        </div>
-
-        <div class="lobby">
-            <button id="createGame" class="lobby-button">
-                🕹️ Create New Game
-            </button>
-            <div class="join-game">
-                <input type="text" id="gameId" 
-                    placeholder="Enter Game Code" 
-                    class="lobby-input"
-                    autocapitalize="characters">
-                <button id="joinGame" class="lobby-button">
-                    🚪 Join Game
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Area -->
-    <div id="gameArea" class="game-container">
-        <div class="game-header">
-            <div class="game-code-display">
-                Room Code: <span class="game-code" id="gameCode"></span>
-            </div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo+Play:wght@200..1000&display=swap" rel="stylesheet">
+        <title>قلّب الورق</title>
+        <link rel="stylesheet" href="style.css">
+        <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <!-- Lobby Screen -->
+        <div class="lobby-screen">
             <div class="game-logo">قلّب الورق</div>
-        </div>
+            
+            <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
+                Your Game Code: <span class="game-code" id="hostCode"></span>
+            </div>
 
-        <div class="game-board">
-            <div class="deck-area">
-                <div class="discard-info">
-                    <div class="deck-count">Cards Left: <span id="deckCount">90</span></div>
-                    <div class="discard-pile" id="discard"></div>
+            <div class="lobby">
+                <button id="createGame" class="lobby-button">
+                    🕹️ Create New Game
+                </button>
+                <div class="join-game">
+                    <input type="text" id="gameId" 
+                        placeholder="Enter Game Code" 
+                        class="lobby-input"
+                        autocapitalize="characters">
+                    <button id="joinGame" class="lobby-button">
+                        🚪 Join Game
+                    </button>
                 </div>
             </div>
-            <div id="playersContainer" class="players-container"></div>
         </div>
 
-        <div class="controls">
-            <button id="startGame" class="game-button green">Start Game</button>
-            <button id="flipCard" class="game-button blue">Flip Card</button>
-            <button id="standButton" class="game-button orange">Stand</button>
-            <button id="resetButton" class="game-button red">Reset Game</button>
+        <!-- Game Area -->
+        <div id="gameArea" class="game-container">
+            <div class="game-header">
+                <div class="game-code-display">
+                    Room Code: <span class="game-code" id="gameCode"></span>
+                </div>
+                <div class="game-logo">قلّب الورق</div>
+            </div>
+
+            <div class="game-board">
+                <div class="deck-area">
+                    <div class="discard-info">
+                        <div class="deck-count">Cards Left: <span id="deckCount">90</span></div>
+                        <div class="discard-pile" id="discard"></div>
+                    </div>
+                </div>
+                <div id="playersContainer" class="players-container"></div>
+            </div>
+
+            <div class="controls">
+                <button id="startGame" class="game-button green">Start Game</button>
+                <button id="flipCard" class="game-button blue">Flip Card</button>
+                <button id="standButton" class="game-button orange">Stand</button>
+                <button id="resetButton" class="game-button red">Reset Game</button>
+            </div>
         </div>
-    </div>
 
-    <!-- Popup Container -->
-    <div id="popupContainer"></div>
+        <!-- Popup Container -->
+        <div id="popupContainer"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js"></script>
-</body>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="client.js"></script>
+    </body>
 </html>
