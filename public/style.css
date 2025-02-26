@@ -371,12 +371,13 @@ body {
     z-index: 2; /* Ensure content stays above glow effects */
     overflow: hidden;
     border: 2px solid;
-    animation: card-glow 1.5s ease-in-out infinite alternate;
     font-size: 1.4rem;
     flex-direction: column;
     width: 50px;
     height: 70px;
     margin: 0 3px;
+    animation: none !important;
+    box-shadow: none !important;
 }
 
 .card.special::before {
@@ -393,52 +394,52 @@ body {
 }
 
 .card.special::after {
-    content: '';
+    content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, 
-        rgba(255,255,255,0.1) 0%, 
-        rgba(255,255,255,0.3) 50%, 
-        rgba(255,255,255,0.1) 100%);
-    opacity: 0.3;
-    z-index: 1;
+    bottom: 5px;
+    right: 5px;
     font-size: 1rem;
-    margin-top: -0.5rem;
+    line-height: 1;
 }
+
+.card.special.adder::after { content: "+"; }
+.card.special.multiplier::after { content: "×"; }
+.card.special.second-chance::after { content: "🛡️"; }
+.card.special.freeze::after { content: "❄️"; }
 
 .card.special.adder {
-    background: linear-gradient(45deg, #27ae60, #2ecc71);
+    background: #27ae60 !important; /* Solid green for adder */
     border-color: #27ae60;
-    color: white;
-}
-
-.card.special.adder::after {
-    content: "+";
 }
 
 .card.special.multiplier {
-    background: linear-gradient(45deg, #f1c40f, #f39c12);
+    background: #f1c40f !important; /* Solid yellow for multiplier */
     border-color: #f1c40f;
-    color: var(--text-dark);
+    color: var(--text-dark) !important;
 }
 
-.card.special.multiplier::after {
-    content: "×";
+.card.special.second-chance {
+    background: #e74c3c !important; /* Red color */
+    border-color: #c0392b !important;
+}
+
+.card.special.freeze {
+    background: #3498db !important; /* Blue color */
+    border-color: #2980b9 !important;
 }
 
 /* Second Chance Card Styling */
 .card.special.second-chance, 
 .discard-card.special.second-chance {
-    background: linear-gradient(45deg, #e74c3c, #c0392b);
-    color: white;
+    background: var(--highlight) !important;
+    color: white !important;
     position: relative;
 }
 
 .card.special.second-chance::after,
 .discard-card.special.second-chance::after {
+    text-shadow: none !important;
+    filter: none !important;
     content: "🛡️";
     font-size: 1.8rem;
     display: block;
@@ -448,13 +449,15 @@ body {
 /* Player & Discard Shared Styles */
 .card.special.second-chance, 
 .discard-card.special.second-chance {
-    background: linear-gradient(45deg, #e74c3c, #c0392b);
-    color: white;
+    background: var(--highlight) !important;
+    color: white !important;
     position: relative;
 }
 
 .card.special.second-chance::after,
 .discard-card.special.second-chance::after {
+    text-shadow: none !important;
+    filter: none !important;
     content: "🛡️";
     font-size: 1.8rem;
     display: block;
@@ -474,19 +477,13 @@ body {
     filter: grayscale(1);
 }
 
-.card.special.freeze {
-    background: linear-gradient(45deg, #3498db, #2980b9);
-    color: white;
-}
-
-.card.special.freeze::after {
-    content: "❄️";
+.card.special.freeze::after,
+.discard-card.special.freeze::after {
+    content: "❄️" !important; /* Single emoji */
     font-size: 1.8rem;
-}
-
-@keyframes card-glow {
-    from { box-shadow: 0 0 5px rgba(255,255,255,0.2); }
-    to { box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
 }
 
 /* Special Cards Section */
@@ -661,17 +658,17 @@ body {
 
 /* Second Chance Indicator */
 .second-chance-indicator {
-    background: rgba(46, 204, 113, 0.2);
-    color: #2ecc71;
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
+    background: transparent !important;
+    border: 2px solid #2ecc71 !important;
+    padding: 0.3rem 0.8rem !important;
+    color: #2ecc71 !important;
     font-size: 0.9rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-left: auto;
+    box-shadow: none !important;
 }
-
 
 /* Discard Pile Container */
 .discard-info {
@@ -723,6 +720,10 @@ body {
     font-weight: bold;
     position: relative;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
 }
 
 /* Regular Number Cards */
@@ -738,26 +739,46 @@ body {
     font-size: 1.4rem;
     font-weight: bold;
     padding-top: 10px; /* Make space for symbol */
+    box-shadow: none !important;
+    background: var(--highlight) !important;
+    background: inherit !important; /* Keep original colors */
+    font-size: 1.4rem;
+    padding-top: 0 !important;
+}
+
+.discard-card.special::before {
+    content: attr(data-value);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
 }
 
 /* Adder Cards (+ cards) */
 .discard-card.adder {
     background: linear-gradient(45deg, #27ae60, #2ecc71);
+    background: #27ae60 !important;
 }
 
 /* Multiplier Cards (x cards) */
 .discard-card.multiplier {
     background: linear-gradient(45deg, #f1c40f, #f39c12);
+    background: #f1c40f !important;
 }
 
 /* Second Chance Card */
 .discard-card.second-chance {
-    background: linear-gradient(45deg, #e74c3c, #c0392b);
+    background: var(--highlight) !important;
+    color: white !important;
     position: relative;
+    background: #e74c3c !important;
 }
 
 /* Second Chance Icon */
 .discard-card.second-chance::after {
+    text-shadow: none !important;
+    filter: none !important;
     content: "🛡️";
     position: absolute;
     bottom: 5px;
@@ -822,6 +843,8 @@ body {
 
 /* Second Chance Card */
 .discard-card.second-chance::after {
+    text-shadow: none !important;
+    filter: none !important;
     content: "🛡️";
     position: absolute;
     bottom: 5px;
@@ -840,10 +863,13 @@ body {
 }
 
 .discard-card.special.freeze {
-  background: linear-gradient(45deg, #3498db, #2980b9) !important;
+  background: var(--highlight) !important;
+  color: white !important;
 }
 
 .discard-card.special.freeze::after {
+  text-shadow: none !important;
+  filter: none !important;
   content: "❄️" !important;
   font-size: 1.4rem;
 }
@@ -983,6 +1009,11 @@ body {
     z-index: 1000;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
     border: 3px solid #3498db;
+    display: none; /* Hidden by default */
+}
+
+.freeze-popup.active {
+    display: block; /* Only show when active */
 }
 
 .freeze-popup .popup-content {
@@ -1012,4 +1043,40 @@ body {
 
 .freeze-popup button:hover {
     transform: translateY(-2px);
+}
+
+/* Fix Second Chance color */
+.card.special.second-chance, 
+.discard-card.special.second-chance {
+  background: #e74c3c !important; /* Red color */
+  border-color: #c0392b !important;
+}
+
+/* Freeze card styling */
+.card.special.freeze,
+.discard-card.special.freeze {
+  background: #3498db !important; /* Blue color */
+  border-color: #2980b9 !important;
+}
+
+.card.special.second-chance::after,
+.discard-card.special.second-chance::after {
+  content: "🛡️" !important;
+}
+
+.card.special.freeze::after,
+.discard-card.special.freeze::after {
+  content: "❄️" !important;
+}
+
+/* Ensure discard cards show symbols */
+.discard-card.special {
+  font-size: 1.4rem;
+  padding-top: 0 !important;
+}
+.discard-card.special::after {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 1rem;
 }

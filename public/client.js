@@ -39,6 +39,38 @@ socket.on('game-update', () => {
   }
 });
 
+socket.on('select-freeze-target', (gameId, targets) => {
+  // Remove any existing popups
+  document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
+  
+  const popup = document.createElement('div');
+  popup.className = 'freeze-popup active';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>❄️ Select player to freeze:</h3>
+      ${targets.map(p => `
+        <button class="freeze-target" data-id="${p.id}">
+          ${p.name}
+        </button>
+      `).join('')}
+      <button class="cancel-freeze">Cancel</button>
+    </div>
+  `;
+
+  popup.querySelectorAll('.freeze-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('use-freeze', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
+    popup.remove();
+  });
+
+  document.body.appendChild(popup);
+});
+
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
 

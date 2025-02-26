@@ -138,7 +138,7 @@ io.on('connection', socket => {
     if (card === 'SC') {
       player.specialCards.push(card);
       advanceTurn(game);
-      return io.to(gameId).emit('game-update', game);
+      return io.to(gameId).emit('game-update', game); // Don't add to discard
     }
 
     // Handle Freeze card
@@ -205,25 +205,20 @@ io.on('connection', socket => {
     }
   });
 
-  socket.on('use-freeze', (gameId, targetId) => {
-    const game = games.get(gameId);
-    if (!game) return;
-  
-    const player = game.players.find(p => p.id === socket.id);
-    const target = game.players.find(p => p.id === targetId);
-  
-    if (player && target && player.specialCards.includes('Freeze')) {
-      // Remove freeze card from player
-      player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
-      
-      // Freeze the target player
-      target.status = 'frozen';
-      game.discardPile.push('Freeze'); // Add exactly one instance
-      
-      io.to(gameId).emit('game-update', game);
-      checkGameStatus(game);
-    }
-  });
+ // Update Freeze usage
+socket.on('use-freeze', (gameId, targetId) => {
+  const game = games.get(gameId);
+  const player = game.players.find(p => p.id === socket.id);
+  const target = game.players.find(p => p.id === targetId);
+
+  if (player && target && player.specialCards.includes('Freeze')) {
+    player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
+    game.discardPile.push('Freeze'); // Add to discard when used
+    target.status = 'frozen';
+    checkGameStatus(game);
+    io.to(gameId).emit('game-update', game);
+  }
+});
 
   // Game status checking
   const checkGameStatus = game => {
@@ -330,7 +325,7 @@ const handleNumberCard = (game, player, card) => {
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
-      game.discardPile.push('SC');
+      game.discardPile.push('SC'); // Only add to discard when used
     } else {
       player.status = 'busted';
       player.bustedCard = card;
