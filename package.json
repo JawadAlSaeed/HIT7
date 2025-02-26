@@ -4,8 +4,10 @@
   "description": "A game about cards",
   "main": "script.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "stop": "kill-port --port 3000",
+    "restart": "pm2 restart my-app",
+    "logs": "pm2 logs my-app"
   },
   "repository": {
     "type": "git",
@@ -25,5 +27,8 @@
     "helmet": "^7.2.0",
     "socket.io": "^4.8.1",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "kill-port": "^2.0.1"
   }
 }
