@@ -179,49 +179,56 @@ function updateDiscardPile(discardPile) {
     return acc;
   }, {});
 
-  const typeMap = {
-    'SC': { type: 'second-chance', display: '🛡️' },
-    'Freeze': { type: 'freeze', display: '❄️' },
-    'D3': { type: 'draw-three', display: '🎯' },
-    '+': { type: 'adder', display: '' },
-    'x': { type: 'multiplier', display: '' }
-  };
-
-  const sortOrder = {
-    'second-chance': 1,
-    'freeze': 2,
-    'draw-three': 3,
-    'adder': 4,
-    'multiplier': 5,
-    'number': 6
-  };
-
   document.getElementById('discard').innerHTML = Object.entries(discardCounts)
     .map(([cardStr, count]) => {
-      // Determine card type and display
       let cardType, displayValue;
       
-      // Check if it's a special card
-      const specialCard = typeMap[cardStr] || 
-                         (cardStr.endsWith('+') ? typeMap['+'] : 
-                          cardStr.endsWith('x') ? typeMap['x'] : null);
-      
-      if (specialCard) {
-        cardType = specialCard.type;
-        displayValue = specialCard.display || cardStr;
+      if (cardStr === 'SC') {
+        cardType = 'second-chance';
+        displayValue = '🛡️';
+      } else if (cardStr === 'Freeze') {
+        cardType = 'freeze';
+        displayValue = '❄️';
+      } else if (cardStr === 'D3') {
+        cardType = 'draw-three';
+        displayValue = '🎯';
+      } else if (cardStr.includes('+')) {
+        cardType = 'adder';
+        displayValue = cardStr;
+      } else if (cardStr.includes('x')) {
+        cardType = 'multiplier';
+        displayValue = cardStr.replace('x', '×');
       } else {
         cardType = 'number';
         displayValue = cardStr;
       }
 
+      const cardStyle = cardType !== 'number' ? `
+        background: ${
+          cardType === 'adder' ? '#27ae60' : 
+          cardType === 'multiplier' ? '#f1c40f' :
+          cardType === 'second-chance' ? '#e74c3c' :
+          cardType === 'freeze' ? '#3498db' :
+          cardType === 'draw-three' ? '#9b59b6' : 'inherit'
+        } !important;
+      ` : '';
+
       return {
         html: `
-          <div class="discard-card ${cardType} ${!specialCard ? 'regular-card' : 'special'}">
+          <div class="discard-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
+               style="${cardStyle}">
             ${displayValue}
             ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
           </div>
         `,
-        order: sortOrder[cardType] || 999
+        order: {
+          'second-chance': 1,
+          'freeze': 2,
+          'draw-three': 3,
+          'adder': 4,
+          'multiplier': 5,
+          'number': 6
+        }[cardType] || 999
       };
     })
     .sort((a, b) => a.order - b.order)
@@ -294,10 +301,19 @@ function getSpecialCardClass(card) {
 }
 
 function getSpecialCardDisplay(card) {
-  return card === 'SC' ? '🛡️' :
-    card === 'Freeze' ? '❄️' :
-    card === 'D3' ? '🎯' :
-    card.replace(/[^0-9]/g, '');
+  // Special cards with emojis
+  if (card === 'SC') return '🛡️';
+  if (card === 'Freeze') return '❄️';
+  if (card === 'D3') return '🎯';
+  
+  // For adder and multiplier cards, extract the number and symbol
+  if (card.endsWith('+') || card.endsWith('x')) {
+    const number = card.slice(0, -1);  // Get everything except last character
+    const symbol = card.slice(-1);     // Get last character (+ or x)
+    return `${number}${symbol}`;       // Combine them (e.g., "2+")
+  }
+  
+  return card;
 }
 
 function getStatusIcon(status) {
@@ -320,7 +336,8 @@ function getStatusText(status) {
         stood: 'STOOD', 
         busted: 'BUSTED',
         waiting: 'WAITING',
-        frozen: 'FROZEN'
+        frozen: 'FROZEN',
+        finished: 'FINISHED' // Add new status
     }[status];
 }
 
@@ -444,21 +461,35 @@ function handleRoundSummary({ players, allBusted }) {
     const popup = document.createElement('div');
     popup.className = 'round-summary-popup';
     
-    const playerList = players.map(player => `
-        <div class="player-summary ${player.status}">
-            <span class="player-name">${player.name}</span>
-            <div class="status-info">
-                <div class="status-badge">${getStatusText(player.status)}</div>
-                ${player.bustedCard ? `
-                    <div class="busted-card">Busted on ${player.bustedCard}</div>
-                ` : ''}
+    const playerList = players.map(player => {
+        const hasBonus = player.regularCards.length === MAX_REGULAR_CARDS;
+        const status = hasBonus ? 'finished' : player.status;
+        
+        return `
+            <div class="player-summary ${status}">
+                <div class="summary-left">
+                    <span class="player-name">${player.name}</span>
+                    <div class="status-info">
+                        <div class="status-badge ${status}">${getStatusText(status)}</div>
+                        ${hasBonus ? `<div class="bonus-badge">+15 BONUS</div>` : ''}
+                        ${player.bustedCard ? `
+                            <div class="busted-card">Busted on ${player.bustedCard}</div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="summary-scores">
+                    <div class="score-item">
+                        <span class="score-label">Round:</span>
+                        <span class="score-value">${player.roundScore}</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-label">Total:</span>
+                        <span class="score-value">${player.totalScore}</span>
+                    </div>
+                </div>
             </div>
-            <div class="scores">
-                <span class="score">Round: ${player.roundScore}</span>
-                <span class="score">Total: ${player.totalScore}</span>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     popup.innerHTML = `
         <div class="popup-content">
@@ -605,6 +636,7 @@ function showTutorial() {
                         <li>First player to reach 200 points wins</li>
                         <li>If all players bust, the round is restarted</li>
                         <li>Your score is calculated as: (Sum of unique numbers + Adder cards) × Multiplier cards</li>
+                        <li>Bonus: Get 15 extra points for reaching 7 cards in one turn!</li>
                     </ul>
                 </div>
             </div>

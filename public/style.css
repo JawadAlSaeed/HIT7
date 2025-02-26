@@ -377,33 +377,11 @@ body {
     align-items: center;
     justify-content: center;
     position: relative;
-    z-index: 2; /* Ensure content stays above glow effects */
-    overflow: hidden;
     border: 2px solid;
-    font-size: 1.4rem;
-    flex-direction: column;
+    font-size: 1.2rem;
     width: 50px;
     height: 70px;
-    margin: 0 3px;
-    animation: none !important;
-    box-shadow: none !important;
-}
-
-.card.special::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: calc(100% - 4px);
-    height: calc(100% - 4px);
-    border-radius: 6px;
-    background: inherit;
-    z-index: -1;
-}
-
-.card.special::after {
-    content: none !important;
+    border-radius: 8px;
 }
 
 .card.special.adder::after { content: "+"; }
@@ -748,29 +726,31 @@ body {
     box-shadow: none !important;
     background: var(--highlight) !important;
     background: inherit !important; /* Keep original colors */
-    font-size: 1.4rem;
-    padding-top: 0 !important;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .discard-card.special::before {
-    content: attr(data-value);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: bold;
+    display: none; /* Remove the before pseudo-element */
 }
 
 /* Adder Cards (+ cards) */
 .discard-card.adder {
     background: linear-gradient(45deg, #27ae60, #2ecc71);
     background: #27ae60 !important;
+    border-color: #219a52 !important;
+    color: white !important;
 }
 
 /* Multiplier Cards (x cards) */
 .discard-card.multiplier {
     background: linear-gradient(45deg, #f1c40f, #f39c12);
     background: #f1c40f !important;
+    border-color: #d0a90d !important;
+    color: var(--text-dark) !important;
 }
 
 /* Second Chance Card */
@@ -779,6 +759,7 @@ body {
     color: white !important;
     position: relative;
     background: #e74c3c !important;
+    border-color: #c0392b !important;
 }
 
 /* Second Chance Icon */
@@ -830,21 +811,11 @@ body {
 
 /* Special Cards Symbols */
 .discard-card.adder::after {
-    content: "+";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 0.9rem;
-    font-weight: bold;
+    display: none;
 }
 
 .discard-card.multiplier::after {
-    content: "×";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 0.9rem;
-    font-weight: bold;
+    display: none;
 }
 
 /* Second Chance Card */
@@ -887,7 +858,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -895,13 +866,22 @@ body {
     padding: 20px;
 }
 
-.popup-content {
-    background: var(--primary);
-    padding: 2rem;
+.round-summary-popup .popup-content {
+    background: var(--secondary);
+    padding: 2.5rem;
     border-radius: 15px;
     max-width: 600px;
     width: 100%;
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    border: 3px solid var(--highlight);
+}
+
+.round-summary-popup h2 {
+    color: var(--highlight);
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    font-weight: 600;
 }
 
 .player-list {
@@ -913,34 +893,119 @@ body {
 
 .player-summary {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    align-items: flex-start;
+    padding: 1.5rem;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    gap: 1.5rem;
 }
 
-.player-summary.busted {
-    opacity: 0.7;
-    background: rgba(231, 76, 60, 0.1);
+.summary-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.player-name {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var (--text-light);
+    margin-bottom: 0.3rem;
+    display: block;
+}
+
+.status-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
 }
 
 .status-badge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
     font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 80px;
+    text-align: center;
 }
 
-.player-summary.active .status-badge { background: #3498db; }
-.player-summary.stood .status-badge { background: #2ecc71; }
-.player-summary.busted .status-badge { background: #e74c3c; }
+/* Status Badge Colors */
+.status-badge.active { background: #3498db; }
+.status-badge.stood { background: #2ecc71; }
+.status-badge.busted { background: #e74c3c; }
+.status-badge.frozen { background: #95a5a6; }
+.status-badge.finished { background: #9b59b6; }
+
+.bonus-badge {
+    background: #9b59b6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
+.summary-scores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    min-width: 120px;
+}
+
+.score-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+}
+
+.score-label {
+    color: var(--text-light);
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.score-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--highlight);
+}
+
+.player-summary .busted-card {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin: 0;
+}
 
 .countdown {
     text-align: center;
     font-size: 1.2rem;
     color: var(--highlight);
-    margin-top: 1.5rem;
+    margin-top: 2rem;
+    font-weight: 500;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 10px;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
 }
 
 /* Special Cards Layout Fix */
@@ -1425,4 +1490,66 @@ body {
 
 .tab-content.active {
     display: block;
+}
+
+/* Special Cards in Discard Pile */
+.discard-card.special {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    padding: 0 !important;
+    color: white;
+}
+
+/* Reset all pseudo-elements */
+.discard-card.special::before,
+.discard-card.special::after,
+.discard-card.adder::after,
+.discard-card.multiplier::after,
+.discard-card.second-chance::before,
+.discard-card.freeze::before {
+    content: none !important;
+}
+
+/* Card Count Badge */
+.discard-card .discard-count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 3px;
+    line-height: 1;
+}
+
+/* Remove any background overrides */
+.discard-card.special[style*="background"] {
+    background: var(--highlight);
+}
+
+/* Clear out conflicting styles */
+.discard-card.special::before,
+.discard-card.special::after {
+    content: none !important;
+}
+
+/* Adder Cards */
+.discard-card.adder {
+    background: #27ae60 !important;
+    border-color: #219a52 !important;
+    color: white !important;
+}
+
+/* Multiplier Cards */
+.discard-card.multiplier {
+    background: #f1c40f !important;
+    border-color: #d0a90d !important;
+    color: var(--text-dark) !important;
 }

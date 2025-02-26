@@ -388,8 +388,10 @@ const handleNumberCard = (game, player, card) => {
     }
   } else {
     player.regularCards.push(card);
-    if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+    // Add 15 bonus points if player reaches 7 cards in one turn
+    if (player.regularCards.length === MAX_REGULAR_CARDS) {
       player.status = 'stood';
+      player.totalScore += 15; // Add bonus points
     }
   }
 };
