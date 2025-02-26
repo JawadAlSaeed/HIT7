@@ -399,7 +399,9 @@ function handleGameJoined(gameId) {
 
 function handleGameStarted(game) {
     document.getElementById('startGame').style.display = 'none';
-    toggleActionButtons(true);
+    // Only show buttons for the first player (current player)
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
     updateGameDisplay(game);
 }
 
