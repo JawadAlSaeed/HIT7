@@ -3,6 +3,7 @@ let currentGameId = null;
 let isHost = false;
 const MAX_REGULAR_CARDS = 7;
 let activeFreezePopup = null;
+let activeDrawThreePopup = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('createGame').addEventListener('click', createGame);
@@ -48,27 +49,56 @@ socket.on('select-freeze-target', (gameId, targets) => {
   popup.innerHTML = `
     <div class="popup-content">
       <h3>❄️ Select player to freeze:</h3>
-      ${targets.map(p => `
-        <button class="freeze-target" data-id="${p.id}">
-          ${p.name}
-        </button>
-      `).join('')}
-      <button class="cancel-freeze">Cancel</button>
+      <div class="freeze-targets">
+        ${targets.map(p => `
+          <button class="freeze-target" data-id="${p.id}">
+            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
     </div>
   `;
 
   popup.querySelectorAll('.freeze-target').forEach(btn => {
     btn.addEventListener('click', () => {
-      socket.emit('use-freeze', currentGameId, btn.dataset.id);
+      socket.emit('freeze-player', currentGameId, btn.dataset.id);
       popup.remove();
     });
   });
 
-  popup.querySelector('.cancel-freeze').addEventListener('click', () => {
-    popup.remove();
+  document.body.appendChild(popup);
+});
+
+socket.on('select-draw-three-target', (gameId, targets) => {
+  if (activeDrawThreePopup) {
+    activeDrawThreePopup.remove();
+    activeDrawThreePopup = null;
+  }
+
+  const popup = document.createElement('div');
+  popup.className = 'draw-three-popup active';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>🎯 Select player to draw three cards:</h3>
+      <div class="draw-three-targets">
+        ${targets.map(p => `
+          <button class="draw-three-target" data-id="${p.id}">
+            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  popup.querySelectorAll('.draw-three-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('draw-three-select', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
   });
 
   document.body.appendChild(popup);
+  activeDrawThreePopup = popup;
 });
 
 socket.on('connect', () => console.log('Connected to server'));
@@ -143,37 +173,59 @@ function updateGameDisplay(game) {
 
 function updateDiscardPile(discardPile) {
   const discardCounts = discardPile.reduce((acc, card) => {
-    const key = card.toString(); // Preserve original card type
+    const key = card.toString();
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
 
+  const typeMap = {
+    'SC': { type: 'second-chance', display: '🛡️' },
+    'Freeze': { type: 'freeze', display: '❄️' },
+    'D3': { type: 'draw-three', display: '🎯' },
+    '+': { type: 'adder', display: '' },
+    'x': { type: 'multiplier', display: '' }
+  };
+
+  const sortOrder = {
+    'second-chance': 1,
+    'freeze': 2,
+    'draw-three': 3,
+    'adder': 4,
+    'multiplier': 5,
+    'number': 6
+  };
+
   document.getElementById('discard').innerHTML = Object.entries(discardCounts)
     .map(([cardStr, count]) => {
-      // Determine card type
-      const typeMap = {
-        'SC': 'second-chance',
-        'Freeze': 'freeze',
-        '+': 'adder',
-        'x': 'multiplier'
-      };
+      // Determine card type and display
+      let cardType, displayValue;
       
-      const cardType = Object.keys(typeMap).find(k => cardStr === k) ? 
-        typeMap[cardStr] : 
-        cardStr.match(/[+x]/) ? typeMap[cardStr.slice(-1)] : '';
+      // Check if it's a special card
+      const specialCard = typeMap[cardStr] || 
+                         (cardStr.endsWith('+') ? typeMap['+'] : 
+                          cardStr.endsWith('x') ? typeMap['x'] : null);
+      
+      if (specialCard) {
+        cardType = specialCard.type;
+        displayValue = specialCard.display || cardStr;
+      } else {
+        cardType = 'number';
+        displayValue = cardStr;
+      }
 
-      const displayValue = {
-        'SC': '🛡️',
-        'Freeze': '❄️'
-      }[cardStr] || cardStr.replace(/[^0-9]/g, '');
-
-      return `
-        <div class="discard-card ${cardType ? 'special ' + cardType : ''}">
-          ${displayValue}
-          ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
-        </div>
-      `;
-    }).join('');
+      return {
+        html: `
+          <div class="discard-card ${cardType} ${!specialCard ? 'regular-card' : 'special'}">
+            ${displayValue}
+            ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
+          </div>
+        `,
+        order: sortOrder[cardType] || 999
+      };
+    })
+    .sort((a, b) => a.order - b.order)
+    .map(item => item.html)
+    .join('');
 }
 
 function renderPlayers(game) {
@@ -184,7 +236,7 @@ function renderPlayers(game) {
 
 function playerTemplate(player, isCurrentTurn) {
     return `
-        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}">
+        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
             <div class="player-header">
                 <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
                 <div class="player-status">
@@ -212,6 +264,11 @@ function playerTemplate(player, isCurrentTurn) {
                     `).join('')}
                 </div>
             ` : ''}
+            ${player.drawThreeRemaining > 0 ? `
+                <div class="draw-three-indicator">
+                  🎯 Draw ${player.drawThreeRemaining} more cards
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -227,14 +284,18 @@ function scoreBox(label, value) {
 }
 
 function getSpecialCardClass(card) {
-  return card === 'SC' ? 'second-chance' :
-    card === 'Freeze' ? 'freeze' :
-    card.endsWith('x') ? 'multiplier' : 'adder';
+  if (card === 'SC') return 'second-chance';
+  if (card === 'Freeze') return 'freeze';
+  if (card === 'D3') return 'draw-three';
+  if (card.endsWith('x')) return 'multiplier';
+  if (card.endsWith('+')) return 'adder';
+  return '';
 }
 
 function getSpecialCardDisplay(card) {
   return card === 'SC' ? '🛡️' :
     card === 'Freeze' ? '❄️' :
+    card === 'D3' ? '🎯' :
     card.replace(/[^0-9]/g, '');
 }
 
@@ -269,8 +330,44 @@ function showGameArea() {
 }
 
 function toggleActionButtons(active) {
-    document.getElementById('flipCard').style.display = active ? 'block' : 'none';
-    document.getElementById('standButton').style.display = active ? 'block' : 'none';
+    const flipCardBtn = document.getElementById('flipCard');
+    const standButton = document.getElementById('standButton');
+    
+    // Get current player object
+    const game = getCurrentGameState();
+    const currentPlayer = game?.players[game.currentPlayer];
+    const isCurrentPlayersTurn = currentPlayer?.id === socket.id;
+    
+    // Show flip card button if it's player's turn and they're active
+    flipCardBtn.style.display = active ? 'block' : 'none';
+    
+    // Show stand button if:
+    // 1. It's player's turn
+    // 2. They're active
+    // 3. They're not in the middle of a Draw Three
+    standButton.style.display = (active && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) ? 'block' : 'none';
+}
+
+// Add this helper function to get current game state
+function getCurrentGameState() {
+    const container = document.getElementById('playersContainer');
+    const players = [...container.querySelectorAll('.player')].map(playerEl => {
+        const isCurrentTurn = playerEl.classList.contains('current-turn');
+        const drawThreeRemaining = parseInt(playerEl.querySelector('.draw-three-indicator')?.textContent.match(/\d+/) || 0);
+        return {
+            id: playerEl.dataset.playerId,
+            drawThreeRemaining
+        };
+    });
+    
+    const currentPlayerIndex = players.findIndex(p => 
+        p.id === socket.id && document.querySelector(`.player[data-player-id="${p.id}"]`)?.classList.contains('current-turn')
+    );
+
+    return {
+        players,
+        currentPlayer: currentPlayerIndex
+    };
 }
 
 // Game event handlers
@@ -403,7 +500,6 @@ function showFreezePopup(gameId, targets) {
           ${t.name}
         </button>
       `).join('')}
-      <button class="cancel-freeze">Cancel</button>
     </div>
   `;
 
@@ -413,12 +509,6 @@ function showFreezePopup(gameId, targets) {
       activeFreezePopup.remove();
       activeFreezePopup = null;
     });
-  });
-
-  activeFreezePopup.querySelector('.cancel-freeze').addEventListener('click', () => {
-    socket.emit('cancel-freeze', currentGameId);
-    activeFreezePopup.remove();
-    activeFreezePopup = null;
   });
 
   document.body.appendChild(activeFreezePopup);
