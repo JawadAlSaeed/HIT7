@@ -1,4 +1,4 @@
-# FLIP7
+# HIT7
 Flip over cards one by one without flipping the same number twice.
 
 Sound easy? Think again! This isn't just any deck of cards… In Flip 7 there's only one 1 card, two 2's, three 3’s, etc plus a bunch of special cards that can score you extra points, give you a second chance, or freeze you or your opponents in your tracks.
