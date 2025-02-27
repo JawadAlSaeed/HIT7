@@ -158,62 +158,56 @@ const handleSocketConnection = (io) => {
 
       const card = game.deck.pop();
       
-      // If player is under draw three effect, any card counts towards the three cards
-      if (player.drawThreeRemaining > 0) {
-        if (typeof card === 'number') {
+      // Handle number cards
+      if (typeof card === 'number') {
           handleNumberCard(game, player, card);
           game.discardPile.push(card);
           
           if (player.status === 'busted') {
-            player.drawThreeRemaining = 0;
-            advanceTurn(game);
+              player.drawThreeRemaining = 0;
+              advanceTurn(game);
           }
           else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-            player.status = 'stood';
-            player.drawThreeRemaining = 0;
-            advanceTurn(game);
+              player.status = 'stood';
+              player.drawThreeRemaining = 0;
+              advanceTurn(game);
+          } 
+          else if (player.drawThreeRemaining > 0) {
+              player.drawThreeRemaining--;
+              if (player.drawThreeRemaining === 0) {
+                  advanceTurn(game);
+              }
           }
-        } else {
-          // Special cards count towards draw three but are kept
-          player.specialCards.push(card);
-        }
-        
-        // Decrease remaining draws and check if done
-        player.drawThreeRemaining--;
+          else {
+              advanceTurn(game);
+          }
+      }
+      // Handle special cards - don't add to discard pile until they're used
+      else if (card === 'D3') {
+        player.specialCards.push(card);
         if (player.drawThreeRemaining === 0) {
-          // If player has pending special cards (Freeze/D3), let them use them
-          if (player.specialCards.some(c => c === 'Freeze' || c === 'D3')) {
-            // Don't advance turn, let player use their special cards
-            handlePendingSpecialCards(socket, game, player);
-          } else {
-            advanceTurn(game);
-          }
-        }
-      } else {
-        // Normal card handling when not under draw three effect
-        if (typeof card === 'number') {
-          handleNumberCard(game, player, card);
-          game.discardPile.push(card);
-          
-          if (player.status === 'busted' || player.regularCards.length >= MAX_REGULAR_CARDS) {
-            advanceTurn(game);
-          }
-        }
-        else if (card === 'D3') {
-          player.specialCards.push(card);
           const targets = game.players.filter(p => 
             p.status === 'active' && 
             p.regularCards.length < MAX_REGULAR_CARDS
           );
           socket.emit('select-draw-three-target', game.id, targets);
+        } else {
+          player.drawThreeRemaining--;
+          if (player.drawThreeRemaining === 0) {
+            advanceTurn(game);
+          }
         }
-        else if (card === 'Freeze') {
-          player.specialCards.push(card);
-          const targets = game.players.filter(p => p.status === 'active');
-          socket.emit('select-freeze-target', game.id, targets);
-        }
-        else {
-          player.specialCards.push(card);
+      }
+      // Handle Freeze card
+      else if (card === 'Freeze') {
+        player.specialCards.push(card);
+        const targets = game.players.filter(p => p.status === 'active');
+        socket.emit('select-freeze-target', game.id, targets);
+      }
+      // Handle other special cards
+      else {
+        player.specialCards.push(card);
+        if (player.drawThreeRemaining === 0) {
           advanceTurn(game);
         }
       }
@@ -287,18 +281,14 @@ const handleSocketConnection = (io) => {
       
       if (player && target && player.specialCards.includes('D3')) {
         player.specialCards = player.specialCards.filter(c => c !== 'D3');
-        game.discardPile.push('D3');
         
         const remainingSpace = MAX_REGULAR_CARDS - target.regularCards.length;
         target.drawThreeRemaining = Math.min(3, remainingSpace);
         
-        // Change turn to target player
-        game.currentPlayer = game.players.findIndex(p => p.id === target.id);
+        // Add Draw Three to discard only when used
+        game.discardPile.push('D3');
         
-        // If the original player has more special cards to use, don't advance turn yet
-        if (!player.specialCards.some(c => c === 'Freeze' || c === 'D3')) {
-          advanceTurn(game);
-        }
+        game.currentPlayer = game.players.findIndex(p => p.id === target.id);
         
         io.to(gameId).emit('game-update', game);
       }
@@ -457,23 +447,6 @@ const updatePlayerScore = player => {
     .reduce((a, c) => a * parseInt(c), 1);
 
   player.roundScore = (base + add) * (multiply || 1);
-};
-
-// Add this new helper function
-const handlePendingSpecialCards = (socket, game, player) => {
-  // First check for Freeze cards
-  if (player.specialCards.includes('Freeze')) {
-    const targets = game.players.filter(p => p.status === 'active');
-    socket.emit('select-freeze-target', game.id, targets);
-  }
-  // Then check for Draw Three cards
-  else if (player.specialCards.includes('D3')) {
-    const targets = game.players.filter(p => 
-      p.status === 'active' && 
-      p.regularCards.length < MAX_REGULAR_CARDS
-    );
-    socket.emit('select-draw-three-target', game.id, targets);
-  }
 };
 
 // Server startup
