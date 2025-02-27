@@ -57,7 +57,19 @@ const createDeck = () => {
   }
 
   // Special cards = 15 cards (total 94)
-  ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC', 'Freeze', 'Freeze', 'Freeze', 'D3', 'D3', 'D3'].forEach(c => deck.push(c));
+  const specialCards = [
+    '2+', '4+', '6+', '8+', '10+',  // 5 adder cards
+    '2x',                            // 1 multiplier card
+    'SC', 'SC', 'SC',               // 3 second chance cards
+    'Freeze', 'Freeze', 'Freeze',    // 3 freeze cards
+    'D3', 'D3', 'D3'                // 3 draw three cards
+  ];
+  deck.push(...specialCards);
+  
+  // Verify deck size
+  if (deck.length !== 94) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 94 cards.`);
+  }
   
   return shuffle(deck);
 };
@@ -125,44 +137,50 @@ const handleSocketConnection = (io) => {
 
       // Handle deck replenishment
       if (game.deck.length === 0) {
-          if (game.discardPile.length === 0) {
-              game.deck = createDeck();
-              shuffle(game.deck);
-          } else {
-              game.deck = shuffle([...game.discardPile]);
-              game.discardPile = [];
-          }
+        // Log the state before reshuffling
+        console.log(`Before reshuffle - Discard pile size: ${game.discardPile.length}`);
+        
+        if (game.discardPile.length === 0) {
+          // If both deck and discard are empty, create a new deck
+          game.deck = createDeck();
+        } else {
+          // Move ALL cards from discard pile back to deck and shuffle
+          game.deck = shuffle([...game.discardPile]);
+          game.discardPile = [];
+        }
+        
+        // Log the state after reshuffling
+        console.log(`After reshuffle - New deck size: ${game.deck.length}`);
+        
+        // Notify clients about the reshuffle
+        io.to(gameId).emit('game-update', game);
       }
 
       const card = game.deck.pop();
       
       // Handle number cards
       if (typeof card === 'number') {
-        handleNumberCard(game, player, card);
-        game.discardPile.push(card); // Move this here - only add number cards once
-        
-        // If player busted, clear draw three state and advance turn
-        if (player.status === 'busted') {
-          player.drawThreeRemaining = 0;
-          advanceTurn(game);
-        }
-        // If player hit max cards
-        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-          player.status = 'stood';
-          player.drawThreeRemaining = 0;
-          advanceTurn(game);
-        } 
-        // If player is in draw three state
-        else if (player.drawThreeRemaining > 0) {
-          player.drawThreeRemaining--;
-          if (player.drawThreeRemaining === 0) {
-            advanceTurn(game);
+          handleNumberCard(game, player, card);
+          game.discardPile.push(card);
+          
+          if (player.status === 'busted') {
+              player.drawThreeRemaining = 0;
+              advanceTurn(game);
           }
-        }
-        // Normal turn advancement
-        else {
-          advanceTurn(game);
-        }
+          else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+              player.status = 'stood';
+              player.drawThreeRemaining = 0;
+              advanceTurn(game);
+          } 
+          else if (player.drawThreeRemaining > 0) {
+              player.drawThreeRemaining--;
+              if (player.drawThreeRemaining === 0) {
+                  advanceTurn(game);
+              }
+          }
+          else {
+              advanceTurn(game);
+          }
       }
       // Handle special cards - don't add to discard pile until they're used
       else if (card === 'D3') {
@@ -289,10 +307,11 @@ const handleSocketConnection = (io) => {
         return;
       }
 
+      // Check if round should end (all players are either busted or stood)
       const activePlayers = game.players.filter(p => p.status === 'active');
       const allBusted = game.players.every(p => p.status === 'busted');
 
-      if (activePlayers.length === 0 || game.deck.length === 0) {
+      if (activePlayers.length === 0) {
         io.to(game.id).emit('round-summary', {
           players: game.players,
           allBusted: allBusted

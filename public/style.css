@@ -384,10 +384,6 @@ body {
     border-radius: 8px;
 }
 
-.card.special.adder::after { content: "+"; }
-.card.special.multiplier::after { content: "×"; }
-.card.special.second-chance::before { content: "🛡️"; }
-.card.special.freeze::before { content: "❄️"; }
 
 .card.special.adder {
     background: #27ae60 !important; /* Solid green for adder */
@@ -422,7 +418,7 @@ body {
 .discard-card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
-    content: "🛡️";
+    content: "";
     font-size: 1.8rem;
     display: block;
     margin-top: -5px;
@@ -440,7 +436,7 @@ body {
 .discard-card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
-    content: "🛡️";
+    content: "";
     font-size: 1.8rem;
     display: block;
     margin-top: -5px;
@@ -461,7 +457,7 @@ body {
 
 .card.special.freeze::before,
 .discard-card.special.freeze::before {
-    content: "❄️" !important; /* Single emoji */
+    content: "" !important; /* Single emoji */
     font-size: 1.8rem;
     position: absolute;
     bottom: 5px;
@@ -1160,12 +1156,12 @@ body {
 
 .card.special.second-chance::before,
 .discard-card.special.second-chance::before {
-  content: "🛡️" !important;
+  content: "" !important;
 }
 
 .card.special.freeze::before,
 .discard-card.special.freeze::before {
-  content: "❄️" !important;
+  content: "" !important;
 }
 
 /* Ensure discard cards show symbols */
