@@ -48,12 +48,15 @@ const MAX_REGULAR_CARDS = 7;
 const createDeck = () => {
   const deck = [];
   
+  // Zero card (1 card)
+  deck.push(0);
+  
   // Regular cards (1-12) = 78 cards
   for (let number = 1; number <= 12; number++) {
     for (let i = 0; i < number; i++) deck.push(number);
   }
 
-  // Special cards = 15 cards (total 93)
+  // Special cards = 15 cards (total 94)
   ['2+', '4+', '6+', '8+', '10+', '2x', 'SC', 'SC', 'SC', 'Freeze', 'Freeze', 'Freeze', 'D3', 'D3', 'D3'].forEach(c => deck.push(c));
   
   return shuffle(deck);
@@ -387,7 +390,15 @@ const advanceTurn = game => {
 };
 
 const handleNumberCard = (game, player, card) => {
-  if (player.regularCards.includes(card)) {
+  if (card === 0) {
+    // Zero card can't cause a bust and can be held multiple times
+    player.regularCards.push(card);
+    // Add 15 bonus points if player reaches 7 cards in one turn
+    if (player.regularCards.length === MAX_REGULAR_CARDS) {
+      player.status = 'stood';
+      player.totalScore += 15; // Add bonus points
+    }
+  } else if (player.regularCards.includes(card)) {
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
