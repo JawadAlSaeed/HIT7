@@ -87,8 +87,27 @@ body::before {
 
 /* Header Logo (smaller version) */
 .game-header .game-logo {
-    font-size: 2.5rem;
+    font-size: 3rem;
     margin: 0;
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
+}
+
+.game-header .game-logo .hit {
+    background: var(--card-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+    padding-right: 5px;
+}
+
+.game-header .game-logo .seven {
+    color: var(--highlight);
+    font-weight: 900;
+    font-size: 1.2em;
+    position: relative;
+    top: 3px;
+    text-shadow: var(--glow);
 }
 
 .lobby-button {
@@ -186,18 +205,23 @@ body::before {
 }
 
 .game-header {
-    background: linear-gradient(145deg, #34495e, #2c3e50);
+    background: rgba(22, 33, 62, 0.8);
     border-radius: 15px;
-    padding: 1.5rem;
+    padding: 1.5rem 2rem;
     margin-bottom: 2rem;
-    border: 2px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(233, 69, 96, 0.2);
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     position: relative;
     overflow: hidden;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
 }
 
 .game-header::before {
@@ -236,12 +260,22 @@ body::before {
     align-items: center;
 }
 
-.game-code-display {
-    font-size: 1.3rem;
-    letter-spacing: 2px;
-    background: rgba(0,0,0,0.15);
-    padding: 0.8rem 1.5rem;
-    border-radius: 8px;
+.game-header .game-code-display {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.game-header .game-code-display .label {
+    font-family: 'Cairo Play', sans-serif;
+    font-size: 1.4rem;
+    color: var(--text-light);
+    opacity: 0.8;
 }
 
 .deck-area {
@@ -726,9 +760,21 @@ body::before {
     }
 
     .game-header {
-        flex-direction: column;
+        flex-direction: row; /* Keep horizontal layout */
+        padding: 1rem;
         gap: 1rem;
-        text-align: center;
+    }
+
+    .game-header .game-logo {
+        font-size: 2rem;
+    }
+
+    .game-header .game-code-display {
+        font-size: 1rem;
+    }
+
+    .game-header .game-code-display .label {
+        font-size: 1.1rem;
     }
     
     .deck-info, .game-code-display {
