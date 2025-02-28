@@ -204,6 +204,7 @@ body::before {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+/* Update Game Header Styling */
 .game-header {
     background: rgba(22, 33, 62, 0.8);
     border-radius: 15px;
@@ -222,6 +223,12 @@ body::before {
 .header-left, .header-right {
     display: flex;
     align-items: center;
+}
+
+.header-left .game-logo {
+    font-size: 3rem;
+    margin: 0;
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
 }
 
 .game-header::before {
@@ -765,11 +772,11 @@ body::before {
         gap: 1rem;
     }
 
-    .game-header .game-logo {
+    .header-left .game-logo {
         font-size: 2rem;
     }
 
-    .game-header .game-code-display {
+    .header-right .game-code-display {
         font-size: 1rem;
     }
 
