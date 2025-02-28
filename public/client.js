@@ -596,6 +596,7 @@ function showTutorial() {
                             </div>
                         </div>
                     </div>
+                    <p>(except for 0 it appears once and has 0 points)</p>
                 </div>
 
                 <div class="tutorial-section">
