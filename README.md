@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/hit7-logo.png" alt="HIT7 Logo" width="200"/>
+  <img src="https://raw.githubusercontent.com/DragonX-cloud/HIT7/main/assets/logo.png" alt="HIT7 Logo" width="200"/>
   <h1>HIT7</h1>
 </div>
 
@@ -45,6 +45,9 @@ HIT7 is an exciting card game that combines luck, strategy, and risk management.
 - JavaScript enabled
 - Minimum screen resolution: 800x600
 
+## Play the Game
+Try HIT7 now at [hit7.xyz](http://hit7.xyz)!
+
 ## Credits
 Developed using AI assistance
 Graphics and sound effects from open-source resources
@@ -52,4 +55,4 @@ Graphics and sound effects from open-source resources
 ## License
 MIT License - Feel free to use and modify while maintaining attribution
 
-[Play Now](#) | [Report Issues](#) | [Contribute](#)
+[Play Now](http://hit7.xyz) | [Report Issues](#) | [Contribute](#)
