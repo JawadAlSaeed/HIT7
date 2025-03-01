@@ -105,10 +105,37 @@ socket.on('select-draw-three-target', (gameId, targets) => {
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
 
+// Add this with the other socket event listeners at the top
+socket.on('rematch-started', (game) => {
+    const popups = document.querySelectorAll('.winner-popup');
+    popups.forEach(popup => popup.remove());
+    
+    // Clear the board for new game
+    document.getElementById('playersContainer').innerHTML = '';
+    
+    // Update game display
+    updateGameDisplay(game);
+    
+    // Check if it's the current player's turn
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
+});
+
 // Game actions
 function createGame() {
-    const name = prompt('Enter your name:');
-    if (name) socket.emit('create-game', name);
+    const name = prompt('Enter your name:')?.trim();
+    if (!name) {
+        return alert('Please enter a name!');
+    }
+    if (name.length < 3) {
+        return alert('Name must be at least 3 characters!');
+    }
+    
+    // Clear any existing game state
+    currentGameId = null;
+    document.getElementById('playersContainer').innerHTML = '';
+    
+    socket.emit('create-game', name);
 }
 
 function joinGame() {
@@ -444,12 +471,25 @@ function showWinnerPopup(winner) {
         <h2>🏆 TOTAL WINNER! 🏆</h2>
         <div class="winner-name">${winner.name}</div>
         <div class="winner-score">${winner.totalScore} Points</div>
-        <button onclick="window.location.reload()" class="game-button green">
-            Play Again
+        <button id="rematchButton" class="game-button green">
+            Play Again with Same Players
         </button>
     `;
     document.body.appendChild(popup);
+
+    // Add rematch button listener
+    document.getElementById('rematchButton').addEventListener('click', () => {
+        socket.emit('request-rematch', currentGameId);
+        popup.remove();
+    });
 }
+
+// Add new socket event listener near the top with other socket.on events
+socket.on('rematch-started', (game) => {
+    const popups = document.querySelectorAll('.winner-popup');
+    popups.forEach(popup => popup.remove());
+    handleGameStarted(game);
+});
 
 function handleGameOver({ players, winner }) {
     toggleActionButtons(false);

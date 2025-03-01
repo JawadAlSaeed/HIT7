@@ -92,6 +92,15 @@ const handleSocketConnection = (io) => {
         return socket.emit('error', 'Name must be at least 3 characters!');
       }
 
+      // Leave any existing game room first
+      if (socket.rooms) {
+        [...socket.rooms].forEach(room => {
+          if (room !== socket.id) {
+            socket.leave(room);
+          }
+        });
+      }
+
       const gameId = uuidv4().substr(0, 5).toUpperCase();
       const newGame = {
         id: gameId,
@@ -292,6 +301,41 @@ const handleSocketConnection = (io) => {
         
         io.to(gameId).emit('game-update', game);
       }
+    });
+
+    // Add rematch handling
+    socket.on('request-rematch', (gameId) => {
+      const game = games.get(gameId);
+      if (!game) return;
+
+      // Reset the game state but keep players
+      const rematchGame = {
+          ...game,
+          deck: createDeck(),
+          discardPile: [],
+          currentPlayer: 0,
+          status: 'playing',
+          roundNumber: 1
+      };
+
+      // Reset all players
+      rematchGame.players = rematchGame.players.map(player => ({
+          ...player,
+          regularCards: [],
+          specialCards: [],
+          status: 'active',
+          roundScore: 0,
+          totalScore: 0,
+          bustedCard: null,
+          drawThreeRemaining: 0
+      }));
+
+      // Update the game in the map
+      games.set(gameId, rematchGame);
+
+      // Notify all players about the rematch
+      io.to(gameId).emit('rematch-started', rematchGame);
+      io.to(gameId).emit('game-update', rematchGame);
     });
 
     // Game status checking
