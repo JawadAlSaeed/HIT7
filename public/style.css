@@ -990,7 +990,7 @@ body::before {
 }
 
 .remaining-pile .regular-cards::before {
-    content: 'Regular Cards';
+    content: 'Regular Cards Remaining';
     position: absolute;
     top: -12px;
     left: 15px;
@@ -1019,7 +1019,7 @@ body::before {
 }
 
 .remaining-pile .special-cards::before {
-    content: 'Special Cards';
+    content: 'Special Cards Remaining';
     position: absolute;
     top: -12px;
     left: 15px;
@@ -1117,7 +1117,7 @@ body::before {
 }
 
 .remaining-pile .regular-cards::before {
-    content: 'Regular Cards';
+    content: 'Regular Cards Remaining';
     position: absolute;
     top: -10px;
     left: 10px;
@@ -1140,7 +1140,7 @@ body::before {
 }
 
 .remaining-pile .special-cards::before {
-    content: 'Special Cards';
+    content: 'Special Cards Remaining';
     position: absolute;
     top: -10px;
     left: 10px;

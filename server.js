@@ -168,17 +168,23 @@ const handleSocketConnection = (io) => {
           
           if (player.status === 'busted') {
               player.drawThreeRemaining = 0;
+              player.pendingSpecialCard = null; // Clear any pending special cards
               advanceTurn(game);
           }
-          else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+          else if (player.regularCards.length + player.specialCards.length >= MAX_REGULAR_CARDS) {
+              // Changed: Count special cards towards the limit
               player.status = 'stood';
               player.drawThreeRemaining = 0;
+              player.pendingSpecialCard = null; // Clear any pending special cards
               advanceTurn(game);
           } 
           else if (player.drawThreeRemaining > 0) {
               player.drawThreeRemaining--;
-              if (player.drawThreeRemaining === 0) {
-                  advanceTurn(game);
+              if (player.drawThreeRemaining === 0 && player.pendingSpecialCard) {
+                // Handle pending special card after D3 sequence completes
+                handlePendingSpecialCard(game, player, socket, io);
+              } else if (player.drawThreeRemaining === 0) {
+                advanceTurn(game);
               }
           }
           else {
@@ -186,31 +192,27 @@ const handleSocketConnection = (io) => {
           }
       }
       // Handle special cards - don't add to discard pile until they're used
-      else if (card === 'D3') {
-        player.specialCards.push(card);
-        if (player.drawThreeRemaining === 0) {
-          const targets = game.players.filter(p => 
-            p.status === 'active' && 
-            p.regularCards.length < MAX_REGULAR_CARDS
-          );
-          socket.emit('select-draw-three-target', game.id, targets);
-        } else {
+      else if (card === 'D3' || card === 'Freeze') {
+        if (player.drawThreeRemaining > 0) {
+          // Store the special card as pending and continue with D3 sequence
+          player.pendingSpecialCard = card;
           player.drawThreeRemaining--;
           if (player.drawThreeRemaining === 0) {
-            advanceTurn(game);
+            handlePendingSpecialCard(game, player, socket, io);
           }
+        } else {
+          handleSpecialCard(game, player, card, socket, io);
         }
-      }
-      // Handle Freeze card
-      else if (card === 'Freeze') {
-        player.specialCards.push(card);
-        const targets = game.players.filter(p => p.status === 'active');
-        socket.emit('select-freeze-target', game.id, targets);
       }
       // Handle other special cards
       else {
         player.specialCards.push(card);
-        if (player.drawThreeRemaining === 0) {
+        if (player.drawThreeRemaining > 0) {
+          player.drawThreeRemaining--;
+          if (player.drawThreeRemaining === 0) {
+            advanceTurn(game);
+          }
+        } else {
           advanceTurn(game);
         }
       }
@@ -285,7 +287,7 @@ const handleSocketConnection = (io) => {
       if (player && target && player.specialCards.includes('D3')) {
         player.specialCards = player.specialCards.filter(c => c !== 'D3');
         
-        const remainingSpace = MAX_REGULAR_CARDS - target.regularCards.length;
+        const remainingSpace = MAX_REGULAR_CARDS - (target.regularCards.length + target.specialCards.length);
         target.drawThreeRemaining = Math.min(3, remainingSpace);
         
         // Add Draw Three to discard only when used
@@ -424,7 +426,8 @@ const createPlayer = (id, name) => ({
   roundScore: 0,
   totalScore: 0,
   bustedCard: null,
-  drawThreeRemaining: 0  // Add this property
+  drawThreeRemaining: 0,  // Add this property
+  pendingSpecialCard: null  // Add this to track pending special cards
 });
 
 const advanceTurn = game => {
@@ -485,6 +488,29 @@ const updatePlayerScore = player => {
     .reduce((a, c) => a * parseInt(c), 1);
 
   player.roundScore = (base + add) * (multiply || 1);
+};
+
+// Add these new helper functions
+const handlePendingSpecialCard = (game, player, socket, io) => {
+  const card = player.pendingSpecialCard;
+  player.pendingSpecialCard = null; // Clear the pending card
+  handleSpecialCard(game, player, card, socket, io);
+};
+
+const handleSpecialCard = (game, player, card, socket, io) => {
+  player.specialCards.push(card);
+  
+  if (card === 'D3') {
+    const targets = game.players.filter(p => 
+      p.status === 'active' && 
+      p.regularCards.length + p.specialCards.length < MAX_REGULAR_CARDS
+    );
+    socket.emit('select-draw-three-target', game.id, targets);
+  } 
+  else if (card === 'Freeze') {
+    const targets = game.players.filter(p => p.status === 'active');
+    socket.emit('select-freeze-target', game.id, targets);
+  }
 };
 
 // Server startup
