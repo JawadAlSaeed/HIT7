@@ -4,6 +4,7 @@ let isHost = false;
 const MAX_REGULAR_CARDS = 7;
 let activeFreezePopup = null;
 let activeDrawThreePopup = null;
+let soundEnabled = true;
 
 // Remove initialization code
 const initializeButtons = () => {
@@ -16,18 +17,21 @@ const initializeButtons = () => {
     
     if (createGameBtn) createGameBtn.onclick = function(e) {
         e.preventDefault();
+        playSound('buttonClick');
         console.log('Create Game clicked');
         createGame();
     };
     
     if (joinGameBtn) joinGameBtn.onclick = function(e) {
         e.preventDefault();
+        playSound('buttonClick');
         console.log('Join Game clicked');
         joinGame();
     };
     
     if (tutorialBtn) tutorialBtn.onclick = function(e) {
         e.preventDefault();
+        playSound('buttonClick');
         console.log('Tutorial clicked');
         showTutorial();
     };
@@ -38,10 +42,24 @@ const initializeButtons = () => {
     const standBtn = document.getElementById('standButton');
     const resetBtn = document.getElementById('resetButton');
 
-    if (startGameBtn) startGameBtn.onclick = startGame;
-    if (flipCardBtn) flipCardBtn.onclick = flipCard;
-    if (standBtn) standBtn.onclick = stand;
-    if (resetBtn) resetBtn.onclick = resetGame;
+    if (startGameBtn) startGameBtn.onclick = function() {
+        playSound('buttonClick');
+        startGame();
+    };
+    if (flipCardBtn) flipCardBtn.onclick = function() {
+        playSound('cardFlip');
+        flipCard();
+    };
+    if (standBtn) standBtn.onclick = function() {
+        playSound('buttonClick');
+        stand();
+    };
+    if (resetBtn) resetBtn.onclick = function() {
+        if (confirm('Reset game for all players?')) {
+            playSound('buttonClick');
+            resetGame();
+        }
+    };
     
     console.log('Button initialization complete');
 };
@@ -157,6 +175,7 @@ socket.on('rematch-started', (game) => {
 
 // Game actions
 function createGame() {
+    playSound('buttonClick');
     console.log('createGame function called'); // Debug log
     const name = prompt('Enter your name:')?.trim();
     if (!name) {
@@ -175,6 +194,7 @@ function createGame() {
 }
 
 function joinGame() {
+    playSound('buttonClick');
     const gameIdInput = document.getElementById('gameId');
     const code = gameIdInput.value.trim().toUpperCase();
     
@@ -190,12 +210,26 @@ function joinGame() {
     socket.emit('join-game', code, name);
 }
 
-function startGame() { socket.emit('start-game', currentGameId); }
-function flipCard() { socket.emit('flip-card', currentGameId); }
-function stand() { socket.emit('stand', currentGameId); }
+function startGame() { 
+    playSound('buttonClick');
+    socket.emit('start-game', currentGameId); 
+}
+
+function flipCard() { 
+    playSound('cardFlip');
+    socket.emit('flip-card', currentGameId); 
+}
+
+function stand() { 
+    playSound('buttonClick');
+    socket.emit('stand', currentGameId); 
+}
 
 function resetGame() {
-    if (confirm('Reset game for all players?')) socket.emit('reset-game', currentGameId);
+    if (confirm('Reset game for all players?')) {
+        playSound('buttonClick');
+        socket.emit('reset-game', currentGameId);
+    }
 }
 
 // Game state handlers
@@ -617,6 +651,7 @@ socket.on('rematch-started', (game) => {
 });
 
 function handleGameOver({ players, winner }) {
+    playSound('winSound');
     toggleActionButtons(false);
     showWinnerPopup(winner);
     const container = document.getElementById('playersContainer');
@@ -633,6 +668,7 @@ function handleError(message) {
 }
 
 function handleRoundSummary({ players, allBusted }) {
+    playSound(allBusted ? 'bustSound' : 'roundEnd');
     const popup = document.createElement('div');
     popup.className = 'round-summary-popup';
     
@@ -844,4 +880,21 @@ function showTutorial() {
     });
 
     document.body.appendChild(popup);
+}
+
+function playSound(soundId) {
+    if (!soundEnabled) return;
+    const sound = document.getElementById(soundId);
+    if (sound) {
+        sound.currentTime = 0; // Reset sound to start
+        sound.play().catch(e => console.log('Sound play failed:', e));
+    }
+}
+
+// Add sound toggle functionality
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const icon = document.querySelector('.sound-toggle i');
+    icon.textContent = soundEnabled ? '🔊' : '🔇';
+    playSound('buttonClick');
 }
