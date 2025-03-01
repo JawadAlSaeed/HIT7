@@ -1,10 +1,9 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/DragonX-cloud/HIT7/main/assets/logo.png" alt="HIT7 Logo" width="200"/>
-  <h1>HIT7</h1>
+  <h1>HIT 7</h1>
 </div>
 
 ## About The Game
-HIT7 is an exciting card game that combines luck, strategy, and risk management. Flip cards one by one without revealing the same number twice to accumulate points and achieve victory!
+HIT 7 is an exciting card game that combines luck, strategy, and risk management. Flip cards one by one without revealing the same number twice to accumulate points and achieve victory!
 
 ## Game Rules
 - Each round, players take turns flipping cards
@@ -46,7 +45,7 @@ HIT7 is an exciting card game that combines luck, strategy, and risk management.
 - Minimum screen resolution: 800x600
 
 ## Play the Game
-Try HIT7 now at [hit7.xyz](http://hit7.xyz)!
+Try HIT 7 now at [hit7.xyz](http://hit7.xyz)!
 
 ## Credits
 Developed using AI assistance
@@ -55,4 +54,4 @@ Graphics and sound effects from open-source resources
 ## License
 MIT License - Feel free to use and modify while maintaining attribution
 
-[Play Now](http://hit7.xyz) | [Report Issues](#) | [Contribute](#)
+[Play Now](http://hit7.xyz) | [Report Issues](https://github.com/JawadAlSaeed/HIT7/issues) | [Contribute](https://github.com/JawadAlSaeed)
