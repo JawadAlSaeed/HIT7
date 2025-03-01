@@ -5,15 +5,49 @@ const MAX_REGULAR_CARDS = 7;
 let activeFreezePopup = null;
 let activeDrawThreePopup = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('createGame').addEventListener('click', createGame);
-    document.getElementById('joinGame').addEventListener('click', joinGame);
-    document.getElementById('startGame').addEventListener('click', startGame);
-    document.getElementById('flipCard').addEventListener('click', flipCard);
-    document.getElementById('standButton').addEventListener('click', stand);
-    document.getElementById('resetButton').addEventListener('click', resetGame);
-    document.getElementById('tutorialButton').addEventListener('click', showTutorial);
-});
+// Remove initialization code
+const initializeButtons = () => {
+    console.log('Initializing buttons...');
+    
+    // Menu Buttons - Use direct onclick instead of addEventListener to prevent duplicates
+    const createGameBtn = document.getElementById('createGame');
+    const joinGameBtn = document.getElementById('joinGame');
+    const tutorialBtn = document.getElementById('tutorialButton');
+    
+    if (createGameBtn) createGameBtn.onclick = function(e) {
+        e.preventDefault();
+        console.log('Create Game clicked');
+        createGame();
+    };
+    
+    if (joinGameBtn) joinGameBtn.onclick = function(e) {
+        e.preventDefault();
+        console.log('Join Game clicked');
+        joinGame();
+    };
+    
+    if (tutorialBtn) tutorialBtn.onclick = function(e) {
+        e.preventDefault();
+        console.log('Tutorial clicked');
+        showTutorial();
+    };
+
+    // Game Control Buttons
+    const startGameBtn = document.getElementById('startGame');
+    const flipCardBtn = document.getElementById('flipCard');
+    const standBtn = document.getElementById('standButton');
+    const resetBtn = document.getElementById('resetButton');
+
+    if (startGameBtn) startGameBtn.onclick = startGame;
+    if (flipCardBtn) flipCardBtn.onclick = flipCard;
+    if (standBtn) standBtn.onclick = stand;
+    if (resetBtn) resetBtn.onclick = resetGame;
+    
+    console.log('Button initialization complete');
+};
+
+// Initialize only once when the DOM is ready
+document.addEventListener('DOMContentLoaded', initializeButtons);
 
 // Socket event listeners
 socket.on('game-created', handleGameCreated);
@@ -123,6 +157,7 @@ socket.on('rematch-started', (game) => {
 
 // Game actions
 function createGame() {
+    console.log('createGame function called'); // Debug log
     const name = prompt('Enter your name:')?.trim();
     if (!name) {
         return alert('Please enter a name!');
@@ -135,6 +170,7 @@ function createGame() {
     currentGameId = null;
     document.getElementById('playersContainer').innerHTML = '';
     
+    console.log('Emitting create-game event with name:', name); // Debug log
     socket.emit('create-game', name);
 }
 
@@ -164,13 +200,21 @@ function resetGame() {
 
 // Game state handlers
 function handleGameCreated(gameId) {
+    console.log('Game created with ID:', gameId); // Debug log
+    
     currentGameId = gameId;
-    document.getElementById('hostCode').textContent = gameId;
-    document.getElementById('hostCodeDisplay').style.display = 'block';
-    document.getElementById('gameCode').textContent = gameId;
-    document.getElementById('startGame').style.display = 'block';
     isHost = true;
-    showGameArea();
+    
+    // Update all displays in the correct order
+    document.querySelector('.lobby-screen').style.display = 'none';
+    document.getElementById('gameArea').style.display = 'flex'; // Change to flex
+    document.getElementById('hostCodeDisplay').style.display = 'block';
+    document.getElementById('startGame').style.display = 'block';
+    document.getElementById('hostCode').textContent = gameId;
+    document.getElementById('gameCode').textContent = gameId;
+    
+    // Ensure the game area is visible
+    document.getElementById('gameArea').classList.add('active');
 }
 
 function handleGameUpdate(game) {
@@ -195,8 +239,93 @@ function handleGameUpdate(game) {
 // Display updates
 function updateGameDisplay(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
-    updateDiscardPile(game.discardPile);
+    updateRemainingPile(game.deck);
     renderPlayers(game);
+}
+
+function updateRemainingPile(deck) {
+    const cardCounts = deck.reduce((acc, card) => {
+        const key = card.toString();
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const regularCards = [];
+    const specialCards = [];
+
+    // Helper function to get sort order for special cards
+    const getSpecialCardOrder = card => {
+        const specialOrder = {
+            'SC': 1,
+            'Freeze': 2,
+            'D3': 3,
+            '2x': 4,
+            '2+': 5,
+            '4+': 6,
+            '6+': 7,
+            '8+': 8,
+            '10+': 9
+        };
+        return specialOrder[card] || 10;
+    };
+
+    Object.entries(cardCounts).forEach(([cardStr, count]) => {
+        let cardType, displayValue;
+        
+        if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
+            cardStr.includes('+') || cardStr.includes('x')) {
+            cardType = 
+                cardStr === 'SC' ? 'second-chance' :
+                cardStr === 'Freeze' ? 'freeze' :
+                cardStr === 'D3' ? 'draw-three' :
+                cardStr.includes('+') ? 'adder' :
+                'multiplier';
+            displayValue = 
+                cardStr === 'SC' ? '🛡️' :
+                cardStr === 'Freeze' ? '❄️' :
+                cardStr === 'D3' ? '🎯' :
+                cardStr;
+            specialCards.push({ cardStr, count, cardType, displayValue });
+        } else {
+            cardType = 'number';
+            displayValue = cardStr;
+            regularCards.push({ cardStr, count, cardType, displayValue });
+        }
+    });
+
+    // Sort regular cards by number
+    regularCards.sort((a, b) => Number(a.cardStr) - Number(b.cardStr));
+    // Sort special cards by predefined order
+    specialCards.sort((a, b) => getSpecialCardOrder(a.cardStr) - getSpecialCardOrder(b.cardStr));
+
+    document.getElementById('discard').innerHTML = `
+        <div class="regular-cards">
+            ${regularCards.map(card => renderCard(card)).join('')}
+        </div>
+        <div class="special-cards">
+            ${specialCards.map(card => renderCard(card)).join('')}
+        </div>
+    `;
+}
+
+function renderCard({ cardType, displayValue, count }) {
+    const cardStyle = cardType !== 'number' ? `
+        background: ${
+            cardType === 'adder' ? '#27ae60' : 
+            cardType === 'multiplier' ? '#f1c40f' :
+            cardType === 'second-chance' ? '#e74c3c' :
+            cardType === 'freeze' ? '#3498db' :
+            cardType === 'draw-three' ? '#9b59b6' : 'inherit'
+        } !important;
+    ` : '';
+
+    return `
+        <div class="remaining-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
+             style="${cardStyle}">
+            ${displayValue}
+            ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+        </div>
+    `;
 }
 
 function updateDiscardPile(discardPile) {
@@ -319,28 +448,28 @@ function scoreBox(label, value) {
 }
 
 function getSpecialCardClass(card) {
-  if (card === 'SC') return 'second-chance';
-  if (card === 'Freeze') return 'freeze';
-  if (card === 'D3') return 'draw-three';
-  if (card.endsWith('x')) return 'multiplier';
-  if (card.endsWith('+')) return 'adder';
-  return '';
+    if (card === 'SC') return 'second-chance';
+    if (card === 'Freeze') return 'freeze';
+    if (card === 'D3') return 'draw-three';
+    if (card.endsWith('x')) return 'multiplier';
+    if (card.endsWith('+')) return 'adder';
+    return '';
 }
 
 function getSpecialCardDisplay(card) {
-  // Special cards with emojis
-  if (card === 'SC') return '🛡️';
-  if (card === 'Freeze') return '❄️';
-  if (card === 'D3') return '🎯';
-  
-  // For adder and multiplier cards, extract the number and symbol
-  if (card.endsWith('+') || card.endsWith('x')) {
-    const number = card.slice(0, -1);  // Get everything except last character
-    const symbol = card.slice(-1);     // Get last character (+ or x)
-    return `${number}${symbol}`;       // Combine them (e.g., "2+")
-  }
-  
-  return card;
+    // Special cards with emojis
+    if (card === 'SC') return '🛡️';
+    if (card === 'Freeze') return '❄️';
+    if (card === 'D3') return '🎯';
+    
+    // For adder and multiplier cards, extract the number and symbol
+    if (card.endsWith('+') || card.endsWith('x')) {
+        const number = card.slice(0, -1);  // Get everything except last character
+        const symbol = card.slice(-1);     // Get last character (+ or x)
+        return `${number}${symbol}`;       // Combine them (e.g., "2+")
+    }
+    
+    return card;
 }
 
 function getStatusIcon(status) {
@@ -369,11 +498,6 @@ function getStatusText(status) {
 }
 
 // UI controls
-function showGameArea() {
-    document.querySelector('.lobby-screen').style.display = 'none';
-    document.getElementById('gameArea').style.display = 'block';
-}
-
 function toggleActionButtons(active) {
     const flipCardBtn = document.getElementById('flipCard');
     const standButton = document.getElementById('standButton');
@@ -421,7 +545,8 @@ function getCurrentGameState() {
 function handleGameJoined(gameId) {
     currentGameId = gameId;
     document.getElementById('gameCode').textContent = gameId;
-    showGameArea();
+    document.querySelector('.lobby-screen').style.display = 'none';
+    document.getElementById('gameArea').style.display = 'block';
 }
 
 function handleGameStarted(game) {
@@ -514,6 +639,7 @@ function handleRoundSummary({ players, allBusted }) {
     const playerList = players.map(player => {
         const hasBonus = player.regularCards.length === MAX_REGULAR_CARDS;
         const status = hasBonus ? 'finished' : player.status;
+        const newTotal = player.status !== 'busted' ? player.totalScore + player.roundScore : player.totalScore;
         
         return `
             <div class="player-summary ${status}">
@@ -529,12 +655,12 @@ function handleRoundSummary({ players, allBusted }) {
                 </div>
                 <div class="summary-scores">
                     <div class="score-item">
-                        <span class="score-label">Round:</span>
+                        <span class="score-label">Round Score:</span>
                         <span class="score-value">${player.roundScore}</span>
                     </div>
                     <div class="score-item">
-                        <span class="score-label">Total:</span>
-                        <span class="score-value">${player.totalScore}</span>
+                        <span class="score-label">New Total:</span>
+                        <span class="score-value">${newTotal}</span>
                     </div>
                 </div>
             </div>

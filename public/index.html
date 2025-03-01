@@ -21,7 +21,7 @@
             
             <div class="menu-container">
                 <div class="menu-buttons">
-                    <button id="createGame" class="lobby-button">
+                    <button type="button" id="createGame" class="lobby-button">
                         🎮 Create New Game
                     </button>
                     <div class="join-game">
@@ -46,7 +46,7 @@
         </div>
 
         <!-- Game Area -->
-        <div id="gameArea" class="game-container">
+        <div id="gameArea" class="game-container" style="display: none;">
             <div class="game-header">
                 <div class="header-left">
                     <div class="game-logo">
@@ -66,7 +66,7 @@
                 <div class="deck-area">
                     <div class="discard-info">
                         <div class="deck-count">CARDS LEFT: <span id="deckCount">93</span></div>
-                        <div class="discard-pile" id="discard"></div>
+                        <div class="remaining-pile" id="discard"></div>  <!-- Changed id kept for compatibility -->
                     </div>
                 </div>
                 <div id="playersContainer" class="players-container"></div>

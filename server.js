@@ -144,24 +144,18 @@ const handleSocketConnection = (io) => {
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
 
-      // Handle deck replenishment
+      // Handle deck replenishment - FIXED
       if (game.deck.length === 0) {
-        // Log the state before reshuffling
-        console.log(`Before reshuffle - Discard pile size: ${game.discardPile.length}`);
+        console.log('Reshuffling deck...');
         
-        if (game.discardPile.length === 0) {
-          // If both deck and discard are empty, create a new deck
-          game.deck = createDeck();
-        } else {
-          // Move ALL cards from discard pile back to deck and shuffle
-          game.deck = shuffle([...game.discardPile]);
-          game.discardPile = [];
-        }
+        // Simply create a new deck instead of combining with discard
+        game.deck = createDeck();
         
-        // Log the state after reshuffling
-        console.log(`After reshuffle - New deck size: ${game.deck.length}`);
+        // Clear the discard pile
         
-        // Notify clients about the reshuffle
+        game.discardPile = [];
+        
+        console.log(`Deck reshuffled. New size: ${game.deck.length}`);
         io.to(gameId).emit('game-update', game);
       }
 
