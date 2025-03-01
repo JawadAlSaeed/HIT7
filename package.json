@@ -5,9 +5,7 @@
   "main": "script.js",
   "scripts": {
     "start": "node server.js",
-    "stop": "kill-port --port 3000",
-    "restart": "pm2 restart server",
-    "logs": "pm2 logs server"
+    "stop": "kill-port --port 3000"
   },
   "repository": {
     "type": "git",
