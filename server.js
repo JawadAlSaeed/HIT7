@@ -230,6 +230,7 @@ const handleSocketConnection = (io) => {
       if (player.id !== socket.id || player.status !== 'active' || player.drawThreeRemaining > 0) return;
 
       player.status = 'stood';
+      io.to(gameId).emit('play-sound', 'standSound'); // Broadcast stand sound
       advanceTurn(game);
       checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
@@ -413,6 +414,12 @@ const handleSocketConnection = (io) => {
       // Immediately emit game update to ensure clients get the new state
       io.to(game.id).emit('game-update', game);
     };
+
+    // Inside handleSocketConnection function, add these socket events
+    socket.on('play-sound', (gameId, soundId) => {
+      // Broadcast sound to all players in the game except sender
+      socket.to(gameId).emit('play-sound', soundId);
+    });
   });
 };
 
@@ -463,10 +470,12 @@ const handleNumberCard = (game, player, card) => {
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
       game.discardPile.push('SC'); // Add SC to discard only when used
+      io.to(game.id).emit('play-sound', 'secondChanceSound');
     } else {
       player.status = 'busted';
       player.bustedCard = card;
       player.roundScore = 0;
+      io.to(game.id).emit('play-sound', 'bustCardSound');
     }
   } else {
     player.regularCards.push(card);

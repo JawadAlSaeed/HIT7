@@ -173,6 +173,11 @@ socket.on('rematch-started', (game) => {
     toggleActionButtons(isCurrentPlayer && game.status === 'playing');
 });
 
+// Add new socket listener for sounds
+socket.on('play-sound', (soundId) => {
+    playSound(soundId);
+});
+
 // Game actions
 function createGame() {
     playSound('buttonClick');
@@ -215,13 +220,15 @@ function startGame() {
     socket.emit('start-game', currentGameId); 
 }
 
+// Modify flip card function to broadcast flip sound
 function flipCard() { 
     playSound('cardFlip');
+    socket.emit('play-sound', currentGameId, 'cardFlip');
     socket.emit('flip-card', currentGameId); 
 }
 
+// Modify stand function to let server handle sound
 function stand() { 
-    playSound('buttonClick');
     socket.emit('stand', currentGameId); 
 }
 
@@ -251,7 +258,9 @@ function handleGameCreated(gameId) {
     document.getElementById('gameArea').classList.add('active');
 }
 
+// Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
+    const prevState = getCurrentGameState();
     isHost = socket.id === game.hostId;
     const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
     const canAct = isCurrentPlayer && game.status === 'playing';
@@ -263,10 +272,9 @@ function handleGameUpdate(game) {
         isHost && game.status === 'lobby' ? 'block' : 'none';
     document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
 
-    // Remove any existing freeze popups when game updates
     if (activeFreezePopup) {
-      activeFreezePopup.remove();
-      activeFreezePopup = null;
+        activeFreezePopup.remove();
+        activeFreezePopup = null;
     }
 }
 
@@ -559,9 +567,13 @@ function getCurrentGameState() {
     const players = [...container.querySelectorAll('.player')].map(playerEl => {
         const isCurrentTurn = playerEl.classList.contains('current-turn');
         const drawThreeRemaining = parseInt(playerEl.querySelector('.draw-three-indicator')?.textContent.match(/\d+/) || 0);
+        const status = playerEl.classList.contains('busted') ? 'busted' : 
+                      playerEl.classList.contains('stood') ? 'stood' : 
+                      playerEl.classList.contains('frozen') ? 'frozen' : 'active';
         return {
             id: playerEl.dataset.playerId,
-            drawThreeRemaining
+            drawThreeRemaining,
+            status
         };
     });
     
@@ -897,4 +909,34 @@ function toggleSound() {
     const icon = document.querySelector('.sound-toggle i');
     icon.textContent = soundEnabled ? '🔊' : '🔇';
     playSound('buttonClick');
+}
+
+// Remove sound from handleNumberCard since server will handle it
+function handleNumberCard(game, player, card) {
+    if (card === 0) {
+        // Zero card can't cause a bust and can be held multiple times
+        player.regularCards.push(card);
+        // Add 15 bonus points if player reaches 7 cards in one turn
+        if (player.regularCards.length === MAX_REGULAR_CARDS) {
+            player.status = 'stood';
+            player.totalScore += 15; // Add bonus points
+        }
+    } else if (player.regularCards.includes(card)) {
+        const scIndex = player.specialCards.indexOf('SC');
+        if (scIndex > -1) {
+            player.specialCards.splice(scIndex, 1);
+            game.discardPile.push('SC');
+        } else {
+            player.status = 'busted';
+            player.bustedCard = card;
+            player.roundScore = 0;
+        }
+    } else {
+        player.regularCards.push(card);
+        // Add 15 bonus points if player reaches 7 cards in one turn
+        if (player.regularCards.length === MAX_REGULAR_CARDS) {
+            player.status = 'stood';
+            player.totalScore += 15; // Add bonus points
+        }
+    }
 }
