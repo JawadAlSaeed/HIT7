@@ -898,6 +898,7 @@ function playSound(soundId) {
     if (!soundEnabled) return;
     const sound = document.getElementById(soundId);
     if (sound) {
+        sound.volume = 0.5; // Set volume to 50%
         sound.currentTime = 0; // Reset sound to start
         sound.play().catch(e => console.log('Sound play failed:', e));
     }
