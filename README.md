@@ -11,20 +11,23 @@ HIT 7 is an exciting card game that combines luck, strategy, and risk management
   - One 1️⃣ card
   - Two 2️⃣ cards
   - Three 3️⃣ cards
-  - etc
+  - and so on until twelve 12 cards
 
 ### Special Cards
-- 🎯 Second Chance: Allows you to continue after revealing a duplicate
+- 🛡️ Second Chance: Allows you to continue after revealing a duplicate
 - ❄️ Freeze: Prevents an opponent from playing their next turn
-- ⭐ Bonus: Doubles your points for the current round
+- 🎯 Draw Three: Draw three cards at once and keep all points if they're unique
+- ✨ 2+,4+, etc: adds that number to the current round
+- ✨ 2x: Doubles your points for the current round
+
 
 ### Scoring
 - Basic points: Card value × Number of cards flipped
-- Bonus points: Successfully flip 7 cards in a row
+- Bonus points: Successfully hit 7 cards in a row
 - Round ends when:
-  - Player chooses to bank points
-  - Player reveals a duplicate number
-  - Player cannot legally flip any more cards
+  - Player chooses to bank points (STAND)
+  - Player reveals a duplicate number (BUST)
+  - player reaches 7 cards hit in a round (and gets a 15 point bouns!)
 
 ## Features
 - Single and multiplayer modes
@@ -45,7 +48,7 @@ HIT 7 is an exciting card game that combines luck, strategy, and risk management
 - Minimum screen resolution: 800x600
 
 ## Play the Game
-Try HIT 7 now at [hit7.xyz](http://hit7.xyz)!
+Try HIT 7 [now](http://hit7.xyz)!
 
 ## Credits
 Developed using AI assistance
