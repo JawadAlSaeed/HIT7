@@ -15,6 +15,12 @@
     --glow: 0 0 10px rgba(233, 69, 96, 0.5);
 }
 
+@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
+    .blur-bg {
+        background: rgba(22, 33, 62, 0.95) !important;
+    }
+}
+
 body {
     font-family: 'Roboto', sans-serif;
     background: var(--gradient-bg);
@@ -52,6 +58,21 @@ body::before {
 
 /* Game Logo Styling */
 .game-logo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.logo-image {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    margin-right: 1rem;
+}
+
+.game-logo .hit {
     font-family: 'Cairo Play', sans-serif;
     font-size: 6rem;
     text-align: center;
@@ -171,6 +192,7 @@ body::before {
     font-size: 1.4rem;
     animation: slideIn 0.3s ease;
     border: 1px solid rgba(233, 69, 96, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     font-family: 'Cairo Play', sans-serif;
 }
@@ -198,6 +220,7 @@ body::before {
     max-width: 1200px;
     padding: 2rem;
     background: rgba(22, 33, 62, 0.8);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: 25px;
     border: 1px solid rgba(233, 69, 96, 0.2);
@@ -222,6 +245,7 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
@@ -316,6 +340,7 @@ body::before {
     border-radius: 15px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(233, 69, 96, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     transform: translateY(0);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -643,6 +668,7 @@ body::before {
     background: rgba(22, 33, 62, 0.8);
     border-radius: 15px;
     border: 1px solid rgba(233, 69, 96, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
@@ -754,6 +780,15 @@ body::before {
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .game-logo {
+        font-size: 4rem;
+    }
+
+    .logo-image {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .game-logo .hit {
         font-size: 4rem;
     }
 
@@ -949,6 +984,7 @@ body::before {
     text-align: center;
     order: -1;
     border: 1px solid rgba(233, 69, 96, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     font-family: 'Cairo Play', sans-serif;
 }
@@ -986,7 +1022,8 @@ body::before {
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 .remaining-pile .regular-cards::before {
@@ -1015,7 +1052,8 @@ body::before {
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 .remaining-pile .special-cards::before {
@@ -1075,7 +1113,8 @@ body::before {
     line-height: 1;
     font-weight: bold;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 /* Special Cards Colors with Gradient */
@@ -1801,6 +1840,7 @@ body::before {
     margin: 2rem auto;
     max-width: 400px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(233, 69, 96, 0.2);
 }
@@ -1857,6 +1897,8 @@ body::before {
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
     border: 3px solid #9b59b6;
     font-family: 'Poppins', sans-serif;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }
 
 .tutorial-popup .close-button {
@@ -1910,6 +1952,8 @@ body::before {
     display: flex;
     align-items: center;
     gap: 1rem;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
 }
 
 .card-example .card {
@@ -1957,6 +2001,8 @@ body::before {
     transition: all 0.2s;
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
 }
 
 .tab-button.active {
@@ -2063,6 +2109,7 @@ body::before {
 /* Enhanced Tutorial Popup Styling */
 .tutorial-popup {
     background: rgba(22, 33, 62, 0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(233, 69, 96, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -2095,32 +2142,9 @@ body::before {
 }
 
 .tab-button {
-    background: transparent;
-    color: var(--text-light);
-    padding: 1rem 2rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.tab-button:hover {
-    background: rgba(233, 69, 96, 0.1);
-    transform: translateY(-2px);
-}
-
-.tab-button.active {
-    background: var(--highlight);
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-}
-
-.tutorial-section {
     background: rgba(15, 52, 96, 0.3);
     border: 1px solid rgba(233, 69, 96, 0.1);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     margin-bottom: 1.5rem;
 }
@@ -2142,6 +2166,7 @@ body::before {
 .card-example {
     background: rgba(22, 33, 62, 0.8);
     border: 1px solid rgba(233, 69, 96, 0.2);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     transition: transform 0.3s ease;
 }
