@@ -171,8 +171,7 @@ const handleSocketConnection = (io) => {
               player.pendingSpecialCard = null; // Clear any pending special cards
               advanceTurn(game);
           }
-          else if (player.regularCards.length + player.specialCards.length >= MAX_REGULAR_CARDS) {
-              // Changed: Count special cards towards the limit
+          else if (player.regularCards.length >= MAX_REGULAR_CARDS) { // Changed: Only count regular cards
               player.status = 'stood';
               player.drawThreeRemaining = 0;
               player.pendingSpecialCard = null; // Clear any pending special cards
