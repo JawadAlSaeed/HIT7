@@ -777,6 +777,16 @@ body::before {
     margin: 1rem 0;
 }
 
+.winner-popup .waiting-message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 1.1rem;
+    animation: pulse 2s infinite;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .game-logo {

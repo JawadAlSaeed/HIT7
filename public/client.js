@@ -635,37 +635,38 @@ function handleAllBusted() {
     }, 1000);
 }
 
-function showWinnerPopup(winner) {
+function showWinnerPopup(winner, isHost) {
     const popup = document.createElement('div');
     popup.className = 'winner-popup';
     popup.innerHTML = `
         <h2>🏆 TOTAL WINNER! 🏆</h2>
         <div class="winner-name">${winner.name}</div>
         <div class="winner-score">${winner.totalScore} Points</div>
-        <button id="rematchButton" class="game-button green">
-            Play Again with Same Players
-        </button>
+        ${isHost ? `
+            <button id="rematchButton" class="game-button green">
+                Start Rematch
+            </button>
+        ` : `
+            <div class="waiting-message">
+                Waiting for host to start rematch...
+            </div>
+        `}
     `;
     document.body.appendChild(popup);
 
-    // Add rematch button listener
-    document.getElementById('rematchButton').addEventListener('click', () => {
-        socket.emit('request-rematch', currentGameId);
-        popup.remove();
-    });
+    // Only add rematch button listener if host
+    if (isHost) {
+        document.getElementById('rematchButton').addEventListener('click', () => {
+            socket.emit('request-rematch', currentGameId);
+            popup.remove();
+        });
+    }
 }
-
-// Add new socket event listener near the top with other socket.on events
-socket.on('rematch-started', (game) => {
-    const popups = document.querySelectorAll('.winner-popup');
-    popups.forEach(popup => popup.remove());
-    handleGameStarted(game);
-});
 
 function handleGameOver({ players, winner }) {
     playSound('winSound');
     toggleActionButtons(false);
-    showWinnerPopup(winner);
+    showWinnerPopup(winner, isHost); // Pass isHost flag
     const container = document.getElementById('playersContainer');
     container.innerHTML = '';
 }
