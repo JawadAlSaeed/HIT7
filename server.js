@@ -337,17 +337,8 @@ const handleSocketConnection = (io) => {
 
     // Game status checking
     const checkGameStatus = game => {
-      // Check for instant winner
-      const potentialWinner = game.players.find(p => 
-        p.status === 'stood' && p.totalScore + p.roundScore >= WINNING_SCORE
-      );
-
-      if (potentialWinner) {
-        potentialWinner.totalScore += potentialWinner.roundScore;
-        endGame(game, potentialWinner);
-        return;
-      }
-
+      // Remove the instant winner check as we want the round to continue
+      
       // Check if round should end (all players are either busted or stood)
       const activePlayers = game.players.filter(p => p.status === 'active');
       const allBusted = game.players.every(p => p.status === 'busted');
@@ -359,6 +350,7 @@ const handleSocketConnection = (io) => {
         });
 
         setTimeout(() => {
+          // Update total scores for non-busted players
           game.players.forEach(player => {
             if (player.status !== 'busted') {
               player.totalScore += player.roundScore;
@@ -368,7 +360,18 @@ const handleSocketConnection = (io) => {
           if (allBusted) {
             startNewRound(game);
           } else {
-            checkFinalWinner(game);
+            // Find the winner among stood players
+            const stoodPlayers = game.players.filter(p => p.status === 'stood');
+            const winner = stoodPlayers.reduce((max, p) => 
+              p.totalScore > max.totalScore ? p : max
+            , { totalScore: -1 });
+
+            // End game if winner has 200+ points, otherwise start new round
+            if (winner.totalScore >= 200) {
+              endGame(game, winner);
+            } else {
+              startNewRound(game);
+            }
           }
 
           io.to(game.id).emit('new-round', game);
