@@ -1599,17 +1599,25 @@ body::before {
 /* Freeze popup styling */
 .freeze-popup {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+}
+
+.freeze-popup .popup-content {
+    position: relative;
     background: var(--secondary);
     padding: 2rem;
     border-radius: 15px;
-    z-index: 1000;
-    box-shadow: 0 0 30px rgba(0,0,0,0.3);
-    border: 3px solid #3498db;
-    min-width: 300px;
-    max-width: 90%;
+    width: 90%;
+    max-width: 400px;
+    animation: popupIn 0.3s ease;
 }
 
 .freeze-popup .popup-content {
@@ -1730,21 +1738,34 @@ body::before {
 /* Draw Three Popup */
 .draw-three-popup {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  width: 100vw; /* Full viewport width */
+  height: 100vh; /* Full viewport height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+}
+
+.draw-three-popup .popup-content {
+  position: relative;
   background: var(--secondary);
   padding: 2rem;
   border-radius: 15px;
-  z-index: 1000;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
-  border: 3px solid #9b59b6;
+  width: 90%;
+  max-width: 400px;
+  animation: popupIn 0.3s ease;
 }
 
 .draw-three-popup .popup-content {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .draw-three-popup h3 {
@@ -1752,7 +1773,14 @@ body::before {
   margin: 0 0 1rem 0;
 }
 
-.draw-three-target {
+.draw-three-popup .draw-three-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.draw-three-popup .draw-three-target {
   background: #9b59b6;
   color: white;
   border: none;
@@ -1764,7 +1792,7 @@ body::before {
   font-weight: 500;
 }
 
-.draw-three-target:hover {
+.draw-three-popup .draw-three-target:hover {
   transform: translateY(-2px);
   background: #8e44ad;
 }
@@ -2205,4 +2233,54 @@ body::before {
     transform: translateX(5px);
     background: rgba(22, 33, 62, 0.9);
     border-color: rgba(233, 69, 96, 0.3);
+}
+
+/* Add new overlay styles */
+.freeze-popup,
+.draw-three-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+}
+
+/* Update popup content styles */
+.freeze-popup .popup-content,
+.draw-three-popup .popup-content {
+    position: relative;
+    background: var(--secondary);
+    padding: 2rem;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    animation: popupIn 0.3s ease;
+    transform: none;
+}
+
+/* Prevent interaction with elements behind the popup */
+body.popup-active {
+    overflow: hidden;
+}
+
+body.popup-active > *:not(.freeze-popup):not(.draw-three-popup) {
+    pointer-events: none;
+    filter: blur(2px);
+}
+
+/* Update popup animation for smoother centering */
+@keyframes popupIn {
+    from { 
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
 }

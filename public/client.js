@@ -83,6 +83,7 @@ socket.on('cancel-freeze', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
     activeFreezePopup = null;
+    document.body.classList.remove('popup-active');
   }
 });
 
@@ -90,6 +91,7 @@ socket.on('game-update', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
     activeFreezePopup = null;
+    document.body.classList.remove('popup-active');
   }
 });
 
@@ -126,8 +128,11 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   if (activeDrawThreePopup) {
     activeDrawThreePopup.remove();
     activeDrawThreePopup = null;
+    document.body.classList.remove('popup-active');
   }
 
+  document.body.classList.add('popup-active');
+  
   const popup = document.createElement('div');
   popup.className = 'draw-three-popup active';
   popup.innerHTML = `
@@ -147,6 +152,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     btn.addEventListener('click', () => {
       socket.emit('draw-three-select', currentGameId, btn.dataset.id);
       popup.remove();
+      document.body.classList.remove('popup-active');
     });
   });
 
@@ -275,6 +281,7 @@ function handleGameUpdate(game) {
     if (activeFreezePopup) {
         activeFreezePopup.remove();
         activeFreezePopup = null;
+        document.body.classList.remove('popup-active');
     }
 }
 
@@ -743,8 +750,11 @@ function showFreezePopup(gameId, targets) {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
     activeFreezePopup = null;
+    document.body.classList.remove('popup-active');
   }
 
+  document.body.classList.add('popup-active');
+  
   // Create new popup
   activeFreezePopup = document.createElement('div');
   activeFreezePopup.id = 'freezePopup';
@@ -765,6 +775,7 @@ function showFreezePopup(gameId, targets) {
       socket.emit('freeze-player', currentGameId, btn.dataset.id);
       activeFreezePopup.remove();
       activeFreezePopup = null;
+      document.body.classList.remove('popup-active');
     });
   });
 
@@ -775,6 +786,7 @@ function showFreezePopup(gameId, targets) {
     if (activeFreezePopup) {
       activeFreezePopup.remove();
       activeFreezePopup = null;
+      document.body.classList.remove('popup-active');
     }
     socket.off('game-update', cleanup);
     socket.off('cancel-freeze', cleanup);
