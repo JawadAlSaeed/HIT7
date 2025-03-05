@@ -163,7 +163,7 @@ const handleSocketConnection = (io) => {
       
       // Handle number cards
       if (typeof card === 'number') {
-          handleNumberCard(game, player, card, io);
+          handleNumberCard(game, player, card);
           game.discardPile.push(card);
           
           if (player.status === 'busted') {
@@ -459,7 +459,7 @@ const advanceTurn = game => {
   game.currentPlayer = nextPlayer;
 };
 
-const handleNumberCard = (game, player, card, io) => {
+const handleNumberCard = (game, player, card) => {
   if (card === 0) {
     // Zero card can't cause a bust and can be held multiple times
     player.regularCards.push(card);

@@ -94,15 +94,64 @@ socket.on('game-update', () => {
 });
 
 socket.on('select-freeze-target', (gameId, targets) => {
-  console.log('Received freeze target selection request:', targets);
-  cleanupPopups(); // Clean up any existing popups first
-  showFreezePopup(gameId, targets);
+  // Remove any existing popups
+  document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
+  
+  const popup = document.createElement('div');
+  popup.className = 'freeze-popup active';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>❄️ Select player to freeze:</h3>
+      <div class="freeze-targets">
+        ${targets.map(p => `
+          <button class="freeze-target" data-id="${p.id}">
+            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  popup.querySelectorAll('.freeze-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('freeze-player', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  document.body.appendChild(popup);
 });
 
 socket.on('select-draw-three-target', (gameId, targets) => {
-  console.log('Received draw three target selection request:', targets);
-  cleanupPopups(); // Clean up any existing popups first
-  showDrawThreePopup(gameId, targets);
+  if (activeDrawThreePopup) {
+    activeDrawThreePopup.remove();
+    activeDrawThreePopup = null;
+  }
+
+  const popup = document.createElement('div');
+  popup.className = 'draw-three-popup active';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>🎯 Select player to draw three cards:</h3>
+      <div class="draw-three-targets">
+        ${targets.map(p => `
+          <button class="draw-three-target" data-id="${p.id}">
+            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  popup.querySelectorAll('.draw-three-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('draw-three-select', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  document.body.appendChild(popup);
+  activeDrawThreePopup = popup;
 });
 
 socket.on('connect', () => console.log('Connected to server'));
@@ -593,23 +642,17 @@ function showWinnerPopup(winner) {
         <h2>🏆 TOTAL WINNER! 🏆</h2>
         <div class="winner-name">${winner.name}</div>
         <div class="winner-score">${winner.totalScore} Points</div>
-        ${isHost ? `
-            <button id="rematchButton" class="game-button green">
-                Play Again with Same Players
-            </button>
-        ` : `
-            <p class="waiting-text">Waiting for host to start rematch...</p>
-        `}
+        <button id="rematchButton" class="game-button green">
+            Play Again with Same Players
+        </button>
     `;
     document.body.appendChild(popup);
 
-    // Add rematch button listener only if host
-    if (isHost) {
-        document.getElementById('rematchButton').addEventListener('click', () => {
-            socket.emit('request-rematch', currentGameId);
-            popup.remove();
-        });
-    }
+    // Add rematch button listener
+    document.getElementById('rematchButton').addEventListener('click', () => {
+        socket.emit('request-rematch', currentGameId);
+        popup.remove();
+    });
 }
 
 // Add new socket event listener near the top with other socket.on events
@@ -695,87 +738,49 @@ function handleRoundSummary({ players, allBusted }) {
 }
 
 function showFreezePopup(gameId, targets) {
-  // Create container with overlay
-  const container = document.createElement('div');
-  container.className = 'popup-container';
-
-  // Create popup content
-  const popup = document.createElement('div');
-  popup.className = 'freeze-popup';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3>❄️ Select player to freeze:</h3>
-      <div class="freeze-targets">
-        ${targets.map(p => `
-          <button class="freeze-target" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  // Add click handlers
-  popup.querySelectorAll('.freeze-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      console.log('Freeze target selected:', btn.dataset.id);
-      socket.emit('use-freeze', gameId, btn.dataset.id);
-      cleanupPopups();
-    });
-  });
-
-  container.appendChild(popup);
-  document.body.appendChild(container);
-  activeFreezePopup = container;
-  disableGameButtons();
-}
-
-function showDrawThreePopup(gameId, targets) {
-  // Create container with overlay
-  const container = document.createElement('div');
-  container.className = 'popup-container';
-
-  // Create popup content
-  const popup = document.createElement('div');
-  popup.className = 'draw-three-popup';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3>🎯 Select player to draw three cards:</h3>
-      <div class="draw-three-targets">
-        ${targets.map(p => `
-          <button class="draw-three-target" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  // Add click handlers
-  popup.querySelectorAll('.draw-three-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      console.log('Draw three target selected:', btn.dataset.id);
-      socket.emit('draw-three-select', gameId, btn.dataset.id);
-      cleanupPopups();
-    });
-  });
-
-  container.appendChild(popup);
-  document.body.appendChild(container);
-  activeDrawThreePopup = container;
-  disableGameButtons();
-}
-
-function cleanupPopups() {
+  // Cleanup any existing popup
   if (activeFreezePopup) {
     activeFreezePopup.remove();
     activeFreezePopup = null;
   }
-  if (activeDrawThreePopup) {
-    activeDrawThreePopup.remove();
-    activeDrawThreePopup = null;
-  }
-  enableGameButtons();
+
+  // Create new popup
+  activeFreezePopup = document.createElement('div');
+  activeFreezePopup.id = 'freezePopup';
+  activeFreezePopup.className = 'freeze-popup';
+  activeFreezePopup.innerHTML = `
+    <div class="popup-content">
+      <h3>Select a player to freeze:</h3>
+      ${targets.map(t => `
+        <button class="freeze-target" data-id="${t.id}">
+          ${t.name}
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  activeFreezePopup.querySelectorAll('.freeze-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('freeze-player', currentGameId, btn.dataset.id);
+      activeFreezePopup.remove();
+      activeFreezePopup = null;
+    });
+  });
+
+  document.body.appendChild(activeFreezePopup);
+
+  // Add auto-removal listeners
+  const cleanup = () => {
+    if (activeFreezePopup) {
+      activeFreezePopup.remove();
+      activeFreezePopup = null;
+    }
+    socket.off('game-update', cleanup);
+    socket.off('cancel-freeze', cleanup);
+  };
+
+  socket.once('game-update', cleanup);
+  socket.once('cancel-freeze', cleanup);
 }
 
 function showTutorial() {
@@ -935,34 +940,4 @@ function handleNumberCard(game, player, card) {
             player.totalScore += 15; // Add bonus points
         }
     }
-}
-
-function cleanupPopups() {
-  if (activeFreezePopup) {
-    activeFreezePopup.remove();
-    activeFreezePopup = null;
-  }
-  if (activeDrawThreePopup) {
-    activeDrawThreePopup.remove();
-    activeDrawThreePopup = null;
-  }
-  enableGameButtons();
-}
-
-function disableGameButtons() {
-  const buttons = document.querySelectorAll('.game-button');
-  buttons.forEach(button => {
-    button.disabled = true;
-    button.style.opacity = '0.5';
-    button.style.pointerEvents = 'none';
-  });
-}
-
-function enableGameButtons() {
-  const buttons = document.querySelectorAll('.game-button');
-  buttons.forEach(button => {
-    button.disabled = false;
-    button.style.opacity = '1';
-    button.style.pointerEvents = 'auto';
-  });
 }
