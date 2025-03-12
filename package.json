@@ -4,8 +4,9 @@
   "description": "A game about cards",
   "main": "script.js",
   "scripts": {
-    "start": "node server.js",
-    "stop": "kill-port --port 3000"
+    "start": "cross-env NODE_ENV=production node server.js",
+    "stop": "npx kill-port 3000",
+    "dev": "cross-env NODE_ENV=development node server.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "kill-port": "^2.0.1"
   }
 }

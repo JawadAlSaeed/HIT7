@@ -12,12 +12,7 @@ const app = express();
 const createIoServer = (server, port) => {
   return new Server(server, {
     cors: {
-      origin: [
-        process.env.PRODUCTION_URL || 'https://your-app-name.herokuapp.com',
-        ...(process.env.NODE_ENV === 'development' 
-          ? [`http://localhost:${port}`] 
-          : [])
-      ],
+      origin: '*', // Allow all origins in development
       methods: ['GET', 'POST'],
       credentials: true
     },
@@ -87,6 +82,11 @@ const handleSocketConnection = (io) => {
   io.on('connection', socket => {
     console.log(`New connection: ${socket.id}`);
 
+    const BASE_URL = process.env.NODE_ENV === 'production' 
+      ? 'https://hit7.xyz'
+      : 'http://localhost:3000';
+
+    // Update game creation to include full URL
     socket.on('create-game', playerName => {
       if (!playerName || playerName.length < 3) {
         return socket.emit('error', 'Name must be at least 3 characters!');
@@ -102,8 +102,10 @@ const handleSocketConnection = (io) => {
       }
 
       const gameId = uuidv4().substr(0, 5).toUpperCase();
+      const gameUrl = `${BASE_URL}/join/${gameId}`;
       const newGame = {
         id: gameId,
+        url: gameUrl,
         hostId: socket.id,
         players: [createPlayer(socket.id, playerName)],
         deck: createDeck(),
@@ -115,7 +117,7 @@ const handleSocketConnection = (io) => {
       
       games.set(gameId, newGame);
       socket.join(gameId);
-      socket.emit('game-created', gameId);
+      socket.emit('game-created', { gameId, gameUrl });
     });
 
     socket.on('join-game', (gameId, playerName) => {
@@ -573,6 +575,24 @@ const startServer = (initialPort) => {
   // Move the Socket.IO connection handling here
   handleSocketConnection(io);
 };
+
+// Move this BEFORE the catch-all route above
+app.get('/join/:gameId', (req, res) => {
+  const gameId = req.params.gameId;
+  const game = games.get(gameId);
+  
+  if (!game) {
+    res.redirect('/?error=game-not-found');
+    return;
+  }
+  
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+// Update route handling to serve index.html for all routes
+app.get('*', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 
 // Start server with initial port
 const PORT = process.env.PORT || 3000;

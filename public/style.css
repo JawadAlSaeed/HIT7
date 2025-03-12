@@ -195,17 +195,15 @@ body::before {
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     font-family: 'Cairo Play', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .game-code {
-    font-weight: bold;
-    background: var(--card-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    letter-spacing: 2px;
-    text-shadow: var(--glow);
-    font-size: 1.6rem;
+    display: none;
 }
 
 @keyframes slideIn {
@@ -1221,7 +1219,7 @@ body::before {
 /* Regular Number Cards */
 .remaining-card.regular-card {
     background: white !important;
-    color: var(--text-dark) !important;
+    color: var (--text-dark) !important;
     border: 2px solid var(--secondary);
 }
 
@@ -2205,4 +2203,42 @@ body::before {
     transform: translateX(5px);
     background: rgba(22, 33, 62, 0.9);
     border-color: rgba(233, 69, 96, 0.3);
+}
+
+.share-link-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-radius: 8px;
+    padding: 0.8rem;
+    color: var(--text-light);
+    width: 300px;
+    margin-right: 0.5rem;
+    font-family: 'Roboto', sans-serif;
+}
+
+.copy-link-btn {
+    background: var(--highlight);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+}
+
+.copy-link-btn:hover {
+    background: #d63d56;
+    transform: translateY(-2px);
+}
+
+/* Update share link styles */
+.share-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
 }

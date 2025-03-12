@@ -12,7 +12,9 @@
         <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
         <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
         <link rel="manifest" href="images/site.webmanifest">
-        <link rel="stylesheet" href="style.css">
+        <!-- Add base tag to ensure relative paths work correctly -->
+        <base href="/">
+        <link rel="stylesheet" href="style.css" type="text/css">
     </head>
     <body>
         <!-- Add audio elements before lobby screen -->
@@ -36,16 +38,6 @@
                     <button type="button" id="createGame" class="lobby-button">
                         🎮 Create New Game
                     </button>
-                    <div class="join-game">
-                        <input type="text" id="gameId" 
-                            placeholder="Enter Game Code" 
-                            class="lobby-input"
-                            autocapitalize="characters"
-                            maxlength="5">
-                        <button id="joinGame" class="lobby-button">
-                            🚪 Join Game
-                        </button>
-                    </div>
                     <button id="tutorialButton" class="lobby-button tutorial-button">
                         📖 How To Play
                     </button>
@@ -53,7 +45,8 @@
             </div>
 
             <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
-                Your Game Code: <span class="game-code" id="hostCode"></span>
+                <span class="label">Share this link with your friends:</span>
+                <div id="hostCode"></div>
             </div>
         </div>
 
@@ -67,8 +60,7 @@
                 </div>
                 <div class="header-right">
                     <div class="game-code-display">
-                        <span class="label">ROOM CODE:</span>
-                        <span class="game-code" id="gameCode"></span>
+                        <span class="share-link" id="shareLink"></span>
                     </div>
                 </div>
             </div>

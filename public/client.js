@@ -65,7 +65,10 @@ const initializeButtons = () => {
 };
 
 // Initialize only once when the DOM is ready
-document.addEventListener('DOMContentLoaded', initializeButtons);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeButtons();
+    checkUrlParams();
+});
 
 // Socket event listeners
 socket.on('game-created', handleGameCreated);
@@ -271,27 +274,42 @@ function resetGame() {
 }
 
 // Game state handlers
-function handleGameCreated(gameId) {
-    console.log('Game created with ID:', gameId); // Debug log
-    
+function handleGameCreated({ gameId, gameUrl }) {
+    console.log('Game created with URL:', gameUrl);
     currentGameId = gameId;
     isHost = true;
     
-    // Update all displays in the correct order
     document.querySelector('.lobby-screen').style.display = 'none';
-    document.getElementById('gameArea').style.display = 'flex'; // Change to flex
+    document.getElementById('gameArea').style.display = 'flex';
     document.getElementById('hostCodeDisplay').style.display = 'block';
     document.getElementById('startGame').style.display = 'block';
-    document.getElementById('hostCode').textContent = gameId;
-    document.getElementById('gameCode').textContent = gameId;
     
-    // Ensure the game area is visible
-    document.getElementById('gameArea').classList.add('active');
+    // Update share link display
+    const shareLink = document.getElementById('shareLink');
+    shareLink.innerHTML = `
+        <input type="text" value="${gameUrl}" readonly 
+               class="share-link-input" id="shareLinkInput">
+        <button class="copy-link-btn" onclick="copyShareLink()">
+            Copy Link
+        </button>
+    `;
+}
+
+// Add copy link functionality
+function copyShareLink() {
+    const linkInput = document.getElementById('shareLinkInput');
+    linkInput.select();
+    document.execCommand('copy');
+    
+    // Show feedback
+    const copyBtn = document.querySelector('.copy-link-btn');
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => copyBtn.textContent = originalText, 2000);
 }
 
 // Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
-    const prevState = getCurrentGameState();
     isHost = socket.id === game.hostId;
     const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
     const canAct = isCurrentPlayer && game.status === 'playing';
@@ -621,9 +639,31 @@ function getCurrentGameState() {
 // Game event handlers
 function handleGameJoined(gameId) {
     currentGameId = gameId;
-    document.getElementById('gameCode').textContent = gameId;
     document.querySelector('.lobby-screen').style.display = 'none';
-    document.getElementById('gameArea').style.display = 'block';
+    document.getElementById('gameArea').style.display = 'flex';
+}
+
+// Update checkUrlParams to handle both paths and search params
+function checkUrlParams() {
+    // First check for join in the path
+    const pathMatch = window.location.pathname.match(/\/join\/([A-Z0-9]{5})/i);
+    if (pathMatch) {
+        const gameId = pathMatch[1].toUpperCase();
+        const name = prompt('Enter your name to join the game:')?.trim();
+        if (name) {
+            socket.emit('join-game', gameId, name);
+            // Clean up URL after emitting join
+            window.history.replaceState({}, document.title, '/');
+            return; // Exit early
+        }
+    }
+    
+    // Check for error params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'game-not-found') {
+        alert('Game not found!');
+        window.history.replaceState({}, document.title, '/');
+    }
 }
 
 function handleGameStarted(game) {
