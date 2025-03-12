@@ -5,8 +5,11 @@
   "main": "script.js",
   "scripts": {
     "start": "node server.js",
-    "stop": "npx kill-port 3000",
-    "dev": "cross-env NODE_ENV=development node server.js"
+    "postinstall": "npm run build",
+    "build": "echo 'No build step required'",
+    "heroku-postbuild": "npm install",
+    "dev": "cross-env NODE_ENV=development node server.js",
+    "stop": "npx kill-port 3000"
   },
   "repository": {
     "type": "git",
@@ -32,8 +35,8 @@
     "kill-port": "^2.0.1"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": "18.x",
+    "npm": "9.x"
   },
   "domains": ["hit7.xyz"]
 }

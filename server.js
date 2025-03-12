@@ -594,16 +594,30 @@ app.get('/join/:gameId', (req, res) => {
 
 // Update route handling to serve index.html for all routes
 app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');Heroku
+  res.sendFile(__dirname + '/public/index.html');
 });
-rocess.env.NODE_ENV === 'production' 
-// Start server
+
+// Initialize Express app and create HTTP server
+const server = http.createServer(app);
+
+// Update port configuration for production
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://' + process.env.HEROKU_APP_NAME + '.herokuapp.com'
-  : 'http://localhost:3000';
+  ? 'https://hit7.xyz'
+  : `http://localhost:${PORT}`;
 
-startServer(PORT);
+// Initialize Socket.IO with the server
+const io = createIoServer(server);
+
+// Handle socket connections
+handleSocketConnection(io);
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`Base URL: ${BASE_URL}`);
+});
 
 // Cleanup empty games every minute
 setInterval(() => {
