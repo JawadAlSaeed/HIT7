@@ -235,11 +235,38 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('game-update', game);
     });
 
+    // Update reset-game event handling
     socket.on('reset-game', gameId => {
       const game = games.get(gameId);
       if (game && socket.id === game.hostId) {
-        games.delete(gameId);
-        io.to(gameId).emit('game-reset');
+        // Reset the game state but keep players
+        const resetGame = {
+          ...game,
+          deck: createDeck(),
+          discardPile: [],
+          currentPlayer: 0,
+          status: 'playing',
+          roundNumber: 1
+        };
+
+        // Reset all players
+        resetGame.players = resetGame.players.map(player => ({
+          ...player,
+          regularCards: [],
+          specialCards: [],
+          status: 'active',
+          roundScore: 0,
+          totalScore: 0,
+          bustedCard: null,
+          drawThreeRemaining: 0,
+          pendingSpecialCard: null
+        }));
+
+        // Update the game in the map
+        games.set(gameId, resetGame);
+
+        // Notify all players about the reset
+        io.to(gameId).emit('game-reset-with-players', resetGame);
       }
     });
 

@@ -55,7 +55,7 @@ const initializeButtons = () => {
         stand();
     };
     if (resetBtn) resetBtn.onclick = function() {
-        if (confirm('Reset game for all players?')) {
+        if (confirm('Reset game and start a new round with all players?')) {
             playSound('buttonClick');
             resetGame();
         }
@@ -178,6 +178,37 @@ socket.on('play-sound', (soundId) => {
     playSound(soundId);
 });
 
+// Add this new event listener with the other socket listeners
+socket.on('game-reset-with-players', (game) => {
+    // Clear any existing popups
+    const popups = document.querySelectorAll('.winner-popup, .round-summary-popup, .info-popup');
+    popups.forEach(popup => popup.remove());
+    
+    // Clear the board for new game
+    document.getElementById('playersContainer').innerHTML = '';
+    
+    // Update game display
+    updateGameDisplay(game);
+    
+    // Check if it's the current player's turn
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
+    
+    // Show a notification
+    const notification = document.createElement('div');
+    notification.className = 'info-popup';
+    notification.innerHTML = `
+        <h2>🔄 Game Reset!</h2>
+        <p class="popup-countdown">Starting new game...</p>
+    `;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 2 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+});
+
 // Game actions
 function createGame() {
     playSound('buttonClick');
@@ -233,7 +264,7 @@ function stand() {
 }
 
 function resetGame() {
-    if (confirm('Reset game for all players?')) {
+    if (confirm('Reset game and start a new round with all players?')) {
         playSound('buttonClick');
         socket.emit('reset-game', currentGameId);
     }
