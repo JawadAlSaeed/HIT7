@@ -9,10 +9,13 @@ require('dotenv').config();
 const app = express();
 
 // Configuration
-const createIoServer = (server, port) => {
+const createIoServer = (server) => {
   return new Server(server, {
     cors: {
-      origin: '*', // Allow all origins in development
+      origin: [
+        'https://hit7.xyz',
+        'http://localhost:3000'
+      ],
       methods: ['GET', 'POST'],
       credentials: true
     },
@@ -591,11 +594,35 @@ app.get('/join/:gameId', (req, res) => {
 
 // Update route handling to serve index.html for all routes
 app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+  res.sendFile(__dirname + '/public/index.html');Heroku
 });
+rocess.env.NODE_ENV === 'production' 
+// Start server with initial port  ? 'https://hit7-64b15d0a58f7.herokuapp.com'  // Update this with your Heroku URL
+const PORT = process.env.PORT || 3000;3000';
+startServer(PORT);
 
-// Start server with initial port
+// Cleanup empty games
+setInterval(() => {st server = http.createServer(app);
+  games.forEach((game, id) => {isten(port, () => {
+
+
+
+}, 60000);  });    if (game.players.length === 0) games.delete(id);    console.log(`Server running on port ${port}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`Base URL: ${BASE_URL}`);
+  });
+
+  // Attach Socket.IO to this server instance
+  const io = createIoServer(server);
+  handleSocketConnection(io);
+};
+
+// Update port configuration for GitHub deployment
 const PORT = process.env.PORT || 3000;
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://' + process.env.HEROKU_APP_NAME + '.herokuapp.com'
+  : 'http://localhost:3000';
+
 startServer(PORT);
 
 // Cleanup empty games

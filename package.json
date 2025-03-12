@@ -4,7 +4,7 @@
   "description": "A game about cards",
   "main": "script.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node server.js",
+    "start": "node server.js",
     "stop": "npx kill-port 3000",
     "dev": "cross-env NODE_ENV=development node server.js"
   },
@@ -30,5 +30,10 @@
   "devDependencies": {
     "cross-env": "^7.0.3",
     "kill-port": "^2.0.1"
-  }
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "domains": ["hit7.xyz"]
 }
