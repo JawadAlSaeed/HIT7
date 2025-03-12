@@ -597,27 +597,7 @@ app.get('*', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');Heroku
 });
 rocess.env.NODE_ENV === 'production' 
-// Start server with initial port  ? 'https://hit7-64b15d0a58f7.herokuapp.com'  // Update this with your Heroku URL
-const PORT = process.env.PORT || 3000;3000';
-startServer(PORT);
-
-// Cleanup empty games
-setInterval(() => {st server = http.createServer(app);
-  games.forEach((game, id) => {isten(port, () => {
-
-
-
-}, 60000);  });    if (game.players.length === 0) games.delete(id);    console.log(`Server running on port ${port}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`Base URL: ${BASE_URL}`);
-  });
-
-  // Attach Socket.IO to this server instance
-  const io = createIoServer(server);
-  handleSocketConnection(io);
-};
-
-// Update port configuration for GitHub deployment
+// Start server
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://' + process.env.HEROKU_APP_NAME + '.herokuapp.com'
@@ -625,7 +605,7 @@ const BASE_URL = process.env.NODE_ENV === 'production'
 
 startServer(PORT);
 
-// Cleanup empty games
+// Cleanup empty games every minute
 setInterval(() => {
   games.forEach((game, id) => {
     if (game.players.length === 0) games.delete(id);
