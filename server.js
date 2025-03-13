@@ -317,14 +317,16 @@ const handleSocketConnection = (io) => {
       const target = game.players.find(p => p.id === targetId);
       
       if (player && target && player.specialCards.includes('D3')) {
+        // Remove D3 from player's special cards
         player.specialCards = player.specialCards.filter(c => c !== 'D3');
         
-        const remainingSpace = MAX_REGULAR_CARDS - (target.regularCards.length + target.specialCards.length);
-        target.drawThreeRemaining = Math.min(3, remainingSpace);
+        // Always set to 3 draws, regardless of remaining space
+        target.drawThreeRemaining = 3;
         
-        // Add Draw Three to discard only when used
+        // Add Draw Three to discard pile
         game.discardPile.push('D3');
         
+        // Set current player to target
         game.currentPlayer = game.players.findIndex(p => p.id === target.id);
         
         io.to(gameId).emit('game-update', game);
@@ -368,9 +370,7 @@ const handleSocketConnection = (io) => {
 
     // Game status checking
     const checkGameStatus = game => {
-      // Remove the instant winner check as we want the round to continue
-      
-      // Check if round should end (all players are either busted or stood)
+      // Check if round should end (all players are either busted, stood, or frozen)
       const activePlayers = game.players.filter(p => p.status === 'active');
       const allBusted = game.players.every(p => p.status === 'busted');
 
@@ -391,15 +391,15 @@ const handleSocketConnection = (io) => {
           if (allBusted) {
             startNewRound(game);
           } else {
-            // Find the winner among stood players
-            const stoodPlayers = game.players.filter(p => p.status === 'stood');
-            const winner = stoodPlayers.reduce((max, p) => 
-              p.totalScore > max.totalScore ? p : max
-            , { totalScore: -1 });
+            // Find highest scoring player among non-busted players
+            const nonBustedPlayers = game.players.filter(p => p.status !== 'busted');
+            const highestScore = Math.max(...nonBustedPlayers.map(p => p.totalScore));
+            const winners = nonBustedPlayers.filter(p => p.totalScore === highestScore);
 
-            // End game if winner has 200+ points, otherwise start new round
-            if (winner.totalScore >= 200) {
-              endGame(game, winner);
+            // End game if any winner has 200+ points, otherwise start new round
+            if (highestScore >= 200) {
+              // In case of a tie, winner is the one who reached it first
+              endGame(game, winners[0]);
             } else {
               startNewRound(game);
             }
@@ -413,7 +413,10 @@ const handleSocketConnection = (io) => {
     const endGame = (game, winner) => {
       game.status = 'finished';
       io.to(game.id).emit('game-over', {
-        players: game.players,
+        players: game.players.map(p => ({
+          ...p,
+          status: p.id === winner.id ? 'winner' : p.status
+        })),
         winner: winner
       });
     };
@@ -492,18 +495,19 @@ const advanceTurn = game => {
 
 const handleNumberCard = (game, player, card, io) => {
   if (card === 0) {
-    // Zero card can't cause a bust and can be held multiple times
     player.regularCards.push(card);
     // Add 15 bonus points if player reaches 7 cards in one turn
     if (player.regularCards.length === MAX_REGULAR_CARDS) {
       player.status = 'stood';
       player.totalScore += 15; // Add bonus points
+      // Don't immediately end game, let round finish
+      updatePlayerScore(player);
     }
   } else if (player.regularCards.includes(card)) {
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
-      game.discardPile.push('SC'); // Add SC to discard only when used
+      game.discardPile.push('SC');
       io.to(game.id).emit('play-sound', 'secondChanceSound');
     } else {
       player.status = 'busted';
@@ -513,10 +517,11 @@ const handleNumberCard = (game, player, card, io) => {
     }
   } else {
     player.regularCards.push(card);
-    // Add 15 bonus points if player reaches 7 cards in one turn
     if (player.regularCards.length === MAX_REGULAR_CARDS) {
       player.status = 'stood';
       player.totalScore += 15; // Add bonus points
+      // Don't immediately end game, let round finish
+      updatePlayerScore(player);
     }
   }
 };
