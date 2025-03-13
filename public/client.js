@@ -490,6 +490,9 @@ function renderPlayers(game) {
 }
 
 function playerTemplate(player, isCurrentTurn) {
+    const emptySlots = Array(7 - player.regularCards.length).fill(0)
+        .map(() => '<div class="empty-slot"></div>').join('');
+
     return `
         <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
             <div class="player-header">
@@ -509,6 +512,7 @@ function playerTemplate(player, isCurrentTurn) {
             </div>
             <div class="card-grid">
                 ${player.regularCards.map(card => `<div class="card">${card}</div>`).join('')}
+                ${emptySlots}
             </div>
             ${player.specialCards.length > 0 ? `
                 <div class="special-cards-container">
@@ -518,10 +522,12 @@ function playerTemplate(player, isCurrentTurn) {
                         </div>
                     `).join('')}
                 </div>
-            ` : ''}
+            ` : `
+                <div class="special-cards-container"></div>
+            `}
             ${player.drawThreeRemaining > 0 ? `
                 <div class="draw-three-indicator">
-                  🎯 Draw ${player.drawThreeRemaining} more cards
+                    🎯 Draw ${player.drawThreeRemaining} more cards
                 </div>
             ` : ''}
         </div>

@@ -332,17 +332,16 @@ body::before {
 
 .player {
     flex: 1;
-    min-width: 280px;
-    max-width: 400px;
+    min-width: 350px; /* Increased from 280px */
+    max-width: 450px; /* Increased from 400px */
     background: rgba(22, 33, 62, 0.9);
     padding: 1.2rem;
     border-radius: 15px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    transform: translateY(0);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    height: fit-content;
+    overflow: hidden;
 }
 
 .player:hover {
@@ -485,58 +484,35 @@ body::before {
     display: inline-block;
 }
 
+/* Card Grid and Slots */
 .card-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.8rem;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(7, 45px); /* Exactly 7 slots of 45px each */
+    gap: 0.8rem;
+    margin: 1rem;
+    padding: 1rem;
     background: rgba(15, 52, 96, 0.3);
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    justify-content: center;
 }
 
-.card-grid::before {
-    content: "Regular Cards";
-    grid-column: 1 / -1;
-    color: var(--text-light);
-    font-size: 0.9rem;
-    opacity: 0.8;
-    margin-bottom: 0.5rem;
-}
-
-.card {
-    background: var(--card-gradient);
-    color: var(--text-light);
-    width: 40px;
-    height: 56px;
-    border-radius: 12px;
+/* Card and Empty Slot Styling */
+.card, .empty-slot {
+    width: 45px;  /* Match special card width */
+    height: 63px; /* Match special card height */
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.2rem;
     font-weight: bold;
-    font-size: 1rem;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-    transition: all 0.3s ease;
-    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
-.card:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-}
-
-.card.bust {
-    background: var(--danger);
-    color: white;
-    animation: busted-pulse 0.6s ease;
-}
-
-@keyframes busted-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+.empty-slot {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
 }
 
 /* Special Card Styling */
@@ -547,11 +523,11 @@ body::before {
     position: relative;
     border: 2px solid;
     font-size: 1.2rem;
-    width: 50px;
-    height: 70px;
+    width: 45px;
+    height: 63px;
     border-radius: 8px;
+    margin: 0;
 }
-
 
 .card.special.adder {
     background: #27ae60 !important; /* Solid green for adder */
@@ -634,26 +610,11 @@ body::before {
 
 /* Special Cards Section */
 .special-cards-container {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 2px solid rgba(255,255,255,0.1);
     display: flex;
-    gap: 0.5rem;
     flex-wrap: wrap;
-    margin-top: 1rem;
-}
-
-.special-cards-container::before {
-    content: "Special Cards";
-    display: block;
-    color: var(--text-light);
-    font-size: 0.9rem;
-    opacity: 0.8;
-    margin-bottom: 0.5rem;
-    display: flex;
     gap: 0.8rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
+    min-height: 70px;
+    align-items: center;
 }
 
 /* Controls */
@@ -836,10 +797,10 @@ body::before {
         gap: 0.3rem;
     }
 
-    .card {
-        width: 35px;
-        height: 49px;
-        font-size: 0.9rem;
+    .card, .empty-slot, .card.special {
+        width: 40px;
+        height: 56px;
+        font-size: 1.1rem;
     }
 
     .score-box {
@@ -918,6 +879,16 @@ body::before {
         padding: 0.8rem 1.5rem;
         font-size: 1rem;
         min-width: 120px;
+    }
+
+    .card-grid {
+        grid-template-columns: repeat(7, 40px); /* Slightly smaller on mobile */
+        gap: 0.5rem;
+    }
+
+    .card-grid, .special-cards-container {
+        margin: 0.8rem;
+        padding: 0.8rem;
     }
 }
 
@@ -1052,22 +1023,6 @@ body::before {
     backdrop-filter: blur(10px);
 }
 
-.remaining-pile .regular-cards::before {
-    content: 'Regular Cards Remaining';
-    position: absolute;
-    top: -12px;
-    left: 15px;
-    background: var(--accent);
-    padding: 0.4rem 1.2rem;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
-}
-
 /* Special Cards Section */
 .remaining-pile .special-cards {
     display: flex;
@@ -1080,22 +1035,6 @@ body::before {
     border: 1px solid rgba(233, 69, 96, 0.2);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-}
-
-.remaining-pile .special-cards::before {
-    content: 'Special Cards Remaining';
-    position: absolute;
-    top: -12px;
-    left: 15px;
-    background: var (--accent);
-    padding: 0.4rem 1.2rem;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
 }
 
 /* Individual Remaining Cards */
@@ -1181,18 +1120,6 @@ body::before {
     position: relative;
 }
 
-.remaining-pile .regular-cards::before {
-    content: 'Regular Cards Remaining';
-    position: absolute;
-    top: -10px;
-    left: 10px;
-    background: var(--secondary);
-    padding: 0 10px;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    opacity: 0.8;
-}
-
 /* Special Cards Section */
 .remaining-pile .special-cards {
     display: flex;
@@ -1202,18 +1129,6 @@ body::before {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     position: relative;
-}
-
-.remaining-pile .special-cards::before {
-    content: 'Special Cards Remaining';
-    position: absolute;
-    top: -10px;
-    left: 10px;
-    background: var(--secondary);
-    padding: 0 10px;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    opacity: 0.8;
 }
 
 /* Individual Remaining Cards */
@@ -2259,4 +2174,9 @@ body::before {
     padding: 0.5rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+}
+
+/* Player Container Text */
+.player * {
+    text-transform: uppercase;
 }
