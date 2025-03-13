@@ -225,6 +225,9 @@ body::before {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     flex-direction: column;
     padding-bottom: calc(80px + 2rem); /* Height of controls + some extra space */
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
 }
 
 .game-container.active {
@@ -328,6 +331,7 @@ body::before {
     gap: 1rem;
     width: 100%;
     justify-content: center;
+    margin-bottom: calc(80px + 1rem); /* Match controls height plus some spacing */
 }
 
 .player {
@@ -619,22 +623,24 @@ body::before {
 
 /* Controls */
 .controls {
-    position: fixed;
+    position: fixed;  /* Changed from absolute to fixed */
     bottom: 0;
     left: 0;
     right: 0;
+    height: 80px;  /* Explicit height */
     margin: 0;
     padding: 1rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;  /* Prevent wrapping */
     justify-content: center;
+    align-items: center;  /* Center vertically */
     gap: 1.2rem;
-    background: rgba(22, 33, 62, 0.95);
-    border-top: 1px solid rgba(233, 69, 96, 0.2);
+    background: rgba(22, 33, 62, 0.98);  /* More opaque background */
+    border-top: 2px solid rgba(233, 69, 96, 0.3);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    z-index: 100;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 1000;  /* Ensure it's above other content */
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .game-button {
