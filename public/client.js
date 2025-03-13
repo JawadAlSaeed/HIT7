@@ -674,6 +674,8 @@ function checkUrlParams() {
 
 function handleGameStarted(game) {
     document.getElementById('startGame').style.display = 'none';
+    // Hide share link when game starts
+    document.getElementById('shareLink').classList.add('hidden');
     // Only show buttons for the first player (current player)
     const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
     toggleActionButtons(isCurrentPlayer && game.status === 'playing');
