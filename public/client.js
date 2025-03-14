@@ -5,6 +5,7 @@ const MAX_REGULAR_CARDS = 7;
 let activeFreezePopup = null;
 let activeDrawThreePopup = null;
 let soundEnabled = true;
+let currentGameUrl = ""; // New: stores the game URL
 
 // Remove initialization code
 const initializeButtons = () => {
@@ -277,6 +278,7 @@ function resetGame() {
 function handleGameCreated({ gameId, gameUrl }) {
     console.log('Game created with URL:', gameUrl);
     currentGameId = gameId;
+    currentGameUrl = gameUrl; // Store URL for later copying
     isHost = true;
     
     document.querySelector('.lobby-screen').style.display = 'none';
@@ -287,28 +289,23 @@ function handleGameCreated({ gameId, gameUrl }) {
     // New: show controls when game is created
     document.querySelector('.controls').style.display = 'flex';
 
-    // Update share link display
+    // Update share link display: show only a button styled like reset button but light blue
     const shareLink = document.getElementById('shareLink');
     shareLink.innerHTML = `
-        <input type="text" value="${gameUrl}" readonly 
-               class="share-link-input" id="shareLinkInput">
-        <button class="copy-link-btn" onclick="copyShareLink()">
-            Copy Link
-        </button>
+        <button onclick="copyShareLink()" class="game-button copy-link-btn" style="white-space: nowrap;">Copy Link</button>
     `;
 }
 
-// Add copy link functionality
 function copyShareLink() {
-    const linkInput = document.getElementById('shareLinkInput');
-    linkInput.select();
-    document.execCommand('copy');
-    
-    // Show feedback
-    const copyBtn = document.querySelector('.copy-link-btn');
-    const originalText = copyBtn.textContent;
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => copyBtn.textContent = originalText, 2000);
+    if (!currentGameUrl) return;
+    navigator.clipboard.writeText(currentGameUrl).then(() => {
+        const btn = document.querySelector('.copy-link-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Link Copied!';
+        setTimeout(() => btn.textContent = originalText, 2000);
+    }).catch(err => {
+        console.error('Copy failed:', err);
+    });
 }
 
 // Remove bust sound from handleGameUpdate since server will handle it

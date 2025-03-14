@@ -156,6 +156,14 @@
         flex: 1;
     }
 
+    /* Ensure the copy link button has the same size as the reset game button */
+    .game-button.copy-link-btn {
+        min-width: 80px;
+        max-width: 120px;
+        height: 50px;
+        padding: 0 15px;
+    }
+
     /* Cards Grid */
     .card-grid {
         grid-template-columns: repeat(7, 40px);

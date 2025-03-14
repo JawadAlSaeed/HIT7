@@ -700,6 +700,14 @@ body::before {
     box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
 }
 
+/* New copy-link button styling: similar to reset button but light blue */
+.game-button.copy-link-btn {
+    background: linear-gradient(135deg, #5bc0de, #31b0d5); /* Light blue gradient */
+    box-shadow: 0 4px 15px rgba(91, 192, 222, 0.3);
+    min-width: 160px; /* Ensure same width as reset button */
+    padding: 1rem 2.5rem; /* Same padding as other game buttons */
+}
+
 .game-button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 5px 12px rgba(0,0,0,0.2);
@@ -2021,6 +2029,9 @@ body::before {
     padding: 0.5rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+    background: transparent; /* Remove gray background */
+    padding: 0;            /* Remove extra padding */
+    border: none;
 }
 
 /* Add this new class */
