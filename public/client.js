@@ -284,6 +284,9 @@ function handleGameCreated({ gameId, gameUrl }) {
     document.getElementById('hostCodeDisplay').style.display = 'block';
     document.getElementById('startGame').style.display = 'block';
     
+    // New: show controls when game is created
+    document.querySelector('.controls').style.display = 'flex';
+
     // Update share link display
     const shareLink = document.getElementById('shareLink');
     shareLink.innerHTML = `
@@ -647,6 +650,8 @@ function handleGameJoined(gameId) {
     currentGameId = gameId;
     document.querySelector('.lobby-screen').style.display = 'none';
     document.getElementById('gameArea').style.display = 'flex';
+    // Show controls for joining players
+    document.querySelector('.controls').style.display = 'flex';
 }
 
 // Update checkUrlParams to handle both paths and search params
