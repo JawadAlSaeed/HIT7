@@ -225,7 +225,7 @@ body::before {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     flex-direction: column;
     padding-bottom: calc(80px + 2rem); /* Height of controls + some extra space */
-    min-height: 100vh;
+    min-height: 100%; /* Changed from vh to % */
     position: relative;
     overflow-x: hidden;
 }

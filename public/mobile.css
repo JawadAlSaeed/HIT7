@@ -34,7 +34,7 @@
         padding: 0;
         margin: 0;
         padding-bottom: 160px; /* Increased space for current player + controls */
-        height: 100vh;
+        min-height: 100%; /* Changed from vh to % */
         overflow-y: auto;
     }
 
