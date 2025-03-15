@@ -325,44 +325,29 @@ body::before {
     align-items: center;
 }
 
-/* Players Container - Updated for correct layout */
+/* Players Container - Updated for centered layout */
 .players-container {
     display: flex;
     gap: 1rem;
-    width: calc(100vw - 4rem); /* Account for container padding */
+    width: calc(100vw - 4rem);
     overflow-x: auto;
     padding: 1rem;
     margin-bottom: calc(80px + 1rem);
     scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: var(--highlight) var(--secondary);
+    justify-content: center; /* Center players horizontally */
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-.players-container::-webkit-scrollbar {
-    height: 8px;
-}
-
-/* Handle */
-.players-container::-webkit-scrollbar-thumb {
-    background: var(--highlight);
-    border-radius: 4px;
-}
-
-/* Track */
-.players-container::-webkit-scrollbar-track {
-    background: var(--secondary);
-    border-radius: 4px;
-}
-
-/* Player Card - Updated sizing */
+/* Player Card - Updated for consistent sizing */
 .player {
-    flex: 0 0 calc(25% - 0.75rem); /* Show 4 players without scrolling */
-    min-width: 300px; /* Minimum width for smaller screens */
-    max-width: none; /* Remove max-width restriction */
-    scroll-snap-align: start;
+    flex: 0 0 calc(25% - 0.75rem);
+    min-width: 300px;
+    max-width: 450px; /* Added max-width to maintain consistency */
+    scroll-snap-align: center; /* Changed from start to center */
     height: auto;
+    margin: 0 auto; /* Center individual players */
 }
 
 .player {
