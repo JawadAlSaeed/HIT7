@@ -211,21 +211,22 @@ body::before {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Game Area */
+/* Game Area - Updated for full screen */
 .game-container {
     display: none;
-    width: 100%;
-    max-width: 1200px;
+    width: 100vw; /* Full viewport width */
+    min-height: 100vh; /* Full viewport height */
+    max-width: none; /* Remove max-width restriction */
+    margin: -20px; /* Offset body padding */
     padding: 2rem;
     background: rgba(22, 33, 62, 0.8);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    border-radius: 25px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border-radius: 0; /* Remove border radius for full screen */
+    border: none;
+    box-shadow: none;
     flex-direction: column;
-    padding-bottom: calc(80px + 2rem); /* Height of controls + some extra space */
-    min-height: 100%; /* Changed from vh to % */
+    padding-bottom: calc(80px + 2rem);
     position: relative;
     overflow-x: hidden;
 }
@@ -324,14 +325,44 @@ body::before {
     align-items: center;
 }
 
-/* Players */
+/* Players Container - Updated for correct layout */
 .players-container {
     display: flex;
-    flex-wrap: wrap;
     gap: 1rem;
-    width: 100%;
-    justify-content: center;
-    margin-bottom: calc(80px + 1rem); /* Match controls height plus some spacing */
+    width: calc(100vw - 4rem); /* Account for container padding */
+    overflow-x: auto;
+    padding: 1rem;
+    margin-bottom: calc(80px + 1rem);
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: thin;
+    scrollbar-color: var(--highlight) var(--secondary);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.players-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+/* Handle */
+.players-container::-webkit-scrollbar-thumb {
+    background: var(--highlight);
+    border-radius: 4px;
+}
+
+/* Track */
+.players-container::-webkit-scrollbar-track {
+    background: var(--secondary);
+    border-radius: 4px;
+}
+
+/* Player Card - Updated sizing */
+.player {
+    flex: 0 0 calc(25% - 0.75rem); /* Show 4 players without scrolling */
+    min-width: 300px; /* Minimum width for smaller screens */
+    max-width: none; /* Remove max-width restriction */
+    scroll-snap-align: start;
+    height: auto;
 }
 
 .player {

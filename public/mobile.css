@@ -32,7 +32,8 @@
     /* Game Area */
     .game-container {
         padding: 0;
-        margin: 0;
+        margin: -10px; /* Match the mobile body padding */
+        width: 100vw;
         padding-bottom: 160px; /* Increased space for current player + controls */
         min-height: 100%; /* Changed from vh to % */
         overflow-y: auto;
@@ -174,6 +175,7 @@
 
     /* Players Container */
     .players-container {
+        width: 100vw; /* Full viewport width */
         margin-top: 140px; /* Header + Deck Area height */
         margin-bottom: 180px; /* Space for current player + controls */
         padding: 5px;
@@ -190,6 +192,31 @@
     .card,
     .special-card {
         min-height: 44px; /* iOS minimum touch target size */
+    }
+
+    /* Players Container - Mobile adjustments */
+    .players-container {
+        width: 100vw; /* Full viewport width */
+        padding: 0.5rem;
+        gap: 0.5rem;
+        margin-top: 140px;
+    }
+
+    .player {
+        flex: 0 0 calc(100% - 1rem); /* Full width on mobile */
+        min-width: 280px;
+    }
+
+    /* Current player remains fixed at bottom */
+    .player.current-turn {
+        position: fixed;
+        bottom: 70px;
+        left: 0;
+        right: 0;
+        z-index: 90;
+        margin: 0 auto;
+        width: calc(100% - 20px); /* Add some space on sides */
+        max-width: none;
     }
 }
 
@@ -228,6 +255,13 @@
 
     .game-button {
         height: 40px;
+    }
+}
+
+/* Tablet/Medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .player {
+        flex: 0 0 calc(33.333% - 0.667rem); /* Show 3 players on tablet */
     }
 }
 
