@@ -37,16 +37,11 @@ const initializeButtons = () => {
         showTutorial();
     };
 
-    // Game Control Buttons
-    const startGameBtn = document.getElementById('startGame');
+    // Game Control Buttons - removed startGame button
     const flipCardBtn = document.getElementById('flipCard');
     const standBtn = document.getElementById('standButton');
     const resetBtn = document.getElementById('resetButton');
 
-    if (startGameBtn) startGameBtn.onclick = function() {
-        playSound('buttonClick');
-        startGame();
-    };
     if (flipCardBtn) flipCardBtn.onclick = function() {
         playSound('cardFlip');
         flipCard();
@@ -281,19 +276,14 @@ function handleGameCreated({ gameId, gameUrl }) {
     currentGameUrl = gameUrl; // Store URL for later copying
     isHost = true;
     
+    // Hide lobby screen
     document.querySelector('.lobby-screen').style.display = 'none';
-    document.getElementById('gameArea').style.display = 'flex';
-    document.getElementById('hostCodeDisplay').style.display = 'block';
-    document.getElementById('startGame').style.display = 'block';
     
-    // New: show controls when game is created
-    document.querySelector('.controls').style.display = 'flex';
-
-    // Update share link display: show only a button styled like reset button but light blue
-    const shareLink = document.getElementById('shareLink');
-    shareLink.innerHTML = `
-        <button onclick="copyShareLink()" class="game-button copy-link-btn" style="white-space: nowrap;">Copy Link</button>
-    `;
+    // Show waiting screen instead of game area
+    showWaitingScreen({
+        players: [{ name: 'You (Host)', id: socket.id }],
+        hostId: socket.id
+    });
 }
 
 function copyShareLink() {
@@ -310,20 +300,44 @@ function copyShareLink() {
 
 // Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
-    isHost = socket.id === game.hostId;
-    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-    const canAct = isCurrentPlayer && game.status === 'playing';
+    const waitingScreen = document.getElementById('waitingScreen');
     
-    updateGameDisplay(game);
-    toggleActionButtons(canAct);
-    
-    document.getElementById('startGame').style.display = 
-        isHost && game.status === 'lobby' ? 'block' : 'none';
-    document.getElementById('resetButton').style.display = isHost ? 'block' : 'none';
-
-    if (activeFreezePopup) {
-        activeFreezePopup.remove();
-        activeFreezePopup = null;
+    if (game.status === 'lobby') {
+        // Update waiting screen if it exists
+        if (waitingScreen) {
+            const playersList = waitingScreen.querySelector('.players-list');
+            if (playersList) {
+                playersList.innerHTML = game.players.map(player => `
+                    <div class="player-item">
+                        ${player.name}
+                        ${player.id === game.hostId ? 
+                            '<span class="host-badge">HOST</span>' : ''}
+                    </div>
+                `).join('');
+            }
+            // Always update the start button when we get a game update in lobby
+            if (isHost) {
+                updateStartButton(game.players.length);
+            }
+        } else {
+            // Show waiting screen if it doesn't exist
+            showWaitingScreen(game);
+        }
+    } else {
+        // Remove waiting screen and show game when started
+        if (waitingScreen) {
+            waitingScreen.remove();
+        }
+        // Update game display as before
+        isHost = socket.id === game.hostId;
+        const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+        const canAct = isCurrentPlayer && game.status === 'playing';
+        
+        updateGameDisplay(game);
+        toggleActionButtons(canAct);
+        
+        document.getElementById('gameArea').style.display = 'flex';
+        document.querySelector('.controls').style.display = 'flex';
     }
 }
 
@@ -609,8 +623,8 @@ function toggleActionButtons(active) {
     // 3. Game is in playing state
     const showButtons = active && currentPlayer;
     
-    flipCardBtn.style.display = showButtons ? 'block' : 'none';
-    standButton.style.display = 
+    if (flipCardBtn) flipCardBtn.style.display = showButtons ? 'block' : 'none';
+    if (standButton) standButton.style.display = 
         (showButtons && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) 
         ? 'block' 
         : 'none';
@@ -646,9 +660,94 @@ function getCurrentGameState() {
 function handleGameJoined(gameId) {
     currentGameId = gameId;
     document.querySelector('.lobby-screen').style.display = 'none';
+}
+
+function showWaitingScreen(gameData) {
+    const waitingScreen = document.createElement('div');
+    waitingScreen.className = 'waiting-screen';
+    waitingScreen.id = 'waitingScreen';
+    
+    const content = `
+        <h2>${isHost ? '🎮 Waiting Room' : '⏳ Waiting for Host'}</h2>
+        ${isHost ? `
+        <div class="share-section">
+            <p class="share-text">Share this link with your friends:</p>
+            <button class="game-button copy-link-btn" onclick="copyShareLink()">
+                Copy Game Link
+            </button>
+            <div class="copied-message">Link copied!</div>
+        </div>
+        ` : ''}
+        <div class="players-list">
+            ${gameData.players.map(player => `
+                <div class="player-item">
+                    ${player.name}
+                    ${player.id === gameData.hostId ? 
+                        '<span class="host-badge">HOST</span>' : ''}
+                </div>
+            `).join('')}
+        </div>
+        ${isHost ? `
+            <div class="button-group">
+                <button onclick="startGame()" id="startGameBtn" class="game-button green" 
+                    ${gameData.players.length < 2 ? 'disabled' : ''}>
+                    ${gameData.players.length < 2 ? 
+                        'Waiting for Players <div class="loading-spinner"></div>' : 
+                        'Start Game'}
+                </button>
+            </div>
+        ` : `
+            <p>Waiting for host to start the game<div class="loading-spinner"></div></p>
+        `}
+    `;
+    
+    waitingScreen.innerHTML = content;
+    document.body.appendChild(waitingScreen);
+
+    // Hide the game area completely while in waiting room
+    document.getElementById('gameArea').style.display = 'none';
+    document.querySelector('.controls').style.display = 'none';
+
+    // Update start button state when players join/leave
+    updateStartButton(gameData.players.length);
+}
+
+// Update handleGameStarted to properly transition from waiting screen to game
+function handleGameStarted(game) {
+    // Remove waiting screen
+    const waitingScreen = document.getElementById('waitingScreen');
+    if (waitingScreen) {
+        waitingScreen.remove();
+    }
+
+    // Show game area and controls
     document.getElementById('gameArea').style.display = 'flex';
-    // Show controls for joining players
     document.querySelector('.controls').style.display = 'flex';
+    
+    // Update game display
+    updateGameDisplay(game);
+    
+    // Check if it's the current player's turn and update controls
+    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
+    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
+}
+
+function updateStartButton(playerCount) {
+    const startBtn = document.getElementById('startGameBtn');
+    if (startBtn) {
+        const disabled = playerCount < 2;
+        startBtn.disabled = disabled;
+        startBtn.innerHTML = disabled ? 
+            'Waiting for Players <div class="loading-spinner"></div>' : 
+            'Start Game';
+
+        // Also update the button style based on state
+        if (disabled) {
+            startBtn.classList.add('disabled');
+        } else {
+            startBtn.classList.remove('disabled');
+        }
+    }
 }
 
 // Update checkUrlParams to handle both paths and search params
@@ -672,16 +771,6 @@ function checkUrlParams() {
         alert('Game not found!');
         window.history.replaceState({}, document.title, '/');
     }
-}
-
-function handleGameStarted(game) {
-    document.getElementById('startGame').style.display = 'none';
-    // Hide share link when game starts
-    document.getElementById('shareLink').classList.add('hidden');
-    // Only show buttons for the first player (current player)
-    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
-    updateGameDisplay(game);
 }
 
 function handleNewRound(game) {
