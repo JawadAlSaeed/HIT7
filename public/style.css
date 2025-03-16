@@ -548,6 +548,10 @@ body::before {
     border: 2px dashed rgba(255, 255, 255, 0.1);
 }
 
+.empty-slot.special {
+    border: 2px dashed rgba(233, 69, 96, 0.2);
+}
+
 /* Special Card Styling */
 .card.special {
     display: flex;
@@ -2296,4 +2300,57 @@ body::before {
 .freeze-target.self-target:hover,
 .draw-three-target.self-target:hover {
     background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.cards-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cards-label {
+    font-family: 'Cairo Play', sans-serif;
+    color: var(--highlight);
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.5rem;
+    background: rgba(15, 52, 96, 0.5);
+    border-radius: 8px 8px 0 0;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-bottom: none;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(15, 52, 96, 0.3);
+    border-radius: 0 0 8px 8px;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+}
+
+.card-grid.special {
+    background: rgba(15, 52, 96, 0.2);
+}
+
+.empty-slot {
+    width: auto;
+    aspect-ratio: 5/7;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+}
+
+.empty-slot.special {
+    border: 2px dashed rgba(233, 69, 96, 0.2);
 }

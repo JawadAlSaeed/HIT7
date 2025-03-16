@@ -295,6 +295,48 @@
     .remove-card-popup h3 {
         font-size: 1.2rem;
     }
+
+    .cards-section {
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+
+    .cards-label {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .card-grid {
+        padding: 0.5rem;
+        gap: 0.3rem;
+    }
+
+    .card-grid .card,
+    .card-grid .empty-slot {
+        font-size: 0.9rem;
+    }
+
+    .player {
+        padding: 0.8rem;
+    }
+
+    .player-header h3 {
+        font-size: 1rem;
+    }
+
+    .scores {
+        gap: 0.3rem;
+        padding: 0.5rem;
+    }
+
+    .score-box {
+        padding: 0.3rem;
+        font-size: 0.8rem;
+    }
+
+    .score-value {
+        font-size: 1rem;
+    }
 }
 
 /* Additional styles for larger phones (max-width: 767px) */
@@ -343,5 +385,17 @@
     .controls {
         position: sticky;
         bottom: 0;
+    }
+
+    .cards-section {
+        flex-direction: row;
+    }
+
+    .cards-container {
+        flex: 1;
+    }
+
+    .card-grid {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

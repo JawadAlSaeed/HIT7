@@ -517,13 +517,15 @@ function renderPlayers(game) {
 }
 
 function playerTemplate(player, isCurrentTurn) {
-    const emptySlots = Array(7 - player.regularCards.length).fill(0)
+    const emptyRegularSlots = Array(7 - player.regularCards.length).fill(0)
         .map(() => '<div class="empty-slot"></div>').join('');
+    const emptySpecialSlots = Array(7 - player.specialCards.length).fill(0)
+        .map(() => '<div class="empty-slot special"></div>').join('');
 
     return `
         <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
             <div class="player-header">
-                <h3>${player.name} ${player.id === socket.id ? '<span class="you">(You)</span>' : ''}</h3>
+                <h3>${player.name.toUpperCase()} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
                 <div class="player-status">
                     ${getStatusIcon(player.status)}
                     ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
@@ -532,29 +534,38 @@ function playerTemplate(player, isCurrentTurn) {
                     ` : ''}
                 </div>
             </div>
+            
             <div class="scores">
-                ${scoreBox('Round Score', player.roundScore)}
-                ${scoreBox('Total Score', player.totalScore)}
-                ${scoreBox('Cards', `${player.regularCards.length}/${MAX_REGULAR_CARDS}`)}
+                ${scoreBox('ROUND SCORE', player.roundScore)}
+                ${scoreBox('TOTAL SCORE', player.totalScore)}
+                ${scoreBox('CARDS', `${player.regularCards.length}/${MAX_REGULAR_CARDS}`)}
             </div>
-            <div class="card-grid">
-                ${player.regularCards.map(card => `<div class="card">${card}</div>`).join('')}
-                ${emptySlots}
-            </div>
-            ${player.specialCards.length > 0 ? `
-                <div class="special-cards-container">
-                    ${player.specialCards.map(card => `
-                        <div class="card special ${getSpecialCardClass(card)}">
-                            ${getSpecialCardDisplay(card)}
-                        </div>
-                    `).join('')}
+
+            <div class="cards-section">
+                <div class="cards-container">
+                    <div class="cards-label">REGULAR CARDS</div>
+                    <div class="card-grid regular">
+                        ${player.regularCards.map(card => `<div class="card">${card}</div>`).join('')}
+                        ${emptyRegularSlots}
+                    </div>
                 </div>
-            ` : `
-                <div class="special-cards-container"></div>
-            `}
+
+                <div class="cards-container">
+                    <div class="cards-label">SPECIAL CARDS</div>
+                    <div class="card-grid special">
+                        ${player.specialCards.map(card => `
+                            <div class="card special ${getSpecialCardClass(card)}">
+                                ${getSpecialCardDisplay(card)}
+                            </div>
+                        `).join('')}
+                        ${emptySpecialSlots}
+                    </div>
+                </div>
+            </div>
+
             ${player.drawThreeRemaining > 0 ? `
                 <div class="draw-three-indicator">
-                    🎯 Draw ${player.drawThreeRemaining} more cards
+                    🎯 DRAW ${player.drawThreeRemaining} MORE CARDS
                 </div>
             ` : ''}
         </div>
