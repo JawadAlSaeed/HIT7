@@ -303,11 +303,16 @@
 
     .cards-label {
         font-size: 0.8rem;
-        padding: 0.3rem 0.5rem;
+        padding: 0.5rem;
+    }
+
+    .cards-section {
+        gap: 0.8rem;
+        margin: 0.8rem 0;
     }
 
     .card-grid {
-        padding: 0.5rem;
+        padding: 0.8rem;
         gap: 0.3rem;
     }
 
@@ -389,6 +394,7 @@
 
     .cards-section {
         flex-direction: row;
+        gap: 0.8rem;
     }
 
     .cards-container {

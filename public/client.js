@@ -841,7 +841,7 @@ function showWinnerPopup(winner, isHost) {
         <div class="winner-score">${winner.totalScore} Points</div>
         ${isHost ? `
             <button id="rematchButton" class="game-button green">
-                Start Rematch
+                Rematch?
             </button>
         ` : `
             <div class="waiting-message">
