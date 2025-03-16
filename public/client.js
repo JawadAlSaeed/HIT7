@@ -362,31 +362,35 @@ function updateRemainingPile(deck) {
             'SC': 1,
             'Freeze': 2,
             'D3': 3,
-            '2x': 4,
-            '2+': 5,
-            '4+': 6,
-            '6+': 7,
-            '8+': 8,
-            '10+': 9
+            'RC': 4,    // Add RC with its own order
+            '2x': 5,    // Shift other special cards down
+            '2+': 6,
+            '4+': 7,
+            '6+': 8,
+            '8+': 9,
+            '10+': 10
         };
-        return specialOrder[card] || 10;
+        return specialOrder[card] || 11;
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
+            cardStr === 'RC' ||  // Add RC to the check
             cardStr.includes('+') || cardStr.includes('x')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
+                cardStr === 'RC' ? 'remove-card' :  // Add RC type
                 cardStr.includes('+') ? 'adder' :
                 'multiplier';
             displayValue = 
                 cardStr === 'SC' ? '🛡️' :
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
+                cardStr === 'RC' ? '🗑️' :  // Add RC display value
                 cardStr;
             specialCards.push({ cardStr, count, cardType, displayValue });
         } else {
@@ -399,7 +403,11 @@ function updateRemainingPile(deck) {
     // Sort regular cards by number
     regularCards.sort((a, b) => Number(a.cardStr) - Number(b.cardStr));
     // Sort special cards by predefined order
-    specialCards.sort((a, b) => getSpecialCardOrder(a.cardStr) - getSpecialCardOrder(b.cardStr));
+    specialCards.sort((a, b) => {
+        const orderA = getSpecialCardOrder(a.cardStr);
+        const orderB = getSpecialCardOrder(b.cardStr);
+        return orderA - orderB;  // Fix: was comparing a.cardStr with itself
+    });
 
     document.getElementById('discard').innerHTML = `
         <div class="regular-cards">
@@ -562,6 +570,7 @@ function getSpecialCardClass(card) {
     if (card === 'D3') return 'draw-three';
     if (card.endsWith('x')) return 'multiplier';
     if (card.endsWith('+')) return 'adder';
+    if (card === 'RC') return 'remove-card';
     return '';
 }
 
@@ -570,6 +579,7 @@ function getSpecialCardDisplay(card) {
     if (card === 'SC') return '🛡️';
     if (card === 'Freeze') return '❄️';
     if (card === 'D3') return '🎯';
+    if (card === 'RC') return '🗑️';
     
     // For adder and multiplier cards, extract the number and symbol
     if (card.endsWith('+') || card.endsWith('x')) {
@@ -951,6 +961,67 @@ function showFreezePopup(gameId, targets) {
   socket.once('game-update', cleanup);
   socket.once('cancel-freeze', cleanup);
 }
+
+function showRemoveCardPopup(gameId, players) {
+  const popup = document.createElement('div');
+  popup.className = 'remove-card-popup';
+  
+  const content = `
+    <div class="popup-content">
+      <h3>🗑️ Select a card to remove:</h3>
+      <div class="players-list">
+        ${players.map(player => `
+          <div class="player-section">
+            <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}</h4>
+            <div class="cards-list">
+              ${player.regularCards.map((card, index) => `
+                <button class="card-button regular" 
+                  data-player="${player.id}" 
+                  data-index="${index}"
+                  data-special="false">
+                  ${card}
+                </button>
+              `).join('')}
+              ${player.specialCards.map((card, index) => `
+                <button class="card-button special ${getSpecialCardClass(card)}" 
+                  data-player="${player.id}" 
+                  data-index="${index}"
+                  data-special="true">
+                  ${getSpecialCardDisplay(card)}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="cancel-button">Cancel</button>
+    </div>
+  `;
+  
+  popup.innerHTML = content;
+
+  // Add event listeners
+  popup.querySelectorAll('.card-button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.player;
+      const cardIndex = parseInt(btn.dataset.index);
+      const isSpecial = btn.dataset.special === 'true';
+      
+      socket.emit('remove-card', gameId, targetId, cardIndex, isSpecial);
+      popup.remove();
+    });
+  });
+
+  popup.querySelector('.cancel-button').addEventListener('click', () => {
+    popup.remove();
+  });
+
+  document.body.appendChild(popup);
+}
+
+socket.on('select-remove-card-target', (gameId, players) => {
+  showRemoveCardPopup(gameId, players);
+});
 
 function showTutorial() {
     // Remove any existing popup first

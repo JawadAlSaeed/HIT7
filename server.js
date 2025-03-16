@@ -54,19 +54,20 @@ const createDeck = () => {
     for (let i = 0; i < number; i++) deck.push(number);
   }
 
-  // Special cards = 15 cards (total 94)
+  // Special cards = 18 cards (total 97)
   const specialCards = [
     '2+', '4+', '6+', '8+', '10+',  // 5 adder cards
     '2x',                            // 1 multiplier card
     'SC', 'SC', 'SC',               // 3 second chance cards
     'Freeze', 'Freeze', 'Freeze',    // 3 freeze cards
-    'D3', 'D3', 'D3'                // 3 draw three cards
+    'D3', 'D3', 'D3',               // 3 draw three cards
+    'RC', 'RC', 'RC'                // 3 remove card cards (NEW)
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 94) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 94 cards.`);
+  if (deck.length !== 97) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 97 cards.`);
   }
   
   return shuffle(deck);
@@ -145,10 +146,10 @@ const handleSocketConnection = (io) => {
     socket.on('flip-card', gameId => {
       const game = games.get(gameId);
       if (!game || game.status !== 'playing') return;
-
+  
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
-
+  
       // Handle deck replenishment - FIXED
       if (game.deck.length === 0) {
         console.log('Reshuffling deck...');
@@ -163,7 +164,7 @@ const handleSocketConnection = (io) => {
         console.log(`Deck reshuffled. New size: ${game.deck.length}`);
         io.to(gameId).emit('game-update', game);
       }
-
+  
       const card = game.deck.pop();
       
       // Handle number cards
@@ -196,7 +197,7 @@ const handleSocketConnection = (io) => {
           }
       }
       // Handle special cards - don't add to discard pile until they're used
-      else if (card === 'D3' || card === 'Freeze') {
+      else if (card === 'D3' || card === 'Freeze' || card === 'RC') {  // Add RC here
         if (player.drawThreeRemaining > 0) {
           // Store the special card as pending and continue with D3 sequence
           player.pendingSpecialCard = card;
@@ -220,7 +221,7 @@ const handleSocketConnection = (io) => {
           advanceTurn(game);
         }
       }
-
+  
       updatePlayerScore(player);
       checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
@@ -366,6 +367,32 @@ const handleSocketConnection = (io) => {
       // Notify all players about the rematch
       io.to(gameId).emit('rematch-started', rematchGame);
       io.to(gameId).emit('game-update', rematchGame);
+    });
+
+    // Add this with other socket events in handleSocketConnection
+    socket.on('remove-card', (gameId, targetPlayerId, cardIndex, isSpecial) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+      
+      const player = game.players.find(p => p.id === socket.id);
+      const target = game.players.find(p => p.id === targetPlayerId);
+      
+      if (player && target && player.specialCards.includes('RC')) {
+        // Remove RC from player's special cards
+        player.specialCards = player.specialCards.filter(c => c !== 'RC');
+        game.discardPile.push('RC');
+  
+        // Remove the selected card from target player
+        if (isSpecial) {
+          target.specialCards.splice(cardIndex, 1);
+        } else {
+          target.regularCards.splice(cardIndex, 1);
+        }
+  
+        advanceTurn(game);
+        checkGameStatus(game);
+        io.to(gameId).emit('game-update', game);
+      }
     });
 
     // Game status checking
@@ -558,6 +585,9 @@ const handleSpecialCard = (game, player, card, socket, io) => {
   else if (card === 'Freeze') {
     const targets = game.players.filter(p => p.status === 'active');
     socket.emit('select-freeze-target', game.id, targets);
+  }
+  else if (card === 'RC') { // Add this condition
+    socket.emit('select-remove-card-target', game.id, game.players);
   }
 };
 

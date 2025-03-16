@@ -1,4 +1,3 @@
-
 /* Mobile-specific styles (max-width: 430px for iPhone 14 Pro Max) */
 @media screen and (max-width: 430px) {
     /* Reset body for mobile */
@@ -271,6 +270,30 @@
         .controls {
             padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
         }
+    }
+
+    /* Remove Card Popup Mobile Styles */
+    .remove-card-popup {
+        width: 95%;
+        padding: 1rem;
+    }
+
+    .remove-card-popup .card-button {
+        width: 40px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    .remove-card-popup .player-section {
+        padding: 0.8rem;
+    }
+
+    .remove-card-popup .cards-list {
+        gap: 0.3rem;
+    }
+
+    .remove-card-popup h3 {
+        font-size: 1.2rem;
     }
 }
 
