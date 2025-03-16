@@ -1485,25 +1485,6 @@ body::before {
     transform: translateY(-2px);
 }
 
-.freeze-popup .cancel-freeze {
-    background: var(--danger);
-    color: white;
-    border: none;
-    padding: 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0.5rem;
-    font-size: 1.1rem;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-}
-
-.freeze-popup .cancel-freeze:hover {
-    background: #c0392b;
-    transform: translateY(-2px);
-}
-
 /* Fix Second Chance color */
 .card.special.second-chance, 
 .discard-card.special.second-chance {
@@ -2193,9 +2174,21 @@ body::before {
 /* Add to special card styles */
 .card.special.remove-card,
 .discard-card.special.remove-card {
-  background: #95a5a6 !important;
-  border-color: #7f8c8d !important;
+  background: #7f8c8d !important; /* Changed to lighter gray */
+  border-color: #95a5a6 !important;
   color: white !important;
+}
+
+.remaining-card.special.remove-card {
+  background: linear-gradient(135deg, #7f8c8d, #95a5a6) !important;
+  border-color: #95a5a6 !important;
+}
+
+/* Remove cancel button styles */
+.cancel-freeze,
+.cancel-draw-three,
+.remove-card-popup .cancel-button {
+  display: none !important;
 }
 
 /* Remove Card Popup */
@@ -2269,19 +2262,38 @@ body::before {
   transform: translateY(-5px);
 }
 
-.remove-card-popup .cancel-button {
-  background: var(--danger);
-  color: white;
-  border: none;
-  padding: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-top: 1rem;
-  font-size: 1.1rem;
-  transition: transform 0.2s;
+/* Add after the adder card styles */
+.card.special.minus,
+.remaining-card.special.minus,
+.discard-card.special.minus {
+    background: linear-gradient(135deg, #2c3e50, #2c3e50) !important;
+    border-color: #34495e !important;
+    color: white !important;
+    text-shadow: none !important;
 }
 
-.remove-card-popup .cancel-button:hover {
-  transform: translateY(-2px);
-  background: #c0392b;
+/* Update remove card popup card styles */
+.remove-card-popup .card-button.special {
+    color: white;
+    font-weight: bold;
+    text-shadow: none;
+}
+
+.remove-card-popup .card-button.special.minus {
+    background: #2c3e50 !important;
+    border-color: #34495e !important;
+}
+
+/* Update remaining pile sort order */
+/* Add styles for self-targeting buttons */
+.freeze-target.self-target,
+.draw-three-target.self-target {
+    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+    position: relative;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.freeze-target.self-target:hover,
+.draw-three-target.self-target:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
 }

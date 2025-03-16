@@ -54,20 +54,21 @@ const createDeck = () => {
     for (let i = 0; i < number; i++) deck.push(number);
   }
 
-  // Special cards = 18 cards (total 97)
+  // Special cards = 21 cards (total 100)
   const specialCards = [
     '2+', '4+', '6+', '8+', '10+',  // 5 adder cards
-    '2x',                            // 1 multiplier card
-    'SC', 'SC', 'SC',               // 3 second chance cards
-    'Freeze', 'Freeze', 'Freeze',    // 3 freeze cards
-    'D3', 'D3', 'D3',               // 3 draw three cards
-    'RC', 'RC', 'RC'                // 3 remove card cards (NEW)
+    '2-', '6-', '10-',              // 3 NEW minus cards
+    '2x',                           // 1 multiplier card
+    'SC', 'SC', 'SC',              // 3 second chance cards
+    'Freeze', 'Freeze', 'Freeze',   // 3 freeze cards
+    'D3', 'D3', 'D3',              // 3 draw three cards
+    'RC', 'RC', 'RC'               // 3 remove card cards
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 97) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 97 cards.`);
+  if (deck.length !== 100) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 100 cards.`);
   }
   
   return shuffle(deck);
@@ -321,15 +322,16 @@ const handleSocketConnection = (io) => {
         // Remove D3 from player's special cards
         player.specialCards = player.specialCards.filter(c => c !== 'D3');
         
-        // Always set to 3 draws, regardless of remaining space
-        target.drawThreeRemaining = 3;
-        
-        // Add Draw Three to discard pile
+        // Add D3 to discard pile
         game.discardPile.push('D3');
+        
+        // Set draw three remaining on target
+        target.drawThreeRemaining = 3;
         
         // Set current player to target
         game.currentPlayer = game.players.findIndex(p => p.id === target.id);
         
+        // Update game state
         io.to(gameId).emit('game-update', game);
       }
     });
@@ -558,11 +560,14 @@ const updatePlayerScore = player => {
   const add = player.specialCards
     .filter(c => c.endsWith('+'))
     .reduce((a, c) => a + parseInt(c), 0);
+  const minus = player.specialCards
+    .filter(c => c.endsWith('-'))
+    .reduce((a, c) => a + parseInt(c), 0);
   const multiply = player.specialCards
     .filter(c => c.endsWith('x'))
     .reduce((a, c) => a * parseInt(c), 1);
 
-  player.roundScore = (base + add) * (multiply || 1);
+  player.roundScore = (base + add - minus) * (multiply || 1);
 };
 
 // Add these new helper functions
@@ -573,20 +578,36 @@ const handlePendingSpecialCard = (game, player, socket, io) => {
 };
 
 const handleSpecialCard = (game, player, card, socket, io) => {
-  player.specialCards.push(card);
-  
   if (card === 'D3') {
+    // Allow targeting any active player (including self) with room for cards
     const targets = game.players.filter(p => 
-      p.status === 'active' && 
-      p.regularCards.length + p.specialCards.length < MAX_REGULAR_CARDS
+      p.status === 'active' && // Only active players
+      p.regularCards.length < MAX_REGULAR_CARDS // Must have room for cards
     );
-    socket.emit('select-draw-three-target', game.id, targets);
+    
+    if (targets.length > 0) {
+      player.specialCards.push(card);
+      socket.emit('select-draw-three-target', game.id, targets);
+    } else {
+      game.discardPile.push(card);
+      advanceTurn(game);
+    }
   } 
   else if (card === 'Freeze') {
-    const targets = game.players.filter(p => p.status === 'active');
-    socket.emit('select-freeze-target', game.id, targets);
+    // Allow targeting any active player (including self)
+    const targets = game.players.filter(p => 
+      p.status === 'active'
+    );
+    if (targets.length > 0) {
+      player.specialCards.push(card);
+      socket.emit('select-freeze-target', game.id, targets);
+    } else {
+      game.discardPile.push(card);
+      advanceTurn(game);
+    }
   }
-  else if (card === 'RC') { // Add this condition
+  else if (card === 'RC') {
+    player.specialCards.push(card);
     socket.emit('select-remove-card-target', game.id, game.players);
   }
 };

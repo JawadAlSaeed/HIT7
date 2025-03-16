@@ -133,7 +133,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
       <h3>🎯 Select player to draw three cards:</h3>
       <div class="draw-three-targets">
         ${targets.map(p => `
-          <button class="draw-three-target" data-id="${p.id}">
+          <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
             ${p.name} ${p.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
@@ -145,6 +145,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     btn.addEventListener('click', () => {
       socket.emit('draw-three-select', currentGameId, btn.dataset.id);
       popup.remove();
+      activeDrawThreePopup = null;
     });
   });
 
@@ -368,9 +369,12 @@ function updateRemainingPile(deck) {
             '4+': 7,
             '6+': 8,
             '8+': 9,
-            '10+': 10
+            '10+': 10,
+            '2-': 11,
+            '6-': 12,
+            '10-': 13
         };
-        return specialOrder[card] || 11;
+        return specialOrder[card] || 14;
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
@@ -378,13 +382,14 @@ function updateRemainingPile(deck) {
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
             cardStr === 'RC' ||  // Add RC to the check
-            cardStr.includes('+') || cardStr.includes('x')) {
+            cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
                 cardStr === 'RC' ? 'remove-card' :  // Add RC type
                 cardStr.includes('+') ? 'adder' :
+                cardStr.includes('-') ? 'minus' :  // Add minus type
                 'multiplier';
             displayValue = 
                 cardStr === 'SC' ? '🛡️' :
@@ -423,11 +428,13 @@ function renderCard({ cardType, displayValue, count }) {
     const cardStyle = cardType !== 'number' ? `
         background: ${
             cardType === 'adder' ? '#27ae60' : 
+            cardType === 'minus' ? '#2c3e50' :  // Change minus card color to dark
             cardType === 'multiplier' ? '#f1c40f' :
             cardType === 'second-chance' ? '#e74c3c' :
             cardType === 'freeze' ? '#3498db' :
             cardType === 'draw-three' ? '#9b59b6' : 'inherit'
         } !important;
+        color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
     ` : '';
 
     return `
@@ -570,6 +577,7 @@ function getSpecialCardClass(card) {
     if (card === 'D3') return 'draw-three';
     if (card.endsWith('x')) return 'multiplier';
     if (card.endsWith('+')) return 'adder';
+    if (card.endsWith('-')) return 'minus';
     if (card === 'RC') return 'remove-card';
     return '';
 }
@@ -582,9 +590,9 @@ function getSpecialCardDisplay(card) {
     if (card === 'RC') return '🗑️';
     
     // For adder and multiplier cards, extract the number and symbol
-    if (card.endsWith('+') || card.endsWith('x')) {
+    if (card.endsWith('+') || card.endsWith('x') || card.endsWith('-')) {
         const number = card.slice(0, -1);  // Get everything except last character
-        const symbol = card.slice(-1);     // Get last character (+ or x)
+        const symbol = card.slice(-1);     // Get last character (+ or x or -)
         return `${number}${symbol}`;       // Combine them (e.g., "2+")
     }
     
@@ -929,12 +937,14 @@ function showFreezePopup(gameId, targets) {
   activeFreezePopup.className = 'freeze-popup';
   activeFreezePopup.innerHTML = `
     <div class="popup-content">
-      <h3>Select a player to freeze:</h3>
-      ${targets.map(t => `
-        <button class="freeze-target" data-id="${t.id}">
-          ${t.name}
-        </button>
-      `).join('')}
+      <h3>❄️ Select a player to freeze:</h3>
+      <div class="freeze-targets">
+        ${targets.map(t => `
+          <button class="freeze-target ${t.id === socket.id ? 'self-target' : ''}" data-id="${t.id}">
+            ${t.name} ${t.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
     </div>
   `;
 
@@ -962,6 +972,7 @@ function showFreezePopup(gameId, targets) {
   socket.once('cancel-freeze', cleanup);
 }
 
+// Update showRemoveCardPopup function to properly display special cards
 function showRemoveCardPopup(gameId, players) {
   const popup = document.createElement('div');
   popup.className = 'remove-card-popup';
@@ -983,7 +994,8 @@ function showRemoveCardPopup(gameId, players) {
                 </button>
               `).join('')}
               ${player.specialCards.map((card, index) => `
-                <button class="card-button special ${getSpecialCardClass(card)}" 
+                <button class="card-button special ${getSpecialCardClass(card)}"
+                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') ? '#fff' : ''}"
                   data-player="${player.id}" 
                   data-index="${index}"
                   data-special="true">
@@ -994,7 +1006,6 @@ function showRemoveCardPopup(gameId, players) {
           </div>
         `).join('')}
       </div>
-      <button class="cancel-button">Cancel</button>
     </div>
   `;
   
@@ -1012,11 +1023,19 @@ function showRemoveCardPopup(gameId, players) {
     });
   });
 
-  popup.querySelector('.cancel-button').addEventListener('click', () => {
-    popup.remove();
-  });
-
   document.body.appendChild(popup);
+}
+
+// Add helper function to get card background color
+function getCardColor(card) {
+    if (card === 'SC') return '#e74c3c';
+    if (card === 'Freeze') return '#3498db';
+    if (card === 'D3') return '#9b59b6';
+    if (card === 'RC') return '#7f8c8d'; // Changed to a lighter gray
+    if (card.endsWith('+')) return '#27ae60';
+    if (card.endsWith('x')) return '#f1c40f';
+    if (card.endsWith('-')) return '#2c3e50'; // New dark color for minus cards
+    return 'inherit';
 }
 
 socket.on('select-remove-card-target', (gameId, players) => {
@@ -1181,3 +1200,35 @@ function handleNumberCard(game, player, card) {
         }
     }
 }
+
+socket.on('select-draw-three-target', (gameId, targets) => {
+  if (activeDrawThreePopup) {
+    activeDrawThreePopup.remove();
+    activeDrawThreePopup = null;
+  }
+
+  const popup = document.createElement('div');
+  popup.className = 'draw-three-popup active';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>🎯 Select player to draw three cards:</h3>
+      <div class="draw-three-targets">
+        ${targets.map(p => `
+          <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
+            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  popup.querySelectorAll('.draw-three-target').forEach(btn => {
+    btn.addEventListener('click', () => {
+      socket.emit('draw-three-select', currentGameId, btn.dataset.id);
+      popup.remove();
+    });
+  });
+
+  document.body.appendChild(popup);
+  activeDrawThreePopup = popup;
+});
