@@ -52,7 +52,6 @@ const initializeButtons = () => {
     };
     if (resetBtn) resetBtn.onclick = function() {
         if (confirm('Reset game and start a new round with all players?')) {
-            playSound('buttonClick');
             resetGame();
         }
     };
@@ -262,11 +261,10 @@ function stand() {
     socket.emit('stand', currentGameId); 
 }
 
+// Modify resetGame function to remove the confirmation
 function resetGame() {
-    if (confirm('Reset game and start a new round with all players?')) {
-        playSound('buttonClick');
-        socket.emit('reset-game', currentGameId);
-    }
+    playSound('buttonClick');
+    socket.emit('reset-game', currentGameId);
 }
 
 // Game state handlers
