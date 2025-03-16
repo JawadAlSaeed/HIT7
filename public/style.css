@@ -269,6 +269,22 @@ body::before {
     align-items: center;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Increased from 0.6rem */
+}
+
+.header-right .game-button {
+    min-width: unset; /* Remove minimum width constraint */
+    padding: 0.8rem 1.2rem; /* Slightly reduce padding */
+    margin-left: 0.5rem; /* Add margin to separate buttons */
+}
+
+.header-right .game-button:first-child {
+    margin-left: 0; /* Remove margin from first button */
+}
+
 .game-header::before {
     content: '';
     position: absolute;
@@ -756,6 +772,16 @@ body::before {
     box-shadow: 0 4px 15px rgba(91, 192, 222, 0.3);
     min-width: 160px; /* Ensure same width as reset button */
     padding: 1rem 2.5rem; /* Same padding as other game buttons */
+}
+
+.game-button.purple {
+    background: #9b59b6;
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+.game-button.purple:hover {
+    background: #8e44ad;
+    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
 }
 
 .game-button:hover:not(:disabled) {

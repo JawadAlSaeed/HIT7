@@ -55,6 +55,9 @@
     .header-right {
         width: 100%;
         justify-content: space-between;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
     }
 
     /* Game Container */
@@ -341,6 +344,40 @@
 
     .score-value {
         font-size: 1rem;
+    }
+
+    .tutorial-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tab-button {
+        flex: 1;
+        min-width: 70px;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+
+    .card-example {
+        padding: 0.8rem;
+    }
+
+    .card-explanation {
+        font-size: 0.85rem;
+    }
+
+    .header-right .game-button {
+        padding: 0.5rem 1rem;
+        min-width: auto;
+        font-size: 0.8rem;
+        height: 35px;
     }
 }
 

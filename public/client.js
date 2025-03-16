@@ -56,6 +56,12 @@ const initializeButtons = () => {
         }
     };
     
+    const headerTutorialBtn = document.getElementById('headerTutorialBtn');
+    if (headerTutorialBtn) headerTutorialBtn.onclick = function() {
+        playSound('buttonClick');
+        showTutorial();
+    };
+    
     console.log('Button initialization complete');
 };
 
@@ -300,6 +306,12 @@ function copyShareLink() {
 // Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
     const waitingScreen = document.getElementById('waitingScreen');
+    const resetButton = document.getElementById('resetButton');
+    
+    // Show/hide reset button based on host status
+    if (resetButton) {
+        resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
+    }
     
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
@@ -1054,7 +1066,6 @@ socket.on('select-remove-card-target', (gameId, players) => {
 });
 
 function showTutorial() {
-    // Remove any existing popup first
     const existingPopup = document.querySelector('.tutorial-popup');
     if (existingPopup) existingPopup.remove();
 
@@ -1064,74 +1075,114 @@ function showTutorial() {
         <button class="close-button">×</button>
         <div class="tutorial-content">
             <div class="tutorial-tabs">
-                <button class="tab-button active" data-tab="cards">Cards</button>
-                <button class="tab-button" data-tab="rules">Rules</button>
+                <button class="tab-button active" data-tab="basics">Basics</button>
+                <button class="tab-button" data-tab="cards">Cards</button>
+                <button class="tab-button" data-tab="special">Special Cards</button>
+                <button class="tab-button" data-tab="scoring">Scoring</button>
             </div>
 
-            <div class="tab-content active" id="cards-tab">
+            <div class="tab-content active" id="basics-tab">
                 <div class="tutorial-section">
-                    <h2>Regular Cards (1-12)</h2>
-                    <p>Regular cards from 1 to 12, each appearing as many times as its value.</p>
+                    <h2>Game Basics</h2>
+                    <ul class="rules-list">
+                        <li>Players take turns drawing cards to collect points</li>
+                        <li>Each player can hold up to 7 regular number cards</li>
+                        <li>Drawing a duplicate number will bust you (unless you have a Second Chance)</li>
+                        <li>You can 'Stand' to bank your points at any time</li>
+                        <li>First player to reach 200 points wins!</li>
+                        <li>If all players bust, the round restarts</li>
+                        <li>Special cards don't count toward your 7-card limit</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tab-content" id="cards-tab">
+                <div class="tutorial-section">
+                    <h2>Regular Cards</h2>
                     <div class="cards-grid">
+                        <div class="card-example">
+                            <div class="card">0</div>
+                            <div class="card-explanation">
+                                Zero Card: Appears once, worth 0 points
+                            </div>
+                        </div>
                         <div class="card-example">
                             <div class="card">7</div>
                             <div class="card-explanation">
-                                Example: Number 7 appears 7 times in the deck
+                                Number Cards: Each number (1-12) appears as many times as its value
                             </div>
                         </div>
                     </div>
-                    <p>(except for 0 it appears once and has 0 points)</p>
                 </div>
+            </div>
 
+            <div class="tab-content" id="special-tab">
                 <div class="tutorial-section">
                     <h2>Special Cards</h2>
                     <div class="cards-grid">
                         <div class="card-example">
                             <div class="card special second-chance">🛡️</div>
                             <div class="card-explanation">
-                                Second Chance: Protects you from busting once
+                                <strong>Second Chance</strong><br>
+                                Protects you once from busting when drawing a duplicate
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special freeze">❄️</div>
                             <div class="card-explanation">
-                                Freeze: Skip a player's turn
+                                <strong>Freeze</strong><br>
+                                Forces any player to skip their next turn
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special draw-three">🎯</div>
                             <div class="card-explanation">
-                                Draw Three: Force a player to draw 3 cards
+                                <strong>Draw Three</strong><br>
+                                Forces any player to draw 3 cards in a row
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special remove-card">🗑️</div>
+                            <div class="card-explanation">
+                                <strong>Remove Card</strong><br>
+                                Remove any card from any player's collection
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special adder">4+</div>
                             <div class="card-explanation">
-                                Add Card: Adds value to your total score
+                                <strong>Add Cards</strong><br>
+                                Adds points to your score (2+, 4+, 6+, 8+, 10+)
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special minus" style="color: white">6-</div>
+                            <div class="card-explanation">
+                                <strong>Minus Cards</strong><br>
+                                Subtracts points from your score (2-, 6-, 10-)
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special multiplier">2×</div>
                             <div class="card-explanation">
-                                Multiply Card: Multiplies your total score
+                                <strong>Multiply Card</strong><br>
+                                Doubles your total round score
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="tab-content" id="rules-tab">
+            <div class="tab-content" id="scoring-tab">
                 <div class="tutorial-section">
-                    <h2>Game Rules</h2>
+                    <h2>Scoring System</h2>
                     <ul class="rules-list">
-                        <li>Players take turns drawing cards</li>
-                        <li>Each player can hold up to 7 regular number cards</li>
-                        <li>Drawing a duplicate number card will bust you unless you have a Second Chance</li>
-                        <li>Special cards don't count toward the 7-card limit</li>
-                        <li>First player to reach 200 points wins</li>
-                        <li>If all players bust, the round is restarted</li>
-                        <li>Your score is calculated as: (Sum of unique numbers + Adder cards) × Multiplier cards</li>
-                        <li>Bonus: Get 15 extra points for reaching 7 cards in one turn!</li>
+                        <li>Your score is the sum of all unique regular cards</li>
+                        <li>Add Cards (+) increase your score by their value</li>
+                        <li>Minus Cards (-) decrease your score by their value</li>
+                        <li>Multiply Cards (×) double your total round score</li>
+                        <li>BONUS: Get 15 extra points for collecting all 7 regular cards!</li>
+                        <li>Example: With cards [3,5,7] + 4+ - 2- × 2 = (15 + 4 - 2) × 2 = 34 points</li>
                     </ul>
                 </div>
             </div>
