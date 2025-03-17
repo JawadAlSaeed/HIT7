@@ -1478,17 +1478,18 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: var(--secondary);
-    box-shadow: none;
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.3);
     padding: 0;
-    border: 3px solid #3498db;
+    border: none;
 }
 
 .freeze-popup h3 {
-    color: #3498db;
+    color: white;
     margin: 0;
     text-align: center;
     font-size: 1.4rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .freeze-popup .freeze-targets {
@@ -1496,12 +1497,14 @@ body::before {
     flex-direction: column;
     gap: 0.5rem;
     margin: 1rem 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .freeze-popup .freeze-target {
-    background: #3498db;
+    background: rgba(255, 255, 255, 0.15);
     color: white;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 1rem;
     border-radius: 8px;
     cursor: pointer;
@@ -1512,8 +1515,9 @@ body::before {
 }
 
 .freeze-popup .freeze-target:hover {
-    background: #2980b9;
+    background: rgba(255, 255, 255, 0.25);
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Fix Second Chance color */
@@ -1590,21 +1594,33 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: var(--secondary);
-  box-shadow: none;
+  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.3);
   padding: 0;
-  border: 3px solid #9b59b6;
+  border: none;
 }
 
 .draw-three-popup h3 {
-  color: #9b59b6;
+  color: white;
   margin: 0 0 1rem 0;
+  text-align: center;
+  font-size: 1.4rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.draw-three-target {
-  background: #9b59b6;
+.draw-three-popup .draw-three-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.draw-three-popup .draw-three-target {
+  background: rgba(255, 255, 255, 0.15);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -1613,9 +1629,10 @@ body::before {
   font-weight: 500;
 }
 
-.draw-three-target:hover {
+.draw-three-popup .draw-three-target:hover {
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
-  background: #8e44ad;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes pulse {
@@ -1653,17 +1670,18 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: var(--secondary);
-  box-shadow: none;
+  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.3);
   padding: 0;
-  border: 3px solid #9b59b6;
+  border: none;
 }
 
 .draw-three-popup h3 {
-  color: #9b59b6;
+  color: white;
   margin: 0;
   text-align: center;
   font-size: 1.4rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .draw-three-popup .draw-three-targets {
@@ -1671,12 +1689,14 @@ body::before {
   flex-direction: column;
   gap: 0.5rem;
   margin: 1rem 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .draw-three-popup .draw-three-target {
-  background: #9b59b6;
+  background: rgba(255, 255, 255, 0.15);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -1687,8 +1707,9 @@ body::before {
 }
 
 .draw-three-popup .draw-three-target:hover {
-  background: #8e44ad;
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Enhanced Menu Styling */
@@ -2242,29 +2263,42 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: var(--secondary);
-  box-shadow: none;
+  background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+  box-shadow: 0 8px 32px rgba(127, 140, 141, 0.3);
   padding: 0;
-  border: 3px solid #95a5a6;
+  border: none;
 }
 
 .remove-card-popup h3 {
-  color: #95a5a6;
+  color: white;
   text-align: center;
   margin: 0 0 1rem 0;
   font-size: 1.4rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .remove-card-popup .players-list {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .remove-card-popup .player-section {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem;
   border-radius: 12px;
+}
+
+.remove-card-popup .player-section h4 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  font-size: 1.2rem;
+  margin: 0 0 1rem 0;
+  font-family: 'Cairo Play', sans-serif;
+  text-transform: uppercase;
 }
 
 .remove-card-popup .cards-list {
@@ -2272,6 +2306,8 @@ body::before {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .remove-card-popup .card-button {
@@ -2459,7 +2495,7 @@ body::before {
 }
 
 .freeze-target.self-target:hover,
-.draw-three-target.self-target:hover {
+draw-three-target.self-target:hover {
     background: rgba(255, 255, 255, 0.15);
     border-color: var(--highlight);
 }
@@ -2500,4 +2536,47 @@ body::before {
     align-items: center;
     justify-content: center;
     font-size: 1.4rem;
+}
+
+.remove-card-popup .card-button.special.adder {
+    background: #27ae60 !important;
+    border-color: #219a52 !important;
+    color: white !important;
+}
+
+.remove-card-popup .card-button.special.multiplier {
+    background: #f1c40f !important;
+    border-color: #d0a90d !important;
+    color: var(--text-dark) !important;
+}
+
+.remove-card-popup .card-button.special.second-chance {
+    background: #e74c3c !important;
+    border-color: #c0392b !important;
+    color: white !important;
+}
+
+.remove-card-popup .card-button.special.freeze {
+    background: #3498db !important;
+    border-color: #2980b9 !important;
+    color: white !important;
+}
+
+.remove-card-popup .card-button.special.draw-three {
+    background: #9b59b6 !important;
+    border-color: #8e44ad !important;
+    color: white !important;
+}
+
+.remove-card-popup .card-button.special.minus {
+    background: #2c3e50 !important;
+    border-color: #34495e !important;
+    color: white !important;
+}
+
+/* Regular cards in remove-card popup */
+.remove-card-popup .card-button.regular {
+    background: white !important;
+    color: var(--text-dark) !important;
+    border: 2px solid var(--secondary);
 }
