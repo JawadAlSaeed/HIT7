@@ -87,6 +87,11 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 MIT License - Feel free to use and modify while maintaining attribution
 
 ## 🙏 Credits
-- Developed using AI assistance
-- Sound effects from open-source resources
-- Icons and graphics from public domain
+- The game is inspired by Flip 7 by MessyTableGames and published by TheOpGames you can get the physical game from [here](https://theop.games/products/flip-7)
+- Developed with the help of Copilot AI assistant
+- Sound effects from open-source resources such as [Free Sound](https://freesound.org/)
+- Logo created using [Figma](https://www.figma.com/)
+- Icons and graphics from the public domain
+
+
+
