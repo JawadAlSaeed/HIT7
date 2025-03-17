@@ -1,60 +1,93 @@
 <div align="center">
+  <img src="public/images/hit7-logo.png" alt="HIT 7 Logo" width="200"/>
   <h1>HIT 7</h1>
+  <p>A fast-paced card game of risk and strategy!</p>
 </div>
 
-## About The Game
-HIT 7 is an exciting card game that combines luck, strategy, and risk management. Flip cards one by one without revealing the same number twice to accumulate points and achieve victory!
+## 🎮 About The Game
+HIT 7 is an exciting multiplayer card game that combines luck, strategy, and risk management. Players take turns drawing cards to build their hands while avoiding duplicates. Use special cards strategically, and be the first to reach 200 points to win!
 
-## Game Rules
-- Each round, players take turns flipping cards
-- The deck contains:
-  - One 1️⃣ card
-  - Two 2️⃣ cards
-  - Three 3️⃣ cards
-  - and so on until twelve 12 cards
+## 🃏 Game Components
 
-### Special Cards
-- 🛡️ Second Chance: Allows you to continue after revealing a duplicate
-- ❄️ Freeze: Prevents an opponent from playing their next turn
-- 🎯 Draw Three: Draw three cards at once and keep all points if they're unique
-- ✨ 2+,4+, etc: adds that number to the current round
-- ✨ 2x: Doubles your points for the current round
+### Regular Cards (79 cards)
+- One 0️⃣ card
+- Two 1️⃣ cards
+- Three 2️⃣ cards
+- And so on until twelve 1️⃣2️⃣ cards
 
+### Special Cards (21 cards)
 
-### Scoring
-- Basic points: Card value × Number of cards flipped
-- Bonus points: Successfully hit 7 cards in a row
-- Round ends when:
-  - Player chooses to bank points (STAND)
-  - Player reveals a duplicate number (BUST)
-  - player reaches 7 cards hit in a round (and gets a 15 point bouns!)
+#### Power Cards
+- 🛡️ Second Chance (3) - Protects you from busting on a duplicate
+- ❄️ Freeze (3) - Skip another player's turn
+- 🎯 Draw Three (3) - Force a player to draw three cards in succession
+- 🗑️ Remove Card (3) - Remove any card from any player's collection
 
-## Features
-- Single and multiplayer modes
-- Special card effects
-- Score tracking and leaderboards
-- Interactive tutorial
-- Sound effects and animations
+#### Point Modifier Cards
+- ➕ Adders (5):
+  - 2+, 4+, 6+, 8+, 10+
+- ➖ Minus (3):
+  - 2-, 6-, 10-
+- ✖️ Multiplier (1):
+  - 2x
 
-## Strategy Tips
-- Balance risk vs. reward
-- Track revealed cards
-- Use special cards wisely
-- Know when to bank points
+## 🎲 Gameplay Rules
 
-## Technical Requirements
-- Modern web browser
+### Basic Rules
+1. Players take turns drawing cards
+2. Maximum of 7 regular cards per player
+3. Drawing a duplicate number = BUST (unless you have 🛡️)
+4. Players can "STAND" to bank their points
+5. Special cards don't count toward the 7-card limit
+
+### 💯 Scoring System
+- Base points: Sum of all unique regular cards
+- Modifiers:
+  - Add cards (+): Add their value to your score
+  - Minus cards (-): Subtract their value from your score
+  - Multiply (2x): Double your final round score
+- 🌟 Bonus: +15 points for collecting all 7 regular cards!
+
+#### Score Example
+```
+Regular Cards: [3,5,7]
+Modifiers: +4, -2, ×2
+Calculation: (15 + 4 - 2) × 2 = 34 points
+```
+
+## 🏆 Winning the Game
+- First player to reach 200 points wins
+- Points accumulate across rounds
+- All players bust = Round restarts
+
+## 🛠️ Technical Details
+- Modern web browser required
 - JavaScript enabled
-- Minimum screen resolution: 800x600
+- Responsive design (mobile-friendly)
+- Supports 2-6 players
 
-## Play the Game
-Try HIT 7 [now](http://hit7.xyz)!
+## 🎵 Features
+- Real-time multiplayer
+- Sound effects and animations
+- Interactive tutorial
+- Special card effects
+- Cross-platform compatibility
 
-## Credits
-Developed using AI assistance
-Graphics and sound effects from open-source resources
+## 🚀 Quick Start
+1. Visit [HIT7.xyz](https://hit7.xyz)
+2. Create a new game
+3. Share the link with friends
+4. Start playing!
 
-## License
+## 🔗 Links
+- [Play Now](https://hit7.xyz)
+- [Report Issues](https://github.com/JawadAlSaeed/HIT7/issues)
+- [Contribute](https://github.com/JawadAlSaeed/HIT7)
+
+## 📜 License
 MIT License - Feel free to use and modify while maintaining attribution
 
-[Play Now](http://hit7.xyz) | [Report Issues](https://github.com/JawadAlSaeed/HIT7/issues) | [Contribute](https://github.com/JawadAlSaeed)
+## 🙏 Credits
+- Developed using AI assistance
+- Sound effects from open-source resources
+- Icons and graphics from public domain
