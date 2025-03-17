@@ -56,9 +56,10 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 ```
 
 ## 🏆 Winning the Game
-- First player to reach 200 points wins
-- Points accumulate across rounds
-- All players bust = Round restarts
+- Points accumulate across multiple rounds
+- if a player busts they lose their points collected in that round
+- The first player to reach 200 points or more wins!
+
 
 ## 🛠️ Technical Details
 - Modern web browser required
@@ -88,7 +89,7 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 MIT License - Feel free to use and modify while maintaining attribution
 
 ## 🙏 Credits
-- The game is inspired by Flip 7 by MessyTableGames and published by TheOpGames you can get the physical game from [here](https://theop.games/products/flip-7)
+- The game is inspired by the game "Flip 7" by Messy Table Games and published by The Op Games, you can get the physical game from [here](https://theop.games/products/flip-7)
 - Developed with the help of Copilot AI assistant
 - Sound effects from open-source resources such as [Free Sound](https://freesound.org/)
 - Logo created using [Figma](https://www.figma.com/)
