@@ -9,10 +9,11 @@ HIT 7 is an exciting multiplayer card game that combines luck, strategy, and ris
 ## 🃏 Game Components
 
 ### Regular Cards (79 cards)
-- One 0️⃣ card
-- Two 1️⃣ cards
-- Three 2️⃣ cards
-- And so on until twelve 1️⃣2️⃣ cards
+- One '1' card
+- Two '2' cards
+- Three '3' cards
+- And so on until twelve '12' cards
+- an extra one '0' card as well
 
 ### Special Cards (21 cards)
 
