@@ -1478,14 +1478,14 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: linear-gradient(135deg, #2980b9, #3498db);
-    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.3);
-    padding: 0;
+    background: linear-gradient(135deg, #2980b9, #3498db) !important;
+    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.4);
+    padding: 2.5rem;
     border: none;
 }
 
 .freeze-popup h3 {
-    color: white;
+    color: white !important;
     margin: 0;
     text-align: center;
     font-size: 1.4rem;
@@ -1594,14 +1594,14 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: linear-gradient(135deg, #8e44ad, #9b59b6);
-  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.3);
-  padding: 0;
+  background: linear-gradient(135deg, #8e44ad, #9b59b6) !important;
+  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.4);
+  padding: 2.5rem;
   border: none;
 }
 
 .draw-three-popup h3 {
-  color: white;
+  color: white !important;
   margin: 0 0 1rem 0;
   text-align: center;
   font-size: 1.4rem;
@@ -1670,14 +1670,14 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: linear-gradient(135deg, #8e44ad, #9b59b6);
-  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.3);
-  padding: 0;
+  background: linear-gradient(135deg, #8e44ad, #9b59b6) !important;
+  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.4);
+  padding: 2.5rem;
   border: none;
 }
 
 .draw-three-popup h3 {
-  color: white;
+  color: white !important;
   margin: 0;
   text-align: center;
   font-size: 1.4rem;
@@ -2579,4 +2579,51 @@ draw-three-target.self-target:hover {
     background: white !important;
     color: var(--text-dark) !important;
     border: 2px solid var(--secondary);
+    font-size: 1.6rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Remove Card Popup - Update card alignment and busted state */
+.remove-card-popup .card-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.remove-card-popup .player-section.busted {
+    opacity: 0.7;
+    position: relative;
+}
+
+.remove-card-popup .player-section.busted::before {
+    content: "BUSTED";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    background: #e74c3c;
+    color: white;
+    padding: 0.5rem 2rem;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    z-index: 1;
+    letter-spacing: 2px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.remove-card-popup .player-section.busted .cards-list {
+    pointer-events: none;
+    filter: grayscale(0.8);
+}
+
+.remove-card-popup .player-section.busted .card-button {
+    cursor: not-allowed;
 }
