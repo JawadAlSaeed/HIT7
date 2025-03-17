@@ -1275,20 +1275,22 @@ body::before {
     font-weight: 600;
 }
 
+/* Player List - Horizontal Scroll */
 .player-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin: 1.5rem 0;
+    display: block;
+    overflow-x: visible;
+    gap: 0;
+    padding-bottom: 0;
 }
 
 .player-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex: 0 0 auto; /* Prevent items from shrinking */
+    width: 300px; /* Adjust as needed */
+    min-width: 300px;
+    background: rgba(22, 33, 62, 0.9);
+    border-radius: 15px;
     padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border: 1px solid rgba(233, 69, 96, 0.2);
     transition: all 0.3s ease;
     gap: 1.5rem;
 }
@@ -2671,14 +2673,77 @@ draw-three-target.self-target:hover {
     color: transparent;
 }
 
-.player-list {
+.round-summary-header {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin: 1.5rem 0;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(15, 52, 96, 0.5);
+    border-radius: 12px 12px 0 0;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-light);
+    font-weight: 600;
+    align-items: center;
+    text-align: center;
+}
+
+.round-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.player-summary-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(15, 52, 96, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    align-items: center;
+}
+
+.points-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.points-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-light);
+    opacity: 0.7;
+    letter-spacing: 1px;
+}
+
+.points {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: 'Cairo Play', sans-serif;
+    color: var(--highlight);
+    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+}
+
+/* Player List - Horizontal Scroll */
+.player-list {
+    display: block;
+    overflow-x: visible;
+    gap: 0;
+    padding-bottom: 0;
 }
 
 .player-summary {
+    flex: 0 0 auto; /* Prevent items from shrinking */
+    width: 300px; /* Adjust as needed */
+    min-width: 300px;
     background: rgba(22, 33, 62, 0.9);
     border-radius: 15px;
     padding: 1.5rem;

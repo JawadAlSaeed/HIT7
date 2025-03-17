@@ -900,26 +900,20 @@ function handleRoundSummary({ players, allBusted }) {
         const newTotal = player.status !== 'busted' ? player.totalScore + player.roundScore : player.totalScore;
         
         return `
-            <div class="player-summary ${status}">
-                <div class="summary-left">
-                    <span class="player-name">${player.name}</span>
-                    <div class="status-info">
-                        <div class="status-badge ${status}">${getStatusText(status)}</div>
-                        ${hasBonus ? `<div class="bonus-badge">+15 BONUS</div>` : ''}
-                        ${player.bustedCard ? `
-                            <div class="busted-card">Busted on ${player.bustedCard}</div>
-                        ` : ''}
-                    </div>
+            <div class="player-summary-row">
+                <div class="name">
+                    ${player.name}
+                    ${hasBonus ? '🌟' : ''}
+                    ${player.bustedCard ? `(Busted on ${player.bustedCard})` : ''}
                 </div>
-                <div class="summary-scores">
-                    <div class="score-item">
-                        <span class="score-label">Round Score:</span>
-                        <span class="score-value">${player.roundScore}</span>
-                    </div>
-                    <div class="score-item">
-                        <span class="score-label">New Total:</span>
-                        <span class="score-value">${newTotal}</span>
-                    </div>
+                <div class="status ${status}">${getStatusText(status)}</div>
+                <div class="points-container">
+                    <span class="points-label">Round</span>
+                    <span class="points">${player.roundScore}</span>
+                </div>
+                <div class="points-container">
+                    <span class="points-label">Total</span>
+                    <span class="points">${newTotal}</span>
                 </div>
             </div>
         `;
@@ -928,7 +922,13 @@ function handleRoundSummary({ players, allBusted }) {
     popup.innerHTML = `
         <div class="popup-content">
             <h2>${allBusted ? '💥 ALL PLAYERS BUSTED! 💥' : '🏁 ROUND SUMMARY 🏁'}</h2>
-            <div class="player-list">${playerList}</div>
+            <div class="round-summary-header">
+                <span>Player</span>
+                <span>Status</span>
+                <span>Round Points</span>
+                <span>Total Points</span>
+            </div>
+            <div class="round-summary-list">${playerList}</div>
             <p class="countdown">Next round starting in <span id="countdown">5</span>...</p>
         </div>
     `;
