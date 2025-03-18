@@ -214,6 +214,9 @@ socket.on('game-reset-with-players', (game) => {
     }, 2000);
 });
 
+// Add select-card-from-pile event listener with other socket listeners
+socket.on('select-card-from-pile', showSelectCardPopup);
+
 // Game actions
 function createGame() {
     playSound('buttonClick');
@@ -375,39 +378,42 @@ function updateRemainingPile(deck) {
             'SC': 1,
             'Freeze': 2,
             'D3': 3,
-            'RC': 4,    // Add RC with its own order
-            '2x': 5,    // Shift other special cards down
-            '2+': 6,
-            '4+': 7,
-            '6+': 8,
-            '8+': 9,
-            '10+': 10,
-            '2-': 11,
-            '6-': 12,
-            '10-': 13
+            'RC': 4,
+            'Select': 5,  // Add Select card to the ordering
+            '2x': 6,
+            '2+': 7,
+            '4+': 8,
+            '6+': 9,
+            '8+': 10,
+            '10+': 11,
+            '2-': 12,
+            '6-': 13,
+            '10-': 14
         };
-        return specialOrder[card] || 14;
+        return specialOrder[card] || 15;
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-            cardStr === 'RC' ||  // Add RC to the check
+            cardStr === 'RC' || cardStr === 'Select' ||  // Add Select to the check
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
-                cardStr === 'RC' ? 'remove-card' :  // Add RC type
+                cardStr === 'RC' ? 'remove-card' :
+                cardStr === 'Select' ? 'select-card' :  // Add select-card type
                 cardStr.includes('+') ? 'adder' :
-                cardStr.includes('-') ? 'minus' :  // Add minus type
+                cardStr.includes('-') ? 'minus' :
                 'multiplier';
             displayValue = 
                 cardStr === 'SC' ? '🛡️' :
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
-                cardStr === 'RC' ? '🗑️' :  // Add RC display value
+                cardStr === 'RC' ? '🗑️' :
+                cardStr === 'Select' ? '🃏' :  // Add joker emoji
                 cardStr;
             specialCards.push({ cardStr, count, cardType, displayValue });
         } else {
@@ -419,11 +425,12 @@ function updateRemainingPile(deck) {
 
     // Sort regular cards by number
     regularCards.sort((a, b) => Number(a.cardStr) - Number(b.cardStr));
+    
     // Sort special cards by predefined order
     specialCards.sort((a, b) => {
         const orderA = getSpecialCardOrder(a.cardStr);
         const orderB = getSpecialCardOrder(b.cardStr);
-        return orderA - orderB;  // Fix: was comparing a.cardStr with itself
+        return orderA - orderB;
     });
 
     document.getElementById('discard').innerHTML = `
@@ -436,18 +443,32 @@ function updateRemainingPile(deck) {
     `;
 }
 
+// Update the renderCard function to use the new gradient
 function renderCard({ cardType, displayValue, count }) {
-    const cardStyle = cardType !== 'number' ? `
-        background: ${
-            cardType === 'adder' ? '#27ae60' : 
-            cardType === 'minus' ? '#2c3e50' :  // Change minus card color to dark
-            cardType === 'multiplier' ? '#f1c40f' :
-            cardType === 'second-chance' ? '#e74c3c' :
-            cardType === 'freeze' ? '#3498db' :
-            cardType === 'draw-three' ? '#9b59b6' : 'inherit'
-        } !important;
-        color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
-    ` : '';
+    let cardStyle = '';
+    
+    if (cardType !== 'number') {
+        if (cardType === 'select-card') {
+            // Special gradient for select card - more subtle with fewer colors
+            cardStyle = `
+                background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
+                border-color: #e74c3c !important;
+            `;
+        } else {
+            cardStyle = `
+                background: ${
+                    cardType === 'adder' ? '#27ae60' : 
+                    cardType === 'minus' ? '#2c3e50' :
+                    cardType === 'multiplier' ? '#f1c40f' :
+                    cardType === 'second-chance' ? '#e74c3c' :
+                    cardType === 'freeze' ? '#3498db' :
+                    cardType === 'draw-three' ? '#9b59b6' :
+                    cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
+                } !important;
+                color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
+            `;
+        }
+    }
 
     return `
         <div class="remaining-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
@@ -594,23 +615,27 @@ function scoreBox(label, value) {
     `;
 }
 
+// Update special card class function to include "Select" card
 function getSpecialCardClass(card) {
     if (card === 'SC') return 'second-chance';
     if (card === 'Freeze') return 'freeze';
     if (card === 'D3') return 'draw-three';
-    if (card.endsWith('x')) return 'multiplier';
-    if (card.endsWith('+')) return 'adder';
-    if (card.endsWith('-')) return 'minus';
     if (card === 'RC') return 'remove-card';
+    if (card === 'Select') return 'select-card';
+    if (card.endsWith('+')) return 'adder';
+    if (card.endsWith('x')) return 'multiplier';
+    if (card.endsWith('-')) return 'minus';
     return '';
 }
 
+// Update special card display function to include "Select" card
 function getSpecialCardDisplay(card) {
     // Special cards with emojis
     if (card === 'SC') return '🛡️';
     if (card === 'Freeze') return '❄️';
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
+    if (card === 'Select') return '🃏';
     
     // For adder and multiplier cards, extract the number and symbol
     if (card.endsWith('+') || card.endsWith('x') || card.endsWith('-')) {
@@ -1064,6 +1089,125 @@ function getCardColor(card) {
 socket.on('select-remove-card-target', (gameId, players) => {
   showRemoveCardPopup(gameId, players);
 });
+
+// Add this function to show the Select Card popup
+function showSelectCardPopup(gameId, deck) {
+  // Group cards by type
+  const regularCards = [];
+  const specialCards = [];
+  
+  // Count occurrence of each card
+  const cardCounts = deck.reduce((acc, card) => {
+    const cardStr = card.toString();
+    acc[cardStr] = (acc[cardStr] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Sort card groups
+  Object.entries(cardCounts).forEach(([cardStr, count]) => {
+    if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
+        cardStr === 'RC' || cardStr === 'Select' ||
+        cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
+      specialCards.push({ card: cardStr, count });
+    } else {
+      regularCards.push({ card: parseInt(cardStr), count });
+    }
+  });
+  
+  // Sort regular cards numerically
+  regularCards.sort((a, b) => a.card - b.card);
+  
+  // Create popup
+  const popup = document.createElement('div');
+  popup.className = 'select-card-popup';
+  
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>🃏 Select Any Card From The Deck</h3>
+      
+      <div class="card-section">
+        <div class="section-title">Regular Cards</div>
+        <div class="cards-list">
+          ${regularCards.map(({ card, count }) => `
+            <button class="card-button regular" data-card="${card}">
+              ${card}
+              ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="card-section">
+        <div class="section-title">Special Cards</div>
+        <div class="cards-list">
+          ${specialCards.map(({ card, count }) => {
+            const cardClass = getSpecialCardClass(card);
+            const cardDisplay = getSpecialCardDisplay(card);
+            const cardStyle = getCardColorStyle(card);
+            
+            return `
+              <button class="card-button special ${cardClass}" 
+                     data-card="${card}" 
+                     style="${cardStyle}">
+                ${cardDisplay}
+                ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add event listeners to card options
+  popup.querySelectorAll('.card-button').forEach(button => {
+    button.addEventListener('click', () => {
+      const selectedCard = button.dataset.card;
+      // For regular cards, convert to number
+      const finalCard = isNaN(selectedCard) ? selectedCard : parseInt(selectedCard);
+      
+      // Close the popup first
+      popup.remove();
+      
+      // Handle selected card
+      handleSelectedCard(gameId, finalCard);
+    });
+  });
+  
+  document.body.appendChild(popup);
+}
+
+// New function to handle selected cards
+function handleSelectedCard(gameId, selectedCard) {
+  // First send the selection to the server
+  socket.emit('select-card-choice', gameId, selectedCard);
+  
+  // Then immediately show appropriate popup for special cards
+  if (selectedCard === 'D3') {
+    // No need to wait for server response - we can show the D3 popup right away
+    socket.emit('request-draw-three-targets', gameId);
+  } else if (selectedCard === 'Freeze') {
+    // Show freeze popup immediately
+    socket.emit('request-freeze-targets', gameId);
+  } else if (selectedCard === 'RC') {
+    // Show remove card popup immediately
+    socket.emit('request-remove-card-targets', gameId);
+  }
+  // For other cards, no immediate action needed
+}
+
+// Add helper function for card color styling - update gradient
+function getCardColorStyle(card) {
+  if (card === 'SC') return 'background: #e74c3c !important;';
+  if (card === 'Freeze') return 'background: #3498db !important;';
+  if (card === 'D3') return 'background: #9b59b6 !important;';
+  if (card === 'RC') return 'background: #7f8c8d !important;';
+  if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
+  if (card.endsWith('+')) return 'background: #27ae60 !important;';
+  if (card.endsWith('x')) return 'background: #f1c40f !important; color: var(--text-dark) !important;';
+  if (card.endsWith('-')) return 'background: #2c3e50 !important; color: white !important;';
+  return '';
+}
 
 function showTutorial() {
     const existingPopup = document.querySelector('.tutorial-popup');
