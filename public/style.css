@@ -1501,6 +1501,7 @@ body::before {
     margin: 1rem 0;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 30px; /* Added space below target buttons */
 }
 
 .freeze-popup .freeze-target {
@@ -1600,6 +1601,8 @@ body::before {
   box-shadow: 0 8px 32px rgba(155, 89, 182, 0.4);
   padding: 2.5rem;
   border: none;
+  padding-bottom: 80px; /* Increase bottom padding for button space */
+  position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .draw-three-popup h3 {
@@ -1617,6 +1620,7 @@ body::before {
   margin: 1rem 0;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 30px; /* Added space below target buttons */
 }
 
 .draw-three-popup .draw-three-target {
@@ -1676,6 +1680,8 @@ body::before {
   box-shadow: 0 8px 32px rgba(155, 89, 182, 0.4);
   padding: 2.5rem;
   border: none;
+  padding-bottom: 80px; /* Increase bottom padding for button space */
+  position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .draw-three-popup h3 {
@@ -1693,6 +1699,7 @@ body::before {
   margin: 1rem 0;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 30px; /* Added space below target buttons */
 }
 
 .draw-three-popup .draw-three-target {
@@ -2269,6 +2276,8 @@ body::before {
   box-shadow: 0 8px 32px rgba(127, 140, 141, 0.3);
   padding: 0;
   border: none;
+  padding-bottom: 80px; /* Increase bottom padding for button space */
+  position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .remove-card-popup h3 {
@@ -2434,6 +2443,8 @@ body::before {
     margin: 20px;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+    padding-bottom: 80px; /* Increase bottom padding for button space */
+    position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 /* Popup Headers */
@@ -2458,6 +2469,7 @@ body::before {
     padding: 1.5rem;
     border: 1px solid rgba(233, 69, 96, 0.2);
     margin: 1rem 0;
+    margin-bottom: 30px; /* Added space below target buttons */
 }
 
 /* Popup Target Buttons */
@@ -2952,6 +2964,8 @@ draw-three-target.self-target:hover {
   border: 3px solid;
   border-image: linear-gradient(135deg, #e74c3c, #9b59b6, #3498db) 1;
   box-shadow: 0 0 50px rgba(231, 76, 60, 0.3);
+  padding-bottom: 80px; /* Increase bottom padding for button space */
+  position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .select-card-popup h3 {
@@ -3140,4 +3154,60 @@ draw-three-target.self-target:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+}
+
+/* HOLD TO VIEW GAME button styling - updated position */
+.view-game-button {
+    position: absolute;
+    bottom: 25px; /* Increased from 20px to create more space */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 2px solid rgba(233, 69, 96, 0.5);
+    border-radius: 30px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Roboto', sans-serif;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1100;
+    margin-top: 20px; /* Add top margin for spacing */
+}
+
+/* Make the popups semi-transparent when holding the view button */
+.popup-hiding {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+/* Mobile adjustments for the view game button */
+@media screen and (max-width: 430px) {
+    .view-game-button {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+        bottom: 15px;
+    }
+}
+
+/* Update Regular Cards */
+.card:not(.special) {
+    background: var(--text-light) !important;
+    color: var(--text-dark) !important;
+    font-weight: bold;
+    border: 2px solid var(--secondary);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.card:not(.special):hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }

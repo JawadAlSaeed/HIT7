@@ -105,14 +105,17 @@ socket.on('select-freeze-target', (gameId, targets) => {
   popup.className = 'freeze-popup active';
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>❄️ Select player to freeze:</h3>
+      <h3><span class="emoji">❄️</span> Select player to freeze:</h3>
       <div class="freeze-targets">
         ${targets.map(p => `
-          <button class="freeze-target" data-id="${p.id}">
+          <button class="freeze-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
             ${p.name} ${p.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -123,7 +126,40 @@ socket.on('select-freeze-target', (gameId, targets) => {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
   document.body.appendChild(popup);
+  observer.observe(document.body, { childList: true });
 });
 
 socket.on('select-draw-three-target', (gameId, targets) => {
@@ -999,6 +1035,9 @@ function showFreezePopup(gameId, targets) {
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -1010,7 +1049,41 @@ function showFreezePopup(gameId, targets) {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = activeFreezePopup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    activeFreezePopup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    activeFreezePopup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (activeFreezePopup && activeFreezePopup.parentElement) {
+      activeFreezePopup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
   document.body.appendChild(activeFreezePopup);
+
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(activeFreezePopup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 
   // Add auto-removal listeners
   const cleanup = () => {
@@ -1060,6 +1133,9 @@ function showRemoveCardPopup(gameId, players) {
           </div>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
   
@@ -1077,7 +1153,41 @@ function showRemoveCardPopup(gameId, players) {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
   document.body.appendChild(popup);
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 }
 
 // Add helper function to get card background color
@@ -1131,6 +1241,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   // Create popup
   const popup = document.createElement('div');
   popup.className = 'select-card-popup';
+  popup.id = 'selectCardPopup';
   
   popup.innerHTML = `
     <div class="popup-content">
@@ -1167,6 +1278,10 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
           }).join('')}
         </div>
       </div>
+      
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
   
@@ -1185,7 +1300,44 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
     });
   });
   
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault(); // Prevent default behavior
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Prevent default behavior
+    popup.classList.add('popup-hiding');
+  });
+  
+  // Handle mouseup and touchend on the button or anywhere on the document
+  const handleUp = () => {
+    if (popup.parentElement) { // Check if popup is still in the DOM
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  // Add event listeners for mouseup and touchend
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
+  // Add a cleanup function to remove event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
   document.body.appendChild(popup);
+  
+  // Start observing the popup for removal
+  observer.observe(document.body, { childList: true });
 }
 
 // New function to handle selected cards
@@ -1436,6 +1588,9 @@ socket.on('select-draw-three-target', (gameId, targets) => {
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -1446,6 +1601,40 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
   document.body.appendChild(popup);
   activeDrawThreePopup = popup;
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 });
