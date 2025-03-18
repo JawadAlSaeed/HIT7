@@ -55,15 +55,16 @@ const createDeck = () => {
   }
 
   // Special cards = 22 cards (total 101)
+  // Updated cards list: replaced 4- and 8- with one 3x card
   const specialCards = [
-    '2+', '4+', '6+', '8+', '10+',  // 5 adder cards
-    '2-', '6-', '10-',              // 3 NEW minus cards
-    '2x',                           // 1 multiplier card
-    'SC', 'SC', 'SC',              // 3 second chance cards
-    'Freeze', 'Freeze', 'Freeze',   // 3 freeze cards
-    'D3', 'D3', 'D3',              // 3 draw three cards
-    'RC', 'RC', 'RC',               // 3 remove card cards
-    'Select'                        // 1 NEW select card
+    '2+', '6+', '10+',                  // 3 adder cards
+    '2-', '6-', '10-',                  // 3 minus cards
+    '2x', '3x',                         // 2 multiplier cards (added 3x)
+    'SC', 'SC', 'SC',                   // 3 second chance cards
+    'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
+    'D3', 'D3', 'D3',                   // 3 draw three cards
+    'RC', 'RC', 'RC',                   // 3 remove card cards
+    'Select'                            // 1 NEW select card
   ];
   deck.push(...specialCards);
   
@@ -145,6 +146,7 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('game-started', game);
     });
 
+    // Update the flip-card event handler to handle Select as the last card
     socket.on('flip-card', gameId => {
       const game = games.get(gameId);
       if (!game || game.status !== 'playing') return;
@@ -152,23 +154,44 @@ const handleSocketConnection = (io) => {
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
   
-      // Handle deck replenishment - FIXED
+      // Handle deck replenishment - Special handling for the last card being Select
+      if (game.deck.length === 1) {
+        const lastCard = game.deck[0];
+        
+        // If the last card is Select, we need special handling
+        if (lastCard === 'Select') {
+          // Create a new full deck but don't assign it yet
+          const newDeck = createDeck();
+          
+          // Pop the Select card from the current deck
+          game.deck.pop();
+          
+          // Send a special event with both empty deck and the full deck
+          socket.emit('select-card-from-pile', gameId, [], newDeck);
+          
+          // Update the game's deck with the new deck
+          game.discardPile.push('Select');
+          game.deck = newDeck;
+          
+          // No need for further processing - we'll handle the card selection in the select-card-choice event
+          return;
+        }
+      }
+      
+      // Regular empty deck handling
       if (game.deck.length === 0) {
         console.log('Reshuffling deck...');
-        
-        // Simply create a new deck instead of combining with discard
         game.deck = createDeck();
-        
-        // Clear the discard pile
-        
         game.discardPile = [];
-        
         console.log(`Deck reshuffled. New size: ${game.deck.length}`);
-        io.to(gameId).emit('game-update', game);
       }
   
       const card = game.deck.pop();
       
+      // Send game update to all clients to refresh deck count immediately
+      io.to(gameId).emit('game-update', game);
+      
+      // Continue with regular card handling
       // Handle number cards
       if (typeof card === 'number') {
           handleNumberCard(game, player, card, io);
@@ -221,7 +244,7 @@ const handleSocketConnection = (io) => {
             handlePendingSpecialCard(game, player, socket, io);
           }
         } else {
-          // Show select card popup
+          // Show select card popup with the current deck state
           socket.emit('select-card-from-pile', gameId, game.deck);
           game.discardPile.push('Select');
         }
@@ -411,6 +434,69 @@ const handleSocketConnection = (io) => {
         checkGameStatus(game);
         io.to(gameId).emit('game-update', game);
       }
+    });
+
+    // Update the select-card-from-pile event handling for better deck management
+    socket.on('select-card-choice', (gameId, selectedCard) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+      
+      const player = game.players[game.currentPlayer];
+      if (player.id !== socket.id || player.status !== 'active') return;
+    
+      // Find and remove the selected card from the deck (with safety checks)
+      let cardFound = false;
+      const cardIndex = game.deck.findIndex(card => card === selectedCard);
+      
+      if (cardIndex !== -1) {
+        // Card found in the regular deck
+        game.deck.splice(cardIndex, 1);
+        cardFound = true;
+      } 
+      
+      // If card not found, it might mean we're in the special empty-deck scenario
+      if (!cardFound) {
+        // No need to remove the card, it will be in the new deck
+        console.log(`Card ${selectedCard} selected from regenerated deck`);
+      }
+      
+      // Process the selected card
+      if (typeof selectedCard === 'number') {
+        handleNumberCard(game, player, selectedCard, io);
+        game.discardPile.push(selectedCard);
+        
+        if (player.status === 'busted') {
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+          player.status = 'stood';
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else {
+          advanceTurn(game);
+        }
+      }
+      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
+        // For special cards that need targeting, add to hand but don't advance turn yet
+        player.specialCards.push(selectedCard);
+        // The client will request targets immediately
+        // Turn will advance when the special card effect is applied
+      }
+      else {
+        // For other special cards, add to player's hand
+        player.specialCards.push(selectedCard);
+        advanceTurn(game);
+      }
+      
+      updatePlayerScore(player);
+      checkGameStatus(game);
+      
+      // Always emit game update to refresh the deck display
+      io.to(gameId).emit('game-update', game);
     });
 
     // Add new socket event handler for select-card 
@@ -719,11 +805,13 @@ const updatePlayerScore = player => {
   const minus = player.specialCards
     .filter(c => c.endsWith('-'))
     .reduce((a, c) => a + parseInt(c), 0);
-  const multiply = player.specialCards
-    .filter(c => c.endsWith('x'))
-    .reduce((a, c) => a * parseInt(c), 1);
+  
+  // Updated to handle both 2x and 3x multipliers
+  let multiplier = 1;
+  if (player.specialCards.includes('2x')) multiplier *= 2;
+  if (player.specialCards.includes('3x')) multiplier *= 3;
 
-  player.roundScore = (base + add - minus) * (multiply || 1);
+  player.roundScore = (base + add - minus) * multiplier;
 };
 
 // Add these new helper functions

@@ -215,7 +215,9 @@ socket.on('game-reset-with-players', (game) => {
 });
 
 // Add select-card-from-pile event listener with other socket listeners
-socket.on('select-card-from-pile', showSelectCardPopup);
+socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
+  showSelectCardPopup(gameId, deck, fullDeck);
+});
 
 // Game actions
 function createGame() {
@@ -316,6 +318,11 @@ function handleGameUpdate(game) {
         resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
     }
     
+    // Update deck count immediately
+    document.getElementById('deckCount').textContent = game.deck.length;
+    // Update the remaining pile display immediately
+    updateRemainingPile(game.deck);
+    
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
         if (waitingScreen) {
@@ -372,25 +379,24 @@ function updateRemainingPile(deck) {
     const regularCards = [];
     const specialCards = [];
 
-    // Helper function to get sort order for special cards
+    // Helper function to get sort order for special cards - updated order
     const getSpecialCardOrder = card => {
         const specialOrder = {
-            'SC': 1,
-            'Freeze': 2,
-            'D3': 3,
-            'RC': 4,
-            'Select': 5,  // Add Select card to the ordering
-            '2x': 6,
-            '2+': 7,
-            '4+': 8,
-            '6+': 9,
-            '8+': 10,
-            '10+': 11,
-            '2-': 12,
-            '6-': 13,
-            '10-': 14
+            'Select': 1,    // 1. Select Card
+            'SC': 2,        // 2. Second Chance
+            'Freeze': 3,    // 3. Freeze
+            'D3': 4,        // 4. Draw Three
+            'RC': 5,        // 5. Remove Card
+            '2x': 6,        // 6. 2x Multiplier
+            '3x': 7,        // 7. 3x Multiplier (new)
+            '2+': 8,        // 8. 2+
+            '6+': 9,        // 9. 6+
+            '10+': 10,      // 10. 10+
+            '2-': 11,       // 11. 2-
+            '6-': 12,       // 12. 6-
+            '10-': 13,      // 13. 10-
         };
-        return specialOrder[card] || 15;
+        return specialOrder[card] || 99;  // Default high number for unknown cards
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
@@ -928,7 +934,7 @@ function handleRoundSummary({ players, allBusted }) {
             <div class="player-summary-row">
                 <div class="name">
                     ${player.name}
-                    ${hasBonus ? '🌟' : ''}
+                    ${hasBonus ? '🌟+15' : ''}
                     ${player.bustedCard ? `(Busted on ${player.bustedCard})` : ''}
                 </div>
                 <div class="status ${status}">${getStatusText(status)}</div>
@@ -1080,6 +1086,7 @@ function getCardColor(card) {
     if (card === 'Freeze') return '#3498db';
     if (card === 'D3') return '#9b59b6';
     if (card === 'RC') return '#7f8c8d'; // Changed to a lighter gray
+    if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
     if (card.endsWith('+')) return '#27ae60';
     if (card.endsWith('x')) return '#f1c40f';
     if (card.endsWith('-')) return '#2c3e50'; // New dark color for minus cards
@@ -1091,13 +1098,17 @@ socket.on('select-remove-card-target', (gameId, players) => {
 });
 
 // Add this function to show the Select Card popup
-function showSelectCardPopup(gameId, deck) {
+function showSelectCardPopup(gameId, deck, fullDeck = null) {
+  // If deck is empty but we have a fullDeck parameter (for last card scenario)
+  // use the full deck instead
+  const cardsToShow = (deck.length === 0 && fullDeck) ? fullDeck : deck;
+  
   // Group cards by type
   const regularCards = [];
   const specialCards = [];
   
   // Count occurrence of each card
-  const cardCounts = deck.reduce((acc, card) => {
+  const cardCounts = cardsToShow.reduce((acc, card) => {
     const cardStr = card.toString();
     acc[cardStr] = (acc[cardStr] || 0) + 1;
     return acc;
@@ -1309,8 +1320,8 @@ function showTutorial() {
                         <div class="card-example">
                             <div class="card special multiplier">2×</div>
                             <div class="card-explanation">
-                                <strong>Multiply Card</strong><br>
-                                Doubles your total round score
+                                <strong>Multiply Cards</strong><br>
+                                Multiply your total round score (2× or 3×)
                             </div>
                         </div>
                     </div>

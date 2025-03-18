@@ -3056,3 +3056,8 @@ draw-three-target.self-target:hover {
     font-size: 1.2rem;
   }
 }
+
+/* Update the tutorial section to reflect the new card set */
+.tutorial-popup .special-tab .cards-grid .card-explanation:contains('Multiply') {
+  content: "Multiply your total round score (2× or 3×)";
+}
