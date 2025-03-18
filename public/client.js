@@ -991,7 +991,7 @@ function showFreezePopup(gameId, targets) {
   activeFreezePopup.className = 'freeze-popup';
   activeFreezePopup.innerHTML = `
     <div class="popup-content">
-      <h3>❄️ Select a player to freeze:</h3>
+      <h3><span class="emoji">❄️</span> Select a player to freeze:</h3>
       <div class="freeze-targets">
         ${targets.map(t => `
           <button class="freeze-target ${t.id === socket.id ? 'self-target' : ''}" data-id="${t.id}">
@@ -1033,7 +1033,7 @@ function showRemoveCardPopup(gameId, players) {
   
   const content = `
     <div class="popup-content">
-      <h3>🗑️ Select a card to remove:</h3>
+      <h3><span class="emoji">🗑️</span> Select a card to remove:</h3>
       <div class="players-list">
         ${players.map(player => `
           <div class="player-section">
@@ -1049,7 +1049,7 @@ function showRemoveCardPopup(gameId, players) {
               `).join('')}
               ${player.specialCards.map((card, index) => `
                 <button class="card-button special ${getSpecialCardClass(card)}"
-                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') ? '#fff' : ''}"
+                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
                   data-player="${player.id}" 
                   data-index="${index}"
                   data-special="true">
@@ -1134,7 +1134,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>🃏 Select Any Card From The Deck</h3>
+      <h3><span class="emoji">🃏</span> Select Any Card From The Deck</h3>
       
       <div class="card-section">
         <div class="section-title">Regular Cards</div>
@@ -1428,7 +1428,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   popup.className = 'draw-three-popup active';
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>🎯 Select player to draw three cards:</h3>
+      <h3><span class="emoji">🎯</span> Select player to draw three cards:</h3>
       <div class="draw-three-targets">
         ${targets.map(p => `
           <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">

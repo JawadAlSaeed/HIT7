@@ -3061,3 +3061,83 @@ draw-three-target.self-target:hover {
 .tutorial-popup .special-tab .cards-grid .card-explanation:contains('Multiply') {
   content: "Multiply your total round score (2× or 3×)";
 }
+
+/* Fix for emojis in popups - ensure they're not covered by background colors */
+.freeze-popup h3::before,
+.draw-three-popup h3::before,
+.remove-card-popup h3::before,
+.select-card-popup h3::before {
+  content: ""; /* Remove any potential before content */
+}
+
+.freeze-popup h3 span.emoji,
+.draw-three-popup h3 span.emoji,
+.remove-card-popup h3 span.emoji,
+.select-card-popup h3 span.emoji {
+  display: inline-block;
+  margin-right: 5px;
+  filter: none;
+  position: relative;
+  z-index: 2;
+}
+
+/* Fix for Select Card popup styling to match remaining pile */
+.select-card-popup .card-button {
+  position: relative;
+  width: 50px;
+  height: 70px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  font-family: 'Roboto', sans-serif;
+}
+
+.select-card-popup .card-button:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.select-card-popup .card-button.regular {
+  background: white !important;
+  color: var(--text-dark) !important;
+  border: 2px solid var(--secondary);
+}
+
+/* Special card styling within select popup */
+.select-card-popup .card-button.special {
+  color: white !important; /* Ensure text is white for most special cards */
+  border-width: 2px;
+}
+
+/* Specific card type styling overrides */
+.select-card-popup .card-button.special.multiplier {
+  color: var(--text-dark) !important; /* Black text for multiplier cards */
+}
+
+.select-card-popup .card-button.special.minus {
+  color: white !important; /* White text for minus cards */
+}
+
+.select-card-popup .card-count {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  line-height: 1;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
