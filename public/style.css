@@ -252,12 +252,20 @@ body::before {
     align-items: center;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    height: 80px;
+    height: 100px; /* Increase height from 80px to 100px */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header-left, .header-right {
     display: flex;
     align-items: center;
+    height: 100%;
+}
+
+.header-left {
+    flex: 0 0 auto;
+    min-width: 120px; /* Add minimum width to ensure logo space */
 }
 
 .header-left .game-logo {
@@ -269,20 +277,23 @@ body::before {
     align-items: center;
 }
 
+.header-left .logo-image {
+    height: 80px; /* Increase logo height */
+    width: auto; /* Maintain aspect ratio */
+    object-fit: contain;
+    margin-right: 0.5rem;
+}
+
 .header-right {
     display: flex;
     align-items: center;
-    gap: 1rem; /* Increased from 0.6rem */
+    gap: 1rem;
+    flex: 1;
+    justify-content: flex-end;
 }
 
-.header-right .game-button {
-    min-width: unset; /* Remove minimum width constraint */
-    padding: 0.8rem 1.2rem; /* Slightly reduce padding */
-    margin-left: 0.5rem; /* Add margin to separate buttons */
-}
-
-.header-right .game-button:first-child {
-    margin-left: 0; /* Remove margin from first button */
+.header-right .game-code-display {
+    margin-right: auto; /* Push to left within header-right */
 }
 
 .game-header::before {
@@ -1484,6 +1495,8 @@ body::before {
     box-shadow: 0 8px 32px rgba(52, 152, 219, 0.4);
     padding: 2.5rem;
     border: none;
+    padding-bottom: 80px; /* Increase bottom padding for button space */
+    position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .freeze-popup h3 {

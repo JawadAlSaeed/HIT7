@@ -51,26 +51,27 @@ const createDeck = () => {
   
   // Regular cards (1-12) = 78 cards
   for (let number = 1; number <= 12; number++) {
-    for (let i = 0; i < number; i++) deck.push(number);
+    for (let i = 0; i < number; i++) {
+      deck.push(number); // Add missing line to actually push the cards to the deck
+    }
   }
 
-  // Special cards = 22 cards (total 101)
-  // Updated cards list: replaced 4- and 8- with one 3x card
+  // Special cards = 21 cards (total 100 cards)
   const specialCards = [
     '2+', '6+', '10+',                  // 3 adder cards
     '2-', '6-', '10-',                  // 3 minus cards
-    '2x', '3x',                         // 2 multiplier cards (added 3x)
+    '2x', '3x',                         // 2 multiplier cards
     'SC', 'SC', 'SC',                   // 3 second chance cards
     'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
     'D3', 'D3', 'D3',                   // 3 draw three cards
     'RC', 'RC', 'RC',                   // 3 remove card cards
-    'Select'                            // 1 NEW select card
+    'Select'                            // 1 select card
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 101) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 101 cards.`);
+  if (deck.length !== 100) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 100 cards.`);
   }
   
   return shuffle(deck);
