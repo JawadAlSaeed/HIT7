@@ -1776,14 +1776,15 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     padding: 20px;
-    border: 3px solid #9b59b6;
-    max-width: 800px;
+    box-sizing: border-box;
 }
 
 .tutorial-popup .close-button {
@@ -1807,67 +1808,31 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-}
-
-.tutorial-section {
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--secondary);
+    padding: 2.5rem;
     border-radius: 15px;
-    padding: 1.5rem;
+    max-width: 800px;
+    width: 95%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--highlight) var(--secondary);
+    margin: 0 auto;
 }
 
-.tutorial-section h2 {
-    color: #9b59b6;
-    margin: 0 0 1rem 0;
-    font-size: 1.8rem;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
+.tutorial-content::-webkit-scrollbar {
+    width: 8px;
+    background-color: var(--secondary);
 }
 
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.card-example {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 1rem;
+.tutorial-content::-webkit-scrollbar-thumb {
+    background: var(--highlight);
     border-radius: 10px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    -webkit-backdrop-filter: blur(5px);
-    backdrop-filter: blur(5px);
-}
-
-.card-example .card {
-    width: 40px;
-    height: 60px;
-    flex-shrink: 0;
-}
-
-.card-explanation {
-    font-size: 0.9rem;
-    line-height: 1.4;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-}
-
-/* Rules Section */
-.rules-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.rules-list li {
-    padding: 0.8rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rules-list li:last-child {
-    border-bottom: none;
 }
 
 .tutorial-tabs {
@@ -1993,1221 +1958,289 @@ body::before {
 
 /* Enhanced Tutorial Popup Styling */
 .tutorial-popup {
-    background: rgba(22, 33, 62, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.tutorial-popup .close-button {
-    background: var(--highlight);
-    color: var(--text-light);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    font-size: 2rem;
-    border: none;
-    top: 1.5rem;
-    right: 1.5rem;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-}
-
-.tutorial-popup .close-button:hover {
-    transform: scale(1.1) rotate(90deg);
-    background: #d63d56;
-    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-}
-
-.tutorial-tabs {
-    background: rgba(15, 52, 96, 0.5);
-    padding: 0.5rem;
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-}
-
-.tab-button {
-    background: rgba(15, 52, 96, 0.3);
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    -webkit-backdrop-filter: blur(5px);
-    backdrop-filter: blur(5px);
-    margin-bottom: 1.5rem;
-}
-
-.tutorial-section h2 {
-    color: var(--highlight);
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
-}
-
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.card-example {
-    background: rgba(22, 33, 62, 0.8);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(5px);
-    backdrop-filter: blur(5px);
-    transition: transform 0.3s ease;
-}
-
-.card-example:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-}
-
-.card-explanation {
-    color: var(--text-light);
-    font-family: 'Roboto', sans-serif;
-    line-height: 1.6;
-}
-
-.rules-list li {
-    padding: 1rem;
-    background: rgba(22, 33, 62, 0.8);
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.rules-list li:hover {
-    transform: translateX(5px);
-    background: rgba(22, 33, 62, 0.9);
-    border-color: rgba(233, 69, 96, 0.3);
-}
-
-.share-link-input {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    border-radius: 8px;
-    padding: 0.8rem;
-    color: var(--text-light);
-    width: 300px;
-    margin-right: 0.5rem;
-    font-family: 'Roboto', sans-serif;
-}
-
-.copy-link-btn {
-    background: var(--highlight);
-    color: var(--text-light);
-    border: none;
-    border-radius: 8px;
-    padding: 0.8rem 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Roboto', sans-serif;
-    font-weight: 500;
-}
-
-.copy-link-btn:hover {
-    background: #d63d56;
-    transform: translateY(-2px);
-}
-
-/* Update share link styles */
-.share-link {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    background: transparent; /* Remove gray background */
-    padding: 0;            /* Remove extra padding */
-    border: none;
-}
-
-/* Add this new class */
-.hidden {
-    display: none !important;
-}
-
-/* Waiting Screen Styles */
-.waiting-screen {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--secondary);
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
-    z-index: 1000;
-    width: 90%;
-    max-width: 500px;
-    text-align: center;
-    border: 3px solid var(--highlight);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-}
-
-.waiting-screen h2 {
-    color: var(--highlight);
-    margin-bottom: 1.5rem;
-    font-size: 1.8rem;
-}
-
-.waiting-screen .players-list {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
-    border-radius: 10px;
-    margin: 1rem 0;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.waiting-screen .player-item {
-    padding: 0.8rem;
-    margin: 0.5rem 0;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.waiting-screen .player-item .host-badge {
-    background: var(--highlight);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-}
-
-.waiting-screen .button-group {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-top: 1.5rem;
-}
-
-.waiting-screen .share-section {
-    margin: 1.5rem 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-}
-
-.waiting-screen .share-text {
-    font-size: 1.1rem;
-    color: var(--text-light);
-    opacity: 0.9;
-}
-
-.waiting-screen .copied-message {
-    position: absolute;
-    bottom: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--highlight);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.waiting-screen .copied-message.show {
-    opacity: 1;
-}
-
-/* Loading spinner animation */
-.loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
-    border-top-color: var(--highlight);
-    animation: spin 1s ease-in-out infinite;
-    margin-left: 10px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Add to special card styles */
-.card.special.remove-card,
-.discard-card.special.remove-card {
-  background: #7f8c8d !important; /* Changed to lighter gray */
-  border-color: #95a5a6 !important;
-  color: white !important;
-}
-
-.remaining-card.special.remove-card {
-  background: linear-gradient(135deg, #7f8c8d, #95a5a6) !important;
-  border-color: #95a5a6 !important;
-}
-
-/* Remove cancel button styles */
-.cancel-freeze,
-.cancel-draw-three,
-.remove-card-popup .cancel-button {
-  display: none !important;
-}
-
-/* Remove Card Popup */
-.remove-card-popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.remove-card-popup .popup-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  background: linear-gradient(135deg, #7f8c8d, #95a5a6);
-  box-shadow: 0 8px 32px rgba(127, 140, 141, 0.3);
-  padding: 0;
-  border: none;
-  padding-bottom: 80px; /* Increase bottom padding for button space */
-  position: relative; /* Ensure proper positioning of absolute elements */
-}
-
-.remove-card-popup h3 {
-  color: white;
-  text-align: center;
-  margin: 0 0 1rem 0;
-  font-size: 1.4rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.remove-card-popup .players-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.remove-card-popup .player-section {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1rem;
-  border-radius: 12px;
-}
-
-.remove-card-popup .player-section h4 {
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  font-size: 1.2rem;
-  margin: 0 0 1rem 0;
-  font-family: 'Cairo Play', sans-serif;
-  text-transform: uppercase;
-}
-
-.remove-card-popup .cards-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.remove-card-popup .card-button {
-  width: 50px;
-  height: 70px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-  transition: transform 0.2s;
-  color: var(--text-dark);
-  background: white;
-}
-
-.remove-card-popup .card-button.special {
-  color: white;
-}
-
-/* Add after the adder card styles */
-.card.special.minus,
-.remaining-card.special.minus,
-.discard-card.special.minus {
-    background: linear-gradient(135deg, #2c3e50, #2c3e50) !important;
-    border-color: #34495e !important;
-    color: white !important;
-    text-shadow: none !important;
-}
-
-/* Update remove card popup card styles */
-.remove-card-popup .card-button.special {
-    color: white;
-    font-weight: bold;
-    text-shadow: none;
-}
-
-.remove-card-popup .card-button.special.minus {
-    background: #2c3e50 !important;
-    border-color: #34495e !important;
-}
-
-/* Update remaining pile sort order */
-/* Add styles for self-targeting buttons */
-.freeze-target.self-target,
-.draw-three-target.self-target {
-    border: 2px solid rgba(255, 255, 255, 0.5) !important;
-    position: relative;
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.freeze-target.self-target:hover,
-.draw-three-target.self-target:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
-}
-
-.cards-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.cards-container {
-    display: flex;
-    flex-direction: column;
-}
-
-.cards-label {
-    font-family: 'Cairo Play', sans-serif;
-    color: var(--highlight);
-    font-size: 0.9rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 0.8rem;
-    background: rgba(15, 52, 96, 0.5);
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    margin-bottom: 0.5rem;
-    text-align: center;
-}
-
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    padding: 1rem;
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.card-grid.special {
-    background: rgba(15, 52, 96, 0.2);
-}
-
-.empty-slot {
-    width: auto;
-    aspect-ratio: 5/7;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px dashed rgba(255, 255, 255, 0.1);
-}
-
-.empty-slot.special {
-    border: 2px dashed rgba(233, 69, 96, 0.2);
-}
-
-/* Common Popup Content Styling - Update this section */
-.freeze-popup .popup-content,
-.draw-three-popup .popup-content,
-.remove-card-popup .popup-content,
-.round-summary-popup .popup-content,
-.winner-popup .popup-content,
-.tutorial-popup .popup-content {
-    background: var(--secondary);
-    padding: 2.5rem;
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    max-width: 600px;
-    width: 90%;
-    margin: 20px;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    padding-bottom: 80px; /* Increase bottom padding for button space */
-    position: relative; /* Ensure proper positioning of absolute elements */
-}
-
-/* Popup Headers */
-.freeze-popup h3,
-.draw-three-popup h3,
-.remove-card-popup h3 {
-    color: var(--text-light);
-    text-align: center;
-    font-size: 1.6rem;
-    margin: 0 0 1.5rem 0;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* Popup Targets Container */
-.freeze-targets,
-.draw-three-targets,
-.remove-card-popup .players-list {
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    margin: 1rem 0;
-    margin-bottom: 30px; /* Added space below target buttons */
-}
-
-/* Popup Target Buttons */
-.freeze-target,
-.draw-three-target,
-.remove-card-popup .card-button {
-    width: 100%;
-    padding: 1.2rem;
-    margin: 0.5rem 0;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-family: 'Roboto', sans-serif;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: var(--highlight);
-    color: var(--text-light);
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-}
-
-/* Button Hover States */
-.freeze-target:hover,
-.draw-three-target:hover,
-.remove-card-popup .card-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-}
-
-/* Self Target Button Styling */
-.freeze-target.self-target,
-.draw-three-target.self-target {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(233, 69, 96, 0.3);
-}
-
-.freeze-target.self-target:hover,
-draw-three-target.self-target:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--highlight);
-}
-
-/* Remove Card Popup Specific */
-.remove-card-popup .player-section {
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1rem 0;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.remove-card-popup .player-section h4 {
-    color: var(--text-light);
-    font-size: 1.2rem;
-    margin: 0 0 1rem 0;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-}
-
-.remove-card-popup .cards-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-    gap: 0.8rem;
-    padding: 1rem;
-    background: rgba(15, 52, 96, 0.2);
-    border-radius: 8px;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-}
-
-/* Special Card Buttons in Remove Card Popup */
-.remove-card-popup .card-button.special {
-    padding: 0;
-    width: 50px;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-}
-
-.remove-card-popup .card-button.special.adder {
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.multiplier {
-    background: #f1c40f !important;
-    border-color: #d0a90d !important;
-    color: var(--text-dark) !important;
-}
-
-.remove-card-popup .card-button.special.second-chance {
-    background: #e74c3c !important;
-    border-color: #c0392b !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.freeze {
-    background: #3498db !important;
-    border-color: #2980b9 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.draw-three {
-    background: #9b59b6 !important;
-    border-color: #8e44ad !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.minus {
-    background: #2c3e50 !important;
-    border-color: #34495e !important;
-    color: white !important;
-}
-
-/* Regular cards in remove-card popup */
-.remove-card-popup .card-button.regular {
-    background: white !important;
-    color: var(--text-dark) !important;
-    border: 2px solid var(--secondary);
-    font-size: 1.6rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
-
-/* Remove Card Popup - Update card alignment and busted state */
-.remove-card-popup .card-button {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    font-weight: bold;
-}
-
-.remove-card-popup .player-section.busted {
-    opacity: 0.7;
-    position: relative;
-}
-
-.remove-card-popup .player-section.busted::before {
-    content: "BUSTED";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-15deg);
-    background: #e74c3c;
-    color: white;
-    padding: 0.5rem 2rem;
-    border-radius: 5px;
-    font-weight: bold;
-    font-size: 1.2rem;
-    z-index: 1;
-    letter-spacing: 2px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.remove-card-popup .player-section.busted .cards-list {
-    pointer-events: none;
-    filter: grayscale(0.8);
-}
-
-.remove-card-popup .player-section.busted .card-button {
-    cursor: not-allowed;
-}
-
-/* Round Summary Popup - Updated Design */
-.round-summary-popup {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     padding: 20px;
+    box-sizing: border-box;
 }
 
-.round-summary-popup .popup-content {
-    background: linear-gradient(135deg, var(--secondary), var(--accent));
+.tutorial-popup .tutorial-content {
+    background: var(--secondary);
     padding: 2.5rem;
-    border-radius: 20px;
+    border-radius: 15px;
     max-width: 800px;
     width: 95%;
-    border: 3px solid var(--highlight);
-    box-shadow: 0 0 50px rgba(233, 69, 96, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-}
-
-.round-summary-popup h2 {
-    color: white;
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 2.5rem;
-    font-weight: 700;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 2px 10px rgba(233, 69, 96, 0.5);
-    background: var(--card-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.round-summary-header {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(15, 52, 96, 0.5);
-    border-radius: 12px 12px 0 0;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-light);
-    font-weight: 600;
-    align-items: center;
-    text-align: center;
-}
-
-.round-summary-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-}
-
-.player-summary-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    align-items: center;
-}
-
-.points-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.points-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    color: var(--text-light);
-    opacity: 0.7;
-    letter-spacing: 1px;
-}
-
-.points {
-    font-size: 1.4rem;
-    font-weight: 700;
-    font-family: 'Cairo Play', sans-serif;
-    color: var(--highlight);
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
-}
-
-/* Player List - Horizontal Scroll */
-.player-list {
-    display: block;
-    overflow-x: visible;
-    gap: 0;
-    padding-bottom: 0;
-}
-
-.player-summary {
-    flex: 0 0 auto; /* Prevent items from shrinking */
-    width: 300px; /* Adjust as needed */
-    min-width: 300px;
-    background: rgba(22, 33, 62, 0.9);
-    border-radius: 15px;
-    padding: 1.5rem;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    transition: transform 0.3s ease;
+    max-height: 85vh;
+    overflow-y: auto;
     position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--highlight) var(--secondary);
+    margin: 0 auto;
 }
 
-.player-summary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
+.tutorial-popup .tutorial-content::-webkit-scrollbar {
+    width: 8px;
+    background-color: var(--secondary);
+}
+
+.tutorial-popup .tutorial-content::-webkit-scrollbar-thumb {
     background: var(--highlight);
-    opacity: 0.5;
-}
-
-.player-summary:hover {
-    transform: translateY(-5px);
-}
-
-.player-name {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: white;
-    text-align: center;
-    margin-bottom: 1rem;
-    font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
-}
-
-.status-info {
-    display: flex;
-    justify-content: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-}
-
-.status-badge {
-    padding: 0.5rem 1.2rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    min-width: 100px;
-    text-align: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.status-badge.active { 
-    background: linear-gradient(135deg, #3498db, #2980b9);
-}
-.status-badge.stood { 
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-.status-badge.busted { 
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-.status-badge.frozen { 
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-}
-.status-badge.finished { 
-    background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.summary-scores {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.score-item {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
     border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    transition: transform 0.3s ease;
 }
 
-.score-item:hover {
-    transform: translateY(-2px);
-}
-
-.score-label {
-    color: var(--text-light);
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    opacity: 0.8;
-}
-
-.score-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--highlight);
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
-    font-family: 'Cairo Play', sans-serif;
-}
-
-.bonus-badge {
-    background: linear-gradient(135deg, #9b59b6, #8e44ad);
-    color: white;
-    padding: 0.5rem 1.2rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    animation: glow 2s infinite;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 0.5rem;
-    box-shadow: 0 2px 10px rgba(155, 89, 182, 0.3);
-}
-
-.countdown {
-    text-align: center;
-    font-size: 1.3rem;
-    color: white;
-    margin-top: 2rem;
-    font-weight: 500;
-    background: rgba(233, 69, 96, 0.1);
-    padding: 1rem;
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
-}
-
-.countdown span {
-    color: var(--highlight);
-    font-weight: 700;
-    font-size: 1.5rem;
-}
-
-.player-summary .busted-card {
-    text-align: center;
-    background: rgba(231, 76, 60, 0.2);
-    color: #e74c3c;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
-    letter-spacing: 1px;
-    box-shadow: 0 2px 10px rgba(231, 76, 60, 0.2);
-}
-
-/* Select Card Styling - Updated with more subtle gradient */
-.card.special.select-card,
-.discard-card.special.select-card,
-.remaining-card.special.select-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
-  border-color: #e74c3c !important;
-  color: white !important;
-  position: relative;
-}
-
-.card.special.select-card::before,
-.discard-card.special.select-card::before,
-.remaining-card.special.select-card::before {
-  content: "🃏" !important;
-  font-size: 1.8rem;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* Select Card Popup - Updated to match the style of remove-card popup */
-.select-card-popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.select-card-popup .popup-content {
-  background: var(--secondary);
-  padding: 2.5rem;
-  border-radius: 15px;
-  max-width: 800px;
-  width: 95%;
-  overflow-y: auto;
-  max-height: 80vh;
-  border: 3px solid;
-  border-image: linear-gradient(135deg, #e74c3c, #9b59b6, #3498db) 1;
-  box-shadow: 0 0 50px rgba(231, 76, 60, 0.3);
-  padding-bottom: 80px; /* Increase bottom padding for button space */
-  position: relative; /* Ensure proper positioning of absolute elements */
-}
-
-.select-card-popup h3 {
-  color: white;
-  text-align: center;
-  margin-bottom: 2rem;
-  font-size: 1.8rem;
-  font-weight: 700;
-  font-family: 'Cairo Play', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  background: linear-gradient(to right, #e74c3c, #9b59b6, #3498db);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.select-card-popup .cards-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-  gap: 0.8rem;
-  padding: 1rem;
-  background: rgba(15, 52, 96, 0.2);
-  border-radius: 8px;
-  border: 1px solid rgba(233, 69, 96, 0.1);
-}
-
-.select-card-popup .card-button {
-  width: 50px;
-  height: 70px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 1.4rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 0 auto;
-  border: none;
-}
-
-.select-card-popup .card-button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-.select-card-popup .card-button.regular {
-  background: white !important;
-  color: var(--text-dark) !important;
-  border: 2px solid var(--secondary);
-}
-
-.select-card-popup .card-count {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  font-size: 0.8rem;
-  padding: 2px 6px;
-  border-radius: 8px;
-  line-height: 1;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.select-card-popup .card-section {
-  margin-bottom: 1.5rem;
-}
-
-.select-card-popup .section-title {
-  color: var(--highlight);
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  background: rgba(15, 52, 96, 0.5);
-  border-radius: 8px;
-  text-align: center;
-}
-
-/* Mobile adjustments for Select Card popup */
-@media screen and (max-width: 430px) {
-  .select-card-popup .popup-content {
-    padding: 1.5rem;
-    width: 90%;
-  }
-  
-  .select-card-popup h3 {
-    font-size: 1.4rem;
-    margin-bottom: 1rem;
-  }
-  
-  .select-card-popup .cards-list {
-    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-    gap: 0.6rem;
-  }
-  
-  .select-card-popup .card-button {
-    width: 40px;
-    height: 56px;
-    font-size: 1.2rem;
-  }
-}
-
-/* Update the tutorial section to reflect the new card set */
-.tutorial-popup .special-tab .cards-grid .card-explanation:contains('Multiply') {
-  content: "Multiply your total round score (2× or 3×)";
-}
-
-/* Fix for emojis in popups - ensure they're not covered by background colors */
-.freeze-popup h3::before,
-.draw-three-popup h3::before,
-.remove-card-popup h3::before,
-.select-card-popup h3::before {
-  content: ""; /* Remove any potential before content */
-}
-
-.freeze-popup h3 span.emoji,
-.draw-three-popup h3 span.emoji,
-.remove-card-popup h3 span.emoji,
-.select-card-popup h3 span.emoji {
-  display: inline-block;
-  margin-right: 5px;
-  filter: none;
-  position: relative;
-  z-index: 2;
-}
-
-/* Fix for Select Card popup styling to match remaining pile */
-.select-card-popup .card-button {
-  position: relative;
-  width: 50px;
-  height: 70px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 1.4rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 0 auto;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  font-family: 'Roboto', sans-serif;
-}
-
-.select-card-popup .card-button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-.select-card-popup .card-button.regular {
-  background: white !important;
-  color: var(--text-dark) !important;
-  border: 2px solid var(--secondary);
-}
-
-/* Special card styling within select popup */
-.select-card-popup .card-button.special {
-  color: white !important; /* Ensure text is white for most special cards */
-  border-width: 2px;
-}
-
-/* Specific card type styling overrides */
-.select-card-popup .card-button.special.multiplier {
-  color: var(--text-dark) !important; /* Black text for multiplier cards */
-}
-
-.select-card-popup .card-button.special.minus {
-  color: white !important; /* White text for minus cards */
-}
-
-.select-card-popup .card-count {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  font-size: 0.8rem;
-  padding: 2px 6px;
-  border-radius: 8px;
-  line-height: 1;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
-/* HOLD TO VIEW GAME button styling - updated position */
-.view-game-button {
+.tutorial-popup .close-button {
     position: absolute;
-    bottom: 25px; /* Increased from 20px to create more space */
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.15);
+    top: 1rem;
+    right: 1rem;
+    background: var(--highlight);
     color: white;
-    border: 2px solid rgba(233, 69, 96, 0.5);
-    border-radius: 30px;
-    padding: 12px 24px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-family: 'Roboto', sans-serif;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10;
     display: flex;
     align-items: center;
-    gap: 8px;
-    z-index: 1100;
-    margin-top: 20px; /* Add top margin for spacing */
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4);
 }
 
-/* Make the popups semi-transparent when holding the view button */
-.popup-hiding {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
+.tutorial-popup .close-button:hover {
+    transform: rotate(90deg);
+    background: #d63d56;
 }
 
-/* Mobile adjustments for the view game button */
-@media screen and (max-width: 430px) {
-    .view-game-button {
-        padding: 10px 18px;
-        font-size: 0.9rem;
-        bottom: 15px;
-    }
+.tutorial-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+    background: rgba(15, 52, 96, 0.3);
+    border-radius: 12px;
+    padding: 0.8rem;
+    border: 1px solid rgba(233, 69, 96, 0.2);
 }
 
-/* Update Regular Cards */
-.card:not(.special) {
-    background: var(--text-light) !important;
-    color: var(--text-dark) !important;
-    font-weight: bold;
-    border: 2px solid var(--secondary);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+.tab-button {
+    background: rgba(22, 33, 62, 0.8);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+    font-family: 'Cairo Play', sans-serif;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.card:not(.special):hover {
+.tab-button:hover {
+    background: rgba(233, 69, 96, 0.2);
+}
+
+.tab-button.active {
+    background: var(--highlight);
+    color: white;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.tutorial-section {
+    background: rgba(22, 33, 62, 0.6);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(233, 69, 96, 0.2);
+}
+
+.tutorial-section h2 {
+    color: var(--highlight);
+    font-size: 1.8rem;
+    margin: 0 0 1.5rem;
+    font-family: 'Cairo Play', sans-serif;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.2rem;
+}
+
+.card-example {
+    background: rgba(15, 52, 96, 0.4);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    transition: transform 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-example:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    border-color: rgba(233, 69, 96, 0.3);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.card-example .card {
+    min-width: 50px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-example .card:not(.special) {
+    background: white !important;
+    color: var(--text-dark) !important;
+    border: 2px solid var(--secondary);
+}
+
+/* Match special card styles from the remaining pile */
+.card-example .card.special.second-chance {
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    border-color: #c0392b;
+    color: white;
+}
+
+.card-example .card.special.freeze {
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    border-color: #2980b9;
+    color: white;
+}
+
+.card-example .card.special.draw-three {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    border-color: #8e44ad;
+    color: white;
+}
+
+.card-example .card.special.remove-card {
+    background: linear-gradient(135deg, #7f8c8d, #34495e) !important;
+    border-color: #34495e;
+    color: white;
+}
+
+.card-example .card.special.select-card {
+    background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
+    border-color: #e74c3c;
+    color: white;
+}
+
+.card-example .card.special.multiplier {
+    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
+    border-color: #d35400;
+    color: var(--text-dark) !important;
+}
+
+.card-example .card.special.adder {
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    border-color: #219a52;
+    color: white;
+}
+
+.card-example .card.special.minus {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border-color: #2c3e50;
+    color: white !important;
+}
+
+.card-explanation {
+    color: white;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.card-explanation strong {
+    color: var(--highlight);
+    font-family: 'Cairo Play', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.rules-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.rules-list li {
+    background: rgba(15, 52, 96, 0.4);
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    position: relative;
+    padding-left: 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.rules-list li:hover {
+    transform: translateX(5px);
+    border-color: rgba(233, 69, 96, 0.3);
+    background: rgba(15, 52, 96, 0.6);
+}
+
+.rules-list li::before {
+    content: "•";
+    position: absolute;
+    left: 1rem;
+    color: var(--highlight);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.rules-list li strong {
+    color: var(--highlight);
+    font-weight: 700;
 }

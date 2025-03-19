@@ -402,6 +402,99 @@
     .game-button {
         height: 50px;
     }
+
+    .tutorial-popup .tutorial-content {
+        padding: 1.5rem;
+        width: 90%;
+        max-height: 90vh;
+        margin: 0;
+    }
+    
+    .tutorial-popup .close-button {
+        top: 0.8rem;
+        right: 0.8rem;
+        width: 32px;
+        height: 32px;
+        font-size: 1.2rem;
+    }
+    
+    .tutorial-tabs {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.6rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .tab-button {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.8rem;
+        min-width: calc(50% - 0.5rem);
+        flex: 1 0 calc(50% - 0.5rem);
+    }
+    
+    .tutorial-section {
+        padding: 1.2rem;
+    }
+    
+    .tutorial-section h2 {
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .cards-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .card-example {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .card-example .card {
+        min-width: 45px;
+        height: 63px;
+        font-size: 1.2rem;
+    }
+    
+    .card-explanation {
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+    
+    .card-explanation strong {
+        font-size: 1rem;
+    }
+    
+    .rules-list li {
+        padding: 0.8rem 1.2rem 0.8rem 2rem;
+    }
+    
+    .rules-list li::before {
+        left: 0.8rem;
+    }
+}
+
+/* Fine-tune for very small screens */
+@media screen and (max-width: 350px) {
+    .tutorial-popup .tutorial-content {
+        padding: 1rem;
+    }
+    
+    .tab-button {
+        padding: 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .card-example {
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+    }
+    
+    .card-example .card {
+        margin-bottom: 0.5rem;
+    }
 }
 
 /* Landscape mode adjustments */
@@ -440,5 +533,13 @@
 
     .card-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+
+    .tutorial-popup .tutorial-content {
+        max-height: 85vh;
+    }
+    
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

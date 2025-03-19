@@ -1379,11 +1379,12 @@ function showTutorial() {
     const popup = document.createElement('div');
     popup.className = 'tutorial-popup';
     popup.innerHTML = `
-        <button class="close-button">×</button>
         <div class="tutorial-content">
+            <button class="close-button" aria-label="Close tutorial">×</button>
+            
             <div class="tutorial-tabs">
                 <button class="tab-button active" data-tab="basics">Basics</button>
-                <button class="tab-button" data-tab="cards">Cards</button>
+                <button class="tab-button" data-tab="cards">Regular Cards</button>
                 <button class="tab-button" data-tab="special">Special Cards</button>
                 <button class="tab-button" data-tab="scoring">Scoring</button>
             </div>
@@ -1392,13 +1393,12 @@ function showTutorial() {
                 <div class="tutorial-section">
                     <h2>Game Basics</h2>
                     <ul class="rules-list">
-                        <li>Players take turns drawing cards to collect points</li>
+                        <li>Draw cards to collect unique numbers and special abilities</li>
                         <li>Each player can hold up to 7 regular number cards</li>
-                        <li>Drawing a duplicate number will bust you (unless you have a Second Chance)</li>
+                        <li>Drawing a duplicate number will bust you (unless you have a Second Chance card)</li>
                         <li>You can 'Stand' to bank your points at any time</li>
-                        <li>First player to reach 200 points wins!</li>
-                        <li>If all players bust, the round restarts</li>
                         <li>Special cards don't count toward your 7-card limit</li>
+                        <li>First player to reach 200 points wins!</li>
                     </ul>
                 </div>
             </div>
@@ -1408,15 +1408,19 @@ function showTutorial() {
                     <h2>Regular Cards</h2>
                     <div class="cards-grid">
                         <div class="card-example">
-                            <div class="card">0</div>
+                            <div class="card">7</div>
                             <div class="card-explanation">
-                                Zero Card: Appears once, worth 0 points
+                                <strong>Number Cards</strong><br>
+                                Each number (1-12) appears in the deck exactly as many times as its value<br>
+                                (Example: seven 7s, twelve 12s, etc.)
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card">7</div>
+                            <div class="card">0</div>
                             <div class="card-explanation">
-                                Number Cards: Each number (1-12) appears as many times as its value
+                                <strong>Zero Card</strong><br>
+                                Appears once in the deck<br>
+                                Worth 0 points
                             </div>
                         </div>
                     </div>
@@ -1431,21 +1435,28 @@ function showTutorial() {
                             <div class="card special second-chance">🛡️</div>
                             <div class="card-explanation">
                                 <strong>Second Chance</strong><br>
-                                Protects you once from busting when drawing a duplicate
+                                Protects you once from busting when drawing a duplicate number
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special select-card">🃏</div>
+                            <div class="card-explanation">
+                                <strong>Select Card</strong><br>
+                                Choose any card from the remaining deck
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special freeze">❄️</div>
                             <div class="card-explanation">
                                 <strong>Freeze</strong><br>
-                                Forces any player to skip their next turn
+                                Force any player to skip their next turn
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special draw-three">🎯</div>
                             <div class="card-explanation">
                                 <strong>Draw Three</strong><br>
-                                Forces any player to draw 3 cards in a row
+                                Force any player to draw 3 cards in succession
                             </div>
                         </div>
                         <div class="card-example">
@@ -1456,24 +1467,24 @@ function showTutorial() {
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card special adder">4+</div>
+                            <div class="card special adder">2+</div>
                             <div class="card-explanation">
                                 <strong>Add Cards</strong><br>
-                                Adds points to your score (2+, 4+, 6+, 8+, 10+)
+                                Add points to your score (2+, 6+, 10+)
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card special minus" style="color: white">6-</div>
+                            <div class="card special minus" style="color: white">2-</div>
                             <div class="card-explanation">
                                 <strong>Minus Cards</strong><br>
-                                Subtracts points from your score (2-, 6-, 10-)
+                                Subtract points from your score (2-, 6-, 10-)
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special multiplier">2×</div>
                             <div class="card-explanation">
                                 <strong>Multiply Cards</strong><br>
-                                Multiply your total round score (2× or 3×)
+                                Multiply your total round score (2×, 3×)
                             </div>
                         </div>
                     </div>
@@ -1484,12 +1495,12 @@ function showTutorial() {
                 <div class="tutorial-section">
                     <h2>Scoring System</h2>
                     <ul class="rules-list">
-                        <li>Your score is the sum of all unique regular cards</li>
-                        <li>Add Cards (+) increase your score by their value</li>
-                        <li>Minus Cards (-) decrease your score by their value</li>
-                        <li>Multiply Cards (×) double your total round score</li>
+                        <li>Your score is the sum of all your unique regular cards</li>
+                        <li>Add Cards (+) increase your score by their shown value</li>
+                        <li>Minus Cards (-) decrease your score by their shown value</li>
+                        <li>Multiply Cards (×) multiply your total round score</li>
                         <li>BONUS: Get 15 extra points for collecting all 7 regular cards!</li>
-                        <li>Example: With cards [3,5,7] + 4+ - 2- × 2 = (15 + 4 - 2) × 2 = 34 points</li>
+                        <li><strong>Example:</strong> With cards [3,5,7] + 2+ - 2- × 2 = (15 + 2 - 2) × 2 = 30 points</li>
                     </ul>
                 </div>
             </div>
