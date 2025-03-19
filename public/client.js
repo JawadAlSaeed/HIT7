@@ -105,14 +105,17 @@ socket.on('select-freeze-target', (gameId, targets) => {
   popup.className = 'freeze-popup active';
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>❄️ Select player to freeze:</h3>
+      <h3><span class="emoji">❄️</span> Select player to freeze:</h3>
       <div class="freeze-targets">
         ${targets.map(p => `
-          <button class="freeze-target" data-id="${p.id}">
+          <button class="freeze-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
             ${p.name} ${p.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -123,7 +126,40 @@ socket.on('select-freeze-target', (gameId, targets) => {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
   document.body.appendChild(popup);
+  observer.observe(document.body, { childList: true });
 });
 
 socket.on('select-draw-three-target', (gameId, targets) => {
@@ -212,6 +248,11 @@ socket.on('game-reset-with-players', (game) => {
     setTimeout(() => {
         notification.remove();
     }, 2000);
+});
+
+// Add select-card-from-pile event listener with other socket listeners
+socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
+  showSelectCardPopup(gameId, deck, fullDeck);
 });
 
 // Game actions
@@ -313,6 +354,11 @@ function handleGameUpdate(game) {
         resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
     }
     
+    // Update deck count immediately
+    document.getElementById('deckCount').textContent = game.deck.length;
+    // Update the remaining pile display immediately
+    updateRemainingPile(game.deck);
+    
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
         if (waitingScreen) {
@@ -369,45 +415,47 @@ function updateRemainingPile(deck) {
     const regularCards = [];
     const specialCards = [];
 
-    // Helper function to get sort order for special cards
+    // Helper function to get sort order for special cards - updated order
     const getSpecialCardOrder = card => {
         const specialOrder = {
-            'SC': 1,
-            'Freeze': 2,
-            'D3': 3,
-            'RC': 4,    // Add RC with its own order
-            '2x': 5,    // Shift other special cards down
-            '2+': 6,
-            '4+': 7,
-            '6+': 8,
-            '8+': 9,
-            '10+': 10,
-            '2-': 11,
-            '6-': 12,
-            '10-': 13
+            'Select': 1,    // 1. Select Card
+            'SC': 2,        // 2. Second Chance
+            'Freeze': 3,    // 3. Freeze
+            'D3': 4,        // 4. Draw Three
+            'RC': 5,        // 5. Remove Card
+            '2x': 6,        // 6. 2x Multiplier
+            '3x': 7,        // 7. 3x Multiplier (new)
+            '2+': 8,        // 8. 2+
+            '6+': 9,        // 9. 6+
+            '10+': 10,      // 10. 10+
+            '2-': 11,       // 11. 2-
+            '6-': 12,       // 12. 6-
+            '10-': 13,      // 13. 10-
         };
-        return specialOrder[card] || 14;
+        return specialOrder[card] || 99;  // Default high number for unknown cards
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-            cardStr === 'RC' ||  // Add RC to the check
+            cardStr === 'RC' || cardStr === 'Select' ||  // Add Select to the check
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
-                cardStr === 'RC' ? 'remove-card' :  // Add RC type
+                cardStr === 'RC' ? 'remove-card' :
+                cardStr === 'Select' ? 'select-card' :  // Add select-card type
                 cardStr.includes('+') ? 'adder' :
-                cardStr.includes('-') ? 'minus' :  // Add minus type
+                cardStr.includes('-') ? 'minus' :
                 'multiplier';
             displayValue = 
                 cardStr === 'SC' ? '🛡️' :
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
-                cardStr === 'RC' ? '🗑️' :  // Add RC display value
+                cardStr === 'RC' ? '🗑️' :
+                cardStr === 'Select' ? '🃏' :  // Add joker emoji
                 cardStr;
             specialCards.push({ cardStr, count, cardType, displayValue });
         } else {
@@ -419,11 +467,12 @@ function updateRemainingPile(deck) {
 
     // Sort regular cards by number
     regularCards.sort((a, b) => Number(a.cardStr) - Number(b.cardStr));
+    
     // Sort special cards by predefined order
     specialCards.sort((a, b) => {
         const orderA = getSpecialCardOrder(a.cardStr);
         const orderB = getSpecialCardOrder(b.cardStr);
-        return orderA - orderB;  // Fix: was comparing a.cardStr with itself
+        return orderA - orderB;
     });
 
     document.getElementById('discard').innerHTML = `
@@ -436,18 +485,32 @@ function updateRemainingPile(deck) {
     `;
 }
 
+// Update the renderCard function to use the new gradient
 function renderCard({ cardType, displayValue, count }) {
-    const cardStyle = cardType !== 'number' ? `
-        background: ${
-            cardType === 'adder' ? '#27ae60' : 
-            cardType === 'minus' ? '#2c3e50' :  // Change minus card color to dark
-            cardType === 'multiplier' ? '#f1c40f' :
-            cardType === 'second-chance' ? '#e74c3c' :
-            cardType === 'freeze' ? '#3498db' :
-            cardType === 'draw-three' ? '#9b59b6' : 'inherit'
-        } !important;
-        color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
-    ` : '';
+    let cardStyle = '';
+    
+    if (cardType !== 'number') {
+        if (cardType === 'select-card') {
+            // Special gradient for select card - more subtle with fewer colors
+            cardStyle = `
+                background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
+                border-color: #e74c3c !important;
+            `;
+        } else {
+            cardStyle = `
+                background: ${
+                    cardType === 'adder' ? '#27ae60' : 
+                    cardType === 'minus' ? '#2c3e50' :
+                    cardType === 'multiplier' ? '#f1c40f' :
+                    cardType === 'second-chance' ? '#e74c3c' :
+                    cardType === 'freeze' ? '#3498db' :
+                    cardType === 'draw-three' ? '#9b59b6' :
+                    cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
+                } !important;
+                color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
+            `;
+        }
+    }
 
     return `
         <div class="remaining-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
@@ -594,23 +657,27 @@ function scoreBox(label, value) {
     `;
 }
 
+// Update special card class function to include "Select" card
 function getSpecialCardClass(card) {
     if (card === 'SC') return 'second-chance';
     if (card === 'Freeze') return 'freeze';
     if (card === 'D3') return 'draw-three';
-    if (card.endsWith('x')) return 'multiplier';
-    if (card.endsWith('+')) return 'adder';
-    if (card.endsWith('-')) return 'minus';
     if (card === 'RC') return 'remove-card';
+    if (card === 'Select') return 'select-card';
+    if (card.endsWith('+')) return 'adder';
+    if (card.endsWith('x')) return 'multiplier';
+    if (card.endsWith('-')) return 'minus';
     return '';
 }
 
+// Update special card display function to include "Select" card
 function getSpecialCardDisplay(card) {
     // Special cards with emojis
     if (card === 'SC') return '🛡️';
     if (card === 'Freeze') return '❄️';
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
+    if (card === 'Select') return '🃏';
     
     // For adder and multiplier cards, extract the number and symbol
     if (card.endsWith('+') || card.endsWith('x') || card.endsWith('-')) {
@@ -903,7 +970,7 @@ function handleRoundSummary({ players, allBusted }) {
             <div class="player-summary-row">
                 <div class="name">
                     ${player.name}
-                    ${hasBonus ? '🌟' : ''}
+                    ${hasBonus ? '🌟+15' : ''}
                     ${player.bustedCard ? `(Busted on ${player.bustedCard})` : ''}
                 </div>
                 <div class="status ${status}">${getStatusText(status)}</div>
@@ -960,7 +1027,7 @@ function showFreezePopup(gameId, targets) {
   activeFreezePopup.className = 'freeze-popup';
   activeFreezePopup.innerHTML = `
     <div class="popup-content">
-      <h3>❄️ Select a player to freeze:</h3>
+      <h3><span class="emoji">❄️</span> Select a player to freeze:</h3>
       <div class="freeze-targets">
         ${targets.map(t => `
           <button class="freeze-target ${t.id === socket.id ? 'self-target' : ''}" data-id="${t.id}">
@@ -968,6 +1035,9 @@ function showFreezePopup(gameId, targets) {
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -979,7 +1049,41 @@ function showFreezePopup(gameId, targets) {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = activeFreezePopup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    activeFreezePopup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    activeFreezePopup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (activeFreezePopup && activeFreezePopup.parentElement) {
+      activeFreezePopup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
   document.body.appendChild(activeFreezePopup);
+
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(activeFreezePopup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 
   // Add auto-removal listeners
   const cleanup = () => {
@@ -1002,7 +1106,7 @@ function showRemoveCardPopup(gameId, players) {
   
   const content = `
     <div class="popup-content">
-      <h3>🗑️ Select a card to remove:</h3>
+      <h3><span class="emoji">🗑️</span> Select a card to remove:</h3>
       <div class="players-list">
         ${players.map(player => `
           <div class="player-section">
@@ -1018,7 +1122,7 @@ function showRemoveCardPopup(gameId, players) {
               `).join('')}
               ${player.specialCards.map((card, index) => `
                 <button class="card-button special ${getSpecialCardClass(card)}"
-                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') ? '#fff' : ''}"
+                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
                   data-player="${player.id}" 
                   data-index="${index}"
                   data-special="true">
@@ -1029,6 +1133,9 @@ function showRemoveCardPopup(gameId, players) {
           </div>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
   
@@ -1046,7 +1153,41 @@ function showRemoveCardPopup(gameId, players) {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
   document.body.appendChild(popup);
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 }
 
 // Add helper function to get card background color
@@ -1055,6 +1196,7 @@ function getCardColor(card) {
     if (card === 'Freeze') return '#3498db';
     if (card === 'D3') return '#9b59b6';
     if (card === 'RC') return '#7f8c8d'; // Changed to a lighter gray
+    if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
     if (card.endsWith('+')) return '#27ae60';
     if (card.endsWith('x')) return '#f1c40f';
     if (card.endsWith('-')) return '#2c3e50'; // New dark color for minus cards
@@ -1065,6 +1207,171 @@ socket.on('select-remove-card-target', (gameId, players) => {
   showRemoveCardPopup(gameId, players);
 });
 
+// Add this function to show the Select Card popup
+function showSelectCardPopup(gameId, deck, fullDeck = null) {
+  // If deck is empty but we have a fullDeck parameter (for last card scenario)
+  // use the full deck instead
+  const cardsToShow = (deck.length === 0 && fullDeck) ? fullDeck : deck;
+  
+  // Group cards by type
+  const regularCards = [];
+  const specialCards = [];
+  
+  // Count occurrence of each card
+  const cardCounts = cardsToShow.reduce((acc, card) => {
+    const cardStr = card.toString();
+    acc[cardStr] = (acc[cardStr] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Sort card groups
+  Object.entries(cardCounts).forEach(([cardStr, count]) => {
+    if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
+        cardStr === 'RC' || cardStr === 'Select' ||
+        cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
+      specialCards.push({ card: cardStr, count });
+    } else {
+      regularCards.push({ card: parseInt(cardStr), count });
+    }
+  });
+  
+  // Sort regular cards numerically
+  regularCards.sort((a, b) => a.card - b.card);
+  
+  // Create popup
+  const popup = document.createElement('div');
+  popup.className = 'select-card-popup';
+  popup.id = 'selectCardPopup';
+  
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3><span class="emoji">🃏</span> Select Any Card From The Deck</h3>
+      
+      <div class="card-section">
+        <div class="section-title">Regular Cards</div>
+        <div class="cards-list">
+          ${regularCards.map(({ card, count }) => `
+            <button class="card-button regular" data-card="${card}">
+              ${card}
+              ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="card-section">
+        <div class="section-title">Special Cards</div>
+        <div class="cards-list">
+          ${specialCards.map(({ card, count }) => {
+            const cardClass = getSpecialCardClass(card);
+            const cardDisplay = getSpecialCardDisplay(card);
+            const cardStyle = getCardColorStyle(card);
+            
+            return `
+              <button class="card-button special ${cardClass}" 
+                     data-card="${card}" 
+                     style="${cardStyle}">
+                ${cardDisplay}
+                ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
+    </div>
+  `;
+  
+  // Add event listeners to card options
+  popup.querySelectorAll('.card-button').forEach(button => {
+    button.addEventListener('click', () => {
+      const selectedCard = button.dataset.card;
+      // For regular cards, convert to number
+      const finalCard = isNaN(selectedCard) ? selectedCard : parseInt(selectedCard);
+      
+      // Close the popup first
+      popup.remove();
+      
+      // Handle selected card
+      handleSelectedCard(gameId, finalCard);
+    });
+  });
+  
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault(); // Prevent default behavior
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Prevent default behavior
+    popup.classList.add('popup-hiding');
+  });
+  
+  // Handle mouseup and touchend on the button or anywhere on the document
+  const handleUp = () => {
+    if (popup.parentElement) { // Check if popup is still in the DOM
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  // Add event listeners for mouseup and touchend
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+  
+  // Add a cleanup function to remove event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  document.body.appendChild(popup);
+  
+  // Start observing the popup for removal
+  observer.observe(document.body, { childList: true });
+}
+
+// New function to handle selected cards
+function handleSelectedCard(gameId, selectedCard) {
+  // First send the selection to the server
+  socket.emit('select-card-choice', gameId, selectedCard);
+  
+  // Then immediately show appropriate popup for special cards
+  if (selectedCard === 'D3') {
+    // No need to wait for server response - we can show the D3 popup right away
+    socket.emit('request-draw-three-targets', gameId);
+  } else if (selectedCard === 'Freeze') {
+    // Show freeze popup immediately
+    socket.emit('request-freeze-targets', gameId);
+  } else if (selectedCard === 'RC') {
+    // Show remove card popup immediately
+    socket.emit('request-remove-card-targets', gameId);
+  }
+  // For other cards, no immediate action needed
+}
+
+// Add helper function for card color styling - update gradient
+function getCardColorStyle(card) {
+  if (card === 'SC') return 'background: #e74c3c !important;';
+  if (card === 'Freeze') return 'background: #3498db !important;';
+  if (card === 'D3') return 'background: #9b59b6 !important;';
+  if (card === 'RC') return 'background: #7f8c8d !important;';
+  if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
+  if (card.endsWith('+')) return 'background: #27ae60 !important;';
+  if (card.endsWith('x')) return 'background: #f1c40f !important; color: var(--text-dark) !important;';
+  if (card.endsWith('-')) return 'background: #2c3e50 !important; color: white !important;';
+  return '';
+}
+
 function showTutorial() {
     const existingPopup = document.querySelector('.tutorial-popup');
     if (existingPopup) existingPopup.remove();
@@ -1072,11 +1379,12 @@ function showTutorial() {
     const popup = document.createElement('div');
     popup.className = 'tutorial-popup';
     popup.innerHTML = `
-        <button class="close-button">×</button>
         <div class="tutorial-content">
+            <button class="close-button" aria-label="Close tutorial">×</button>
+            
             <div class="tutorial-tabs">
                 <button class="tab-button active" data-tab="basics">Basics</button>
-                <button class="tab-button" data-tab="cards">Cards</button>
+                <button class="tab-button" data-tab="cards">Regular Cards</button>
                 <button class="tab-button" data-tab="special">Special Cards</button>
                 <button class="tab-button" data-tab="scoring">Scoring</button>
             </div>
@@ -1085,13 +1393,12 @@ function showTutorial() {
                 <div class="tutorial-section">
                     <h2>Game Basics</h2>
                     <ul class="rules-list">
-                        <li>Players take turns drawing cards to collect points</li>
+                        <li>Draw cards to collect unique numbers and special abilities</li>
                         <li>Each player can hold up to 7 regular number cards</li>
-                        <li>Drawing a duplicate number will bust you (unless you have a Second Chance)</li>
+                        <li>Drawing a duplicate number will bust you (unless you have a Second Chance card)</li>
                         <li>You can 'Stand' to bank your points at any time</li>
-                        <li>First player to reach 200 points wins!</li>
-                        <li>If all players bust, the round restarts</li>
                         <li>Special cards don't count toward your 7-card limit</li>
+                        <li>First player to reach 200 points wins!</li>
                     </ul>
                 </div>
             </div>
@@ -1101,15 +1408,19 @@ function showTutorial() {
                     <h2>Regular Cards</h2>
                     <div class="cards-grid">
                         <div class="card-example">
-                            <div class="card">0</div>
+                            <div class="card">7</div>
                             <div class="card-explanation">
-                                Zero Card: Appears once, worth 0 points
+                                <strong>Number Cards</strong><br>
+                                Each number (1-12) appears in the deck exactly as many times as its value<br>
+                                (Example: seven 7s, twelve 12s, etc.)
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card">7</div>
+                            <div class="card">0</div>
                             <div class="card-explanation">
-                                Number Cards: Each number (1-12) appears as many times as its value
+                                <strong>Zero Card</strong><br>
+                                Appears once in the deck<br>
+                                Worth 0 points
                             </div>
                         </div>
                     </div>
@@ -1124,21 +1435,28 @@ function showTutorial() {
                             <div class="card special second-chance">🛡️</div>
                             <div class="card-explanation">
                                 <strong>Second Chance</strong><br>
-                                Protects you once from busting when drawing a duplicate
+                                Protects you once from busting when drawing a duplicate number
+                            </div>
+                        </div>
+                        <div class="card-example">
+                            <div class="card special select-card">🃏</div>
+                            <div class="card-explanation">
+                                <strong>Select Card</strong><br>
+                                Choose any card from the remaining deck
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special freeze">❄️</div>
                             <div class="card-explanation">
                                 <strong>Freeze</strong><br>
-                                Forces any player to skip their next turn
+                                Force any player to skip their next turn
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special draw-three">🎯</div>
                             <div class="card-explanation">
                                 <strong>Draw Three</strong><br>
-                                Forces any player to draw 3 cards in a row
+                                Force any player to draw 3 cards in succession
                             </div>
                         </div>
                         <div class="card-example">
@@ -1149,24 +1467,24 @@ function showTutorial() {
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card special adder">4+</div>
+                            <div class="card special adder">2+</div>
                             <div class="card-explanation">
                                 <strong>Add Cards</strong><br>
-                                Adds points to your score (2+, 4+, 6+, 8+, 10+)
+                                Add points to your score (2+, 6+, 10+)
                             </div>
                         </div>
                         <div class="card-example">
-                            <div class="card special minus" style="color: white">6-</div>
+                            <div class="card special minus" style="color: white">2-</div>
                             <div class="card-explanation">
                                 <strong>Minus Cards</strong><br>
-                                Subtracts points from your score (2-, 6-, 10-)
+                                Subtract points from your score (2-, 6-, 10-)
                             </div>
                         </div>
                         <div class="card-example">
                             <div class="card special multiplier">2×</div>
                             <div class="card-explanation">
-                                <strong>Multiply Card</strong><br>
-                                Doubles your total round score
+                                <strong>Multiply Cards</strong><br>
+                                Multiply your total round score (2×, 3×)
                             </div>
                         </div>
                     </div>
@@ -1177,12 +1495,12 @@ function showTutorial() {
                 <div class="tutorial-section">
                     <h2>Scoring System</h2>
                     <ul class="rules-list">
-                        <li>Your score is the sum of all unique regular cards</li>
-                        <li>Add Cards (+) increase your score by their value</li>
-                        <li>Minus Cards (-) decrease your score by their value</li>
-                        <li>Multiply Cards (×) double your total round score</li>
+                        <li>Your score is the sum of all your unique regular cards</li>
+                        <li>Add Cards (+) increase your score by their shown value</li>
+                        <li>Minus Cards (-) decrease your score by their shown value</li>
+                        <li>Multiply Cards (×) multiply your total round score</li>
                         <li>BONUS: Get 15 extra points for collecting all 7 regular cards!</li>
-                        <li>Example: With cards [3,5,7] + 4+ - 2- × 2 = (15 + 4 - 2) × 2 = 34 points</li>
+                        <li><strong>Example:</strong> With cards [3,5,7] + 2+ - 2- × 2 = (15 + 2 - 2) × 2 = 30 points</li>
                     </ul>
                 </div>
             </div>
@@ -1273,7 +1591,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   popup.className = 'draw-three-popup active';
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>🎯 Select player to draw three cards:</h3>
+      <h3><span class="emoji">🎯</span> Select player to draw three cards:</h3>
       <div class="draw-three-targets">
         ${targets.map(p => `
           <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
@@ -1281,6 +1599,9 @@ socket.on('select-draw-three-target', (gameId, targets) => {
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -1291,6 +1612,40 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
   document.body.appendChild(popup);
   activeDrawThreePopup = popup;
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 });

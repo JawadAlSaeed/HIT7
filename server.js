@@ -54,21 +54,23 @@ const createDeck = () => {
     for (let i = 0; i < number; i++) deck.push(number);
   }
 
-  // Special cards = 21 cards (total 100)
+  // Special cards = 22 cards (total 101)
+  // Updated cards list: replaced 4- and 8- with one 3x card
   const specialCards = [
-    '2+', '4+', '6+', '8+', '10+',  // 5 adder cards
-    '2-', '6-', '10-',              // 3 NEW minus cards
-    '2x',                           // 1 multiplier card
-    'SC', 'SC', 'SC',              // 3 second chance cards
-    'Freeze', 'Freeze', 'Freeze',   // 3 freeze cards
-    'D3', 'D3', 'D3',              // 3 draw three cards
-    'RC', 'RC', 'RC'               // 3 remove card cards
+    '2+', '6+', '10+',                  // 3 adder cards
+    '2-', '6-', '10-',                  // 3 minus cards
+    '2x', '3x',                         // 2 multiplier cards (added 3x)
+    'SC', 'SC', 'SC',                   // 3 second chance cards
+    'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
+    'D3', 'D3', 'D3',                   // 3 draw three cards
+    'RC', 'RC', 'RC',                   // 3 remove card cards
+    'Select'                            // 1 NEW select card
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 100) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 100 cards.`);
+  if (deck.length !== 101) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 101 cards.`);
   }
   
   return shuffle(deck);
@@ -144,6 +146,7 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('game-started', game);
     });
 
+    // Update the flip-card event handler to handle Select as the last card
     socket.on('flip-card', gameId => {
       const game = games.get(gameId);
       if (!game || game.status !== 'playing') return;
@@ -151,23 +154,44 @@ const handleSocketConnection = (io) => {
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
   
-      // Handle deck replenishment - FIXED
+      // Handle deck replenishment - Special handling for the last card being Select
+      if (game.deck.length === 1) {
+        const lastCard = game.deck[0];
+        
+        // If the last card is Select, we need special handling
+        if (lastCard === 'Select') {
+          // Create a new full deck but don't assign it yet
+          const newDeck = createDeck();
+          
+          // Pop the Select card from the current deck
+          game.deck.pop();
+          
+          // Send a special event with both empty deck and the full deck
+          socket.emit('select-card-from-pile', gameId, [], newDeck);
+          
+          // Update the game's deck with the new deck
+          game.discardPile.push('Select');
+          game.deck = newDeck;
+          
+          // No need for further processing - we'll handle the card selection in the select-card-choice event
+          return;
+        }
+      }
+      
+      // Regular empty deck handling
       if (game.deck.length === 0) {
         console.log('Reshuffling deck...');
-        
-        // Simply create a new deck instead of combining with discard
         game.deck = createDeck();
-        
-        // Clear the discard pile
-        
         game.discardPile = [];
-        
         console.log(`Deck reshuffled. New size: ${game.deck.length}`);
-        io.to(gameId).emit('game-update', game);
       }
   
       const card = game.deck.pop();
       
+      // Send game update to all clients to refresh deck count immediately
+      io.to(gameId).emit('game-update', game);
+      
+      // Continue with regular card handling
       // Handle number cards
       if (typeof card === 'number') {
           handleNumberCard(game, player, card, io);
@@ -208,6 +232,21 @@ const handleSocketConnection = (io) => {
           }
         } else {
           handleSpecialCard(game, player, card, socket, io);
+        }
+      }
+      // Handle Select Card
+      else if (card === 'Select') {
+        if (player.drawThreeRemaining > 0) {
+          // Store the special card as pending and continue with D3 sequence
+          player.pendingSpecialCard = card;
+          player.drawThreeRemaining--;
+          if (player.drawThreeRemaining === 0) {
+            handlePendingSpecialCard(game, player, socket, io);
+          }
+        } else {
+          // Show select card popup with the current deck state
+          socket.emit('select-card-from-pile', gameId, game.deck);
+          game.discardPile.push('Select');
         }
       }
       // Handle other special cards
@@ -397,6 +436,114 @@ const handleSocketConnection = (io) => {
       }
     });
 
+    // Update the select-card-from-pile event handling for better deck management
+    socket.on('select-card-choice', (gameId, selectedCard) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+      
+      const player = game.players[game.currentPlayer];
+      if (player.id !== socket.id || player.status !== 'active') return;
+    
+      // Find and remove the selected card from the deck (with safety checks)
+      let cardFound = false;
+      const cardIndex = game.deck.findIndex(card => card === selectedCard);
+      
+      if (cardIndex !== -1) {
+        // Card found in the regular deck
+        game.deck.splice(cardIndex, 1);
+        cardFound = true;
+      } 
+      
+      // If card not found, it might mean we're in the special empty-deck scenario
+      if (!cardFound) {
+        // No need to remove the card, it will be in the new deck
+        console.log(`Card ${selectedCard} selected from regenerated deck`);
+      }
+      
+      // Process the selected card
+      if (typeof selectedCard === 'number') {
+        handleNumberCard(game, player, selectedCard, io);
+        game.discardPile.push(selectedCard);
+        
+        if (player.status === 'busted') {
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+          player.status = 'stood';
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else {
+          advanceTurn(game);
+        }
+      }
+      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
+        // For special cards that need targeting, add to hand but don't advance turn yet
+        player.specialCards.push(selectedCard);
+        // The client will request targets immediately
+        // Turn will advance when the special card effect is applied
+      }
+      else {
+        // For other special cards, add to player's hand
+        player.specialCards.push(selectedCard);
+        advanceTurn(game);
+      }
+      
+      updatePlayerScore(player);
+      checkGameStatus(game);
+      
+      // Always emit game update to refresh the deck display
+      io.to(gameId).emit('game-update', game);
+    });
+
+    // Add new socket event handler for select-card 
+    socket.on('select-card-choice', (gameId, selectedCard) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+      
+      const player = game.players[game.currentPlayer];
+      if (player.id !== socket.id || player.status !== 'active') return;
+
+      // Find and remove the selected card from the deck
+      const cardIndex = game.deck.findIndex(card => card === selectedCard);
+      if (cardIndex === -1) return; // Card not found
+      
+      game.deck.splice(cardIndex, 1);
+      
+      // Process the selected card similarly to a drawn card
+      if (typeof selectedCard === 'number') {
+        handleNumberCard(game, player, selectedCard, io);
+        game.discardPile.push(selectedCard);
+        
+        if (player.status === 'busted') {
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+          player.status = 'stood';
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else {
+          advanceTurn(game);
+        }
+      }
+      else {
+        // For special cards, add to player's hand
+        player.specialCards.push(selectedCard);
+        advanceTurn(game);
+      }
+      
+      updatePlayerScore(player);
+      checkGameStatus(game);
+      io.to(gameId).emit('game-update', game);
+    });
+
     // Game status checking
     const checkGameStatus = game => {
       // Check if round should end (all players are either busted, stood, or frozen)
@@ -481,6 +628,101 @@ const handleSocketConnection = (io) => {
       io.to(game.id).emit('game-update', game);
     };
 
+    // Inside handleSocketConnection function, add these new event handlers
+    socket.on('request-draw-three-targets', (gameId) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+    
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || player.status !== 'active') return;
+    
+      // Find valid targets (active players with room for cards)
+      const targets = game.players.filter(p => 
+        p.status === 'active' && // Only active players
+        p.regularCards.length < MAX_REGULAR_CARDS // Must have room for cards
+      );
+      
+      if (targets.length > 0) {
+        socket.emit('select-draw-three-target', game.id, targets);
+      }
+    });
+    
+    socket.on('request-freeze-targets', (gameId) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+    
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || player.status !== 'active') return;
+    
+      // Find valid targets (active players)
+      const targets = game.players.filter(p => p.status === 'active');
+      
+      if (targets.length > 0) {
+        socket.emit('select-freeze-target', game.id, targets);
+      }
+    });
+    
+    socket.on('request-remove-card-targets', (gameId) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+    
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || player.status !== 'active') return;
+    
+      socket.emit('select-remove-card-target', game.id, game.players);
+    });
+    
+    // Update select-card-choice event handler to make it work with special cards immediately
+    socket.on('select-card-choice', (gameId, selectedCard) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+      
+      const player = game.players[game.currentPlayer];
+      if (player.id !== socket.id || player.status !== 'active') return;
+    
+      // Find and remove the selected card from the deck
+      const cardIndex = game.deck.findIndex(card => card === selectedCard);
+      if (cardIndex === -1) return; // Card not found
+      
+      game.deck.splice(cardIndex, 1);
+      
+      // Process the selected card
+      if (typeof selectedCard === 'number') {
+        handleNumberCard(game, player, selectedCard, io);
+        game.discardPile.push(selectedCard);
+        
+        if (player.status === 'busted') {
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
+          player.status = 'stood';
+          player.drawThreeRemaining = 0;
+          player.pendingSpecialCard = null;
+          advanceTurn(game);
+        }
+        else {
+          advanceTurn(game);
+        }
+      }
+      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
+        // For special cards that need targeting, add to hand but don't advance turn yet
+        player.specialCards.push(selectedCard);
+        // The client will request targets immediately
+        // Turn will advance when the special card effect is applied
+      }
+      else {
+        // For other special cards, add to player's hand
+        player.specialCards.push(selectedCard);
+        advanceTurn(game);
+      }
+      
+      updatePlayerScore(player);
+      checkGameStatus(game);
+      io.to(gameId).emit('game-update', game);
+    });
+
     // Inside handleSocketConnection function, add these socket events
     socket.on('play-sound', (gameId, soundId) => {
       // Broadcast sound to all players in the game except sender
@@ -563,11 +805,13 @@ const updatePlayerScore = player => {
   const minus = player.specialCards
     .filter(c => c.endsWith('-'))
     .reduce((a, c) => a + parseInt(c), 0);
-  const multiply = player.specialCards
-    .filter(c => c.endsWith('x'))
-    .reduce((a, c) => a * parseInt(c), 1);
+  
+  // Updated to handle both 2x and 3x multipliers
+  let multiplier = 1;
+  if (player.specialCards.includes('2x')) multiplier *= 2;
+  if (player.specialCards.includes('3x')) multiplier *= 3;
 
-  player.roundScore = (base + add - minus) * (multiply || 1);
+  player.roundScore = (base + add - minus) * multiplier;
 };
 
 // Add these new helper functions
