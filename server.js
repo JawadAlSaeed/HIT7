@@ -56,11 +56,11 @@ const createDeck = () => {
     }
   }
 
-  // Special cards = 21 cards (total 100 cards)
+  // Special cards = 20 cards (total 99 cards)
   const specialCards = [
     '2+', '6+', '10+',                  // 3 adder cards
     '2-', '6-', '10-',                  // 3 minus cards
-    '2x', '3x',                         // 2 multiplier cards
+    '2x',                               // 1 multiplier card (removed 3x)
     'SC', 'SC', 'SC',                   // 3 second chance cards
     'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
     'D3', 'D3', 'D3',                   // 3 draw three cards
@@ -70,8 +70,8 @@ const createDeck = () => {
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 100) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 100 cards.`);
+  if (deck.length !== 99) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 99 cards.`);
   }
   
   return shuffle(deck);
@@ -419,22 +419,36 @@ const handleSocketConnection = (io) => {
       const player = game.players.find(p => p.id === socket.id);
       const target = game.players.find(p => p.id === targetPlayerId);
       
-      if (player && target && player.specialCards.includes('RC')) {
-        // Remove RC from player's special cards
-        player.specialCards = player.specialCards.filter(c => c !== 'RC');
-        game.discardPile.push('RC');
-  
-        // Remove the selected card from target player
-        if (isSpecial) {
-          target.specialCards.splice(cardIndex, 1);
-        } else {
-          target.regularCards.splice(cardIndex, 1);
-        }
-  
-        advanceTurn(game);
-        checkGameStatus(game);
-        io.to(gameId).emit('game-update', game);
+      // Check if both player and target exist and player has RC card
+      if (!player || !target || !player.specialCards.includes('RC')) return;
+      
+      // NEW: Check if target is in active status - only allow removing cards from active players
+      if (target.status !== 'active') {
+        socket.emit('error', 'You can only remove cards from active players.');
+        return;
       }
+    
+      // Remove RC from player's special cards
+      player.specialCards = player.specialCards.filter(c => c !== 'RC');
+      game.discardPile.push('RC');
+    
+      // Remove the selected card from target player
+      if (isSpecial) {
+        const removedCard = target.specialCards[cardIndex];
+        target.specialCards.splice(cardIndex, 1);
+        game.discardPile.push(removedCard); // Add removed card to discard pile
+      } else {
+        const removedCard = target.regularCards[cardIndex];
+        target.regularCards.splice(cardIndex, 1);
+        game.discardPile.push(removedCard); // Add removed card to discard pile
+      }
+    
+      // NEW: Recalculate target's score after card removal
+      updatePlayerScore(target);
+      
+      advanceTurn(game);
+      checkGameStatus(game);
+      io.to(gameId).emit('game-update', game);
     });
 
     // Update the select-card-from-pile event handling for better deck management
@@ -670,7 +684,14 @@ const handleSocketConnection = (io) => {
       const player = game.players.find(p => p.id === socket.id);
       if (!player || player.status !== 'active') return;
     
-      socket.emit('select-remove-card-target', game.id, game.players);
+      // NEW: Only send active players as potential targets
+      const activePlayers = game.players.filter(p => p.status === 'active');
+      
+      // If there are no active players besides the current player, send all players
+      // This prevents empty target list if player is the only active one
+      const targets = activePlayers.length > 1 ? activePlayers : game.players;
+      
+      socket.emit('select-remove-card-target', game.id, targets);
     });
     
     // Update select-card-choice event handler to make it work with special cards immediately
@@ -807,10 +828,10 @@ const updatePlayerScore = player => {
     .filter(c => c.endsWith('-'))
     .reduce((a, c) => a + parseInt(c), 0);
   
-  // Updated to handle both 2x and 3x multipliers
+  // Updated to handle only 2x multiplier
   let multiplier = 1;
-  if (player.specialCards.includes('2x')) multiplier *= 2;
-  if (player.specialCards.includes('3x')) multiplier *= 3;
+  if (player.specialCards.includes('2x'))
+    multiplier *= 2;
 
   player.roundScore = (base + add - minus) * multiplier;
 };

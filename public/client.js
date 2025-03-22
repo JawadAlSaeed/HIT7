@@ -1108,30 +1108,42 @@ function showRemoveCardPopup(gameId, players) {
     <div class="popup-content">
       <h3><span class="emoji">🗑️</span> Select a card to remove:</h3>
       <div class="players-list">
-        ${players.map(player => `
-          <div class="player-section">
-            <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}</h4>
-            <div class="cards-list">
-              ${player.regularCards.map((card, index) => `
-                <button class="card-button regular" 
-                  data-player="${player.id}" 
-                  data-index="${index}"
-                  data-special="false">
-                  ${card}
-                </button>
-              `).join('')}
-              ${player.specialCards.map((card, index) => `
-                <button class="card-button special ${getSpecialCardClass(card)}"
-                  style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
-                  data-player="${player.id}" 
-                  data-index="${index}"
-                  data-special="true">
-                  ${getSpecialCardDisplay(card)}
-                </button>
-              `).join('')}
+        ${players.map(player => {
+          const isDisabled = player.status !== 'active';
+          return `
+            <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
+              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''} 
+                  ${isDisabled ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
+              </h4>
+              <div class="cards-list">
+                ${player.regularCards.map((card, index) => `
+                  <button class="card-button regular" 
+                    data-player="${player.id}" 
+                    data-index="${index}"
+                    data-special="false"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${card}
+                  </button>
+                `).join('')}
+                ${player.specialCards.map((card, index) => `
+                  <button class="card-button special ${getSpecialCardClass(card)}"
+                    style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                    data-player="${player.id}" 
+                    data-index="${index}"
+                    data-special="true"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${getSpecialCardDisplay(card)}
+                  </button>
+                `).join('')}
+              </div>
+              ${isDisabled ? `
+                <div class="status-overlay">
+                  <span class="status-message">Player is ${player.status.toUpperCase()}</span>
+                </div>
+              ` : ''}
             </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
       <button class="view-game-button" id="viewGameButton">
         <span class="icon">👁️</span> Hold to view game
@@ -1141,8 +1153,8 @@ function showRemoveCardPopup(gameId, players) {
   
   popup.innerHTML = content;
 
-  // Add event listeners
-  popup.querySelectorAll('.card-button').forEach(btn => {
+  // Add event listeners - only for enabled buttons
+  popup.querySelectorAll('.card-button:not([disabled])').forEach(btn => {
     btn.addEventListener('click', () => {
       const targetId = btn.dataset.player;
       const cardIndex = parseInt(btn.dataset.index);
@@ -1503,15 +1515,8 @@ function showTutorial() {
                         <div class="card-example">
                             <div class="card special multiplier">2×</div>
                             <div class="card-explanation">
-                                <strong>Multiply Cards</strong><br>
+                                <strong>Multiply Card</strong><br>
                                 2× doubles your total round score
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special multiplier">3×</div>
-                            <div class="card-explanation">
-                                <strong>Triple Multiplier</strong><br>
-                                3× triples your total round score
                             </div>
                         </div>
                     </div>
@@ -1527,7 +1532,7 @@ function showTutorial() {
                             <span class="formula-step">Base Score: Sum of all unique regular cards</span>
                             <span class="formula-step">+ Add Card values</span>
                             <span class="formula-step">- Minus Card values</span>
-                            <span class="formula-step">× Multiplier effects (stacked)</span>
+                            <span class="formula-step">× Multiplier effect (2×)</span>
                             <span class="formula-step">+ Bonus (15 points for filling all 7 slots)</span>
                         </div>
                     </div>
@@ -1535,15 +1540,15 @@ function showTutorial() {
                     <h3>Example</h3>
                     <div class="score-example">
                         <p class="score-scenario">
-                            Player has: [3,5,7] + 2+ and 6+ + 2- + 2× and 3×
+                            Player has: [3,5,7] + 2+ and 6+ + 2- + 2×
                         </p>
                         <ul class="score-calculation">
                             <li>Base score: 3 + 5 + 7 = 15</li>
                             <li>Add cards: 2 + 6 = 8</li>
                             <li>Minus cards: -2</li>
                             <li>Subtotal: 15 + 8 - 2 = 21</li>
-                            <li>Multipliers: 21 × 2 × 3 = 126</li>
-                            <li>Final round score: 126 points</li>
+                            <li>Multiplier: 21 × 2 = 42</li>
+                            <li>Final round score: 42 points</li>
                         </ul>
                     </div>
                 </div>
@@ -1556,7 +1561,7 @@ function showTutorial() {
                         <li><strong>Risk Management:</strong> The more cards you have, the higher your potential score but also the higher risk of busting</li>
                         <li><strong>Second Chance:</strong> Save this card for when you have a high score at risk</li>
                         <li><strong>Select Card:</strong> Use this to grab a multiplier or a number you know is safe</li>
-                        <li><strong>Multipliers:</strong> Try to collect both 2× and 3× to maximize your score (they multiply together!)</li>
+                        <li><strong>Multipliers:</strong> The 2× multiplier can significantly increase your score - prioritize getting it</li>
                         <li><strong>Targeting:</strong> Use Freeze or Draw Three on players with high scores or nearly full hands</li>
                         <li><strong>Seven's Bonus:</strong> If you're close to having all 7 slots filled, it might be worth risking one more card for the 15-point bonus</li>
                     </ul>
