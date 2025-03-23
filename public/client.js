@@ -628,11 +628,20 @@ function playerTemplate(player, isCurrentTurn) {
                 <div class="cards-container">
                     <div class="cards-label">SPECIAL CARDS</div>
                     <div class="card-grid special">
-                        ${player.specialCards.map(card => `
-                            <div class="card special ${getSpecialCardClass(card)}">
-                                ${getSpecialCardDisplay(card)}
-                            </div>
-                        `).join('')}
+                        ${player.specialCards.map(card => {
+                            const cardClass = getSpecialCardClass(card);
+                            const cardDisplay = getSpecialCardDisplay(card);
+                            
+                            // Add inline style for select-card gradient
+                            let cardStyle = '';
+                            if (card === 'Select') {
+                                cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
+                            }
+                            
+                            return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
+                                ${cardDisplay}
+                            </div>`;
+                        }).join('')}
                         ${emptySpecialSlots}
                     </div>
                 </div>
@@ -1403,6 +1412,12 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
 function handleSelectedCard(gameId, selectedCard) {
   // First send the selection to the server
   socket.emit('select-card-choice', gameId, selectedCard);
+  
+  // Remove the select card popup if it exists
+  const selectCardPopup = document.getElementById('selectCardPopup');
+  if (selectCardPopup) {
+    selectCardPopup.remove();
+  }
   
   // Then immediately show appropriate popup for special cards
   if (selectedCard === 'D3') {

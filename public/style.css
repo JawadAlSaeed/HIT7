@@ -805,7 +805,7 @@ body::before {
     cursor: not-allowed;
 }
 
-/* Improved Winner Popup */
+/* Winner Popup */
 .winner-popup {
     position: fixed;
     top: 0;
@@ -818,219 +818,73 @@ body::before {
     justify-content: center;
     z-index: 1000;
     padding: 20px;
-}
-
-.winner-popup .popup-content {
-    background: linear-gradient(135deg, var(--secondary), #1f2c4c);
-    padding: 2.5rem;
-    border-radius: 20px;
-    max-width: 550px;
-    width: 95%;
-    position: relative;
-    overflow: hidden;
     border: 3px solid var(--highlight);
-    box-shadow: 0 0 50px rgba(233, 69, 96, 0.3);
-    text-align: center;
-    animation: popIn 0.5s cubic-bezier(0.26, 0.53, 0.74, 1.48);
-}
-
-@keyframes popIn {
-    0% { opacity: 0; transform: scale(0.8); }
-    45% { opacity: 1; transform: scale(1.05); }
-    80% { transform: scale(0.95); }
-    100% { transform: scale(1); }
-}
-
-.winner-popup .trophy-banner {
-    font-size: 5rem;
-    margin: -1rem 0 -1.5rem;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.7);
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
 }
 
 .winner-popup h2 {
-    color: #ffd700;
-    font-size: 3.5rem;
-    margin: 0 0 1rem;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-    background: linear-gradient(to right, #ffd700, #ffa500);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.winner-popup .winner-name {
-    font-size: 2rem;
-    font-weight: 700;
-    color: white;
-    margin: 0.5rem 0;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-.winner-popup .winner-score {
+    color: var(--highlight);
     font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--highlight);
-    margin: 0.5rem 0 2rem;
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
-    font-family: 'Cairo Play', sans-serif;
-}
-
-.winner-popup .leaderboard {
-    background: rgba(15, 52, 96, 0.5);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.winner-popup .leaderboard h3 {
     margin: 0 0 1.5rem;
-    color: white;
-    font-size: 1.4rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    opacity: 0.9;
 }
 
-.winner-popup .leaderboard-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-}
-
-.winner-popup .leaderboard-row {
-    display: grid;
-    grid-template-columns: 50px 1fr auto;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    align-items: center;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-}
-
-.winner-popup .leaderboard-row:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.winner-popup .leaderboard-row.winner {
-    border: 1px solid #ffd700;
-    background: rgba(255, 215, 0, 0.1);
-}
-
-.winner-popup .leaderboard-row.current-player {
-    border: 1px solid var(--highlight);
-}
-
-.winner-popup .rank {
+.winner-name {
     font-size: 1.8rem;
+    margin: 1rem 0;
 }
 
-.winner-popup .player-name {
-    text-align: left;
-    font-size: 1.2rem;
-    font-weight: 500;
+.winner-score {
+    font-size: 2rem;
+    color: var (--success);
+    margin: 1rem 0;
 }
 
-.winner-popup .player-score {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--highlight);
+.winner-popup .waiting-message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 1.1rem;
+    animation: pulse 2s infinite;
 }
 
 .winner-popup #rematchButton {
     margin: 1.5rem auto 0;
     display: block;
     min-width: 200px;
-    animation: pulse 2s infinite;
 }
 
-.winner-popup .waiting-message {
-    margin: 2rem auto 0;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    font-size: 1.1rem;
+.info-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    border: 3px solid var(--danger);
     max-width: 300px;
-    animation: pulse 2s infinite;
 }
 
-/* Add glow effect to the trophy banner */
-.winner-popup .trophy-banner {
-    position: relative;
+.info-popup h2 {
+    color: var(--danger);
+    font-size: 1.8rem;
+    margin: 0 0 1rem;
 }
 
-.winner-popup .trophy-banner::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80px;
-    height: 80px;
-    background: radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0) 70%);
-    border-radius: 50%;
-    z-index: -1;
-    animation: glow 2s ease-in-out infinite;
+.popup-countdown {
+    font-size: 1.4rem;
+    color: var(--text-light);
+    margin: 0;
 }
 
-@keyframes glow {
-    0% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-}
-
-/* Mobile adjustments for winner popup */
-@media screen and (max-width: 430px) {
-    .winner-popup .popup-content {
-        padding: 2rem 1.5rem;
-    }
-    
-    .winner-popup h2 {
-        font-size: 2.5rem;
-    }
-    
-    .winner-popup .winner-name {
-        font-size: 1.6rem;
-    }
-    
-    .winner-popup .winner-score {
-        font-size: 2rem;
-    }
-    
-    .winner-popup .leaderboard {
-        padding: 1rem;
-    }
-    
-    .winner-popup .leaderboard-row {
-        padding: 0.8rem;
-    }
-    
-    .winner-popup .rank {
-        font-size: 1.5rem;
-    }
-    
-    .winner-popup .player-name {
-        font-size: 1rem;
-    }
-    
-    .winner-popup .player-score {
-        font-size: 1.2rem;
-    }
+@keyframes popupIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 /* Second Chance Indicator */
@@ -2956,87 +2810,6 @@ draw-three-target.self-target:hover {
     cursor: not-allowed;
 }
 
-/* Add styles for disabled players in the remove card popup */
-.remove-card-popup .player-section.disabled {
-  opacity: 0.7;
-  position: relative;
-  background: rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.remove-card-popup .player-section.disabled .card-button {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.remove-card-popup .player-section.disabled .status-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  margin-left: 0.5rem;
-  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-}
-
-.remove-card-popup .player-section.disabled .status-badge.busted {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.remove-card-popup .player-section.disabled .status-badge.stood {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-.remove-card-popup .player-section.disabled .status-badge.frozen {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.remove-card-popup .status-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 12px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.remove-card-popup .player-section.disabled:hover .status-overlay {
-  opacity: 1;
-}
-
-.remove-card-popup .status-message {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 0.8rem 1.5rem;
-  border-radius: 30px;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 0.9rem;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-/* Improve button disabled state */
-.remove-card-popup .card-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-  box-shadow: none;
-}
-
-.remove-card-popup .card-button:disabled:hover {
-  transform: none;
-}
-
 /* Round Summary Popup - Updated Design */
 .round-summary-popup {
     position: fixed;
@@ -3471,7 +3244,98 @@ draw-three-target.self-target:hover {
   content: "Multiply your total round score (2× or 3×)";
 }
 
-/* Fix for emojis in popups - ensure they're not covered by background colors */
+/* Fix for emojis in popup headers - ensure they display properly */
+.freeze-popup h3 span.emoji,
+.draw-three-popup h3 span.emoji,
+.remove-card-popup h3 span.emoji,
+.select-card-popup h3 span.emoji {
+    display: inline-block;
+    margin-right: 10px;
+    color: white !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    text-shadow: none;
+    position: relative;
+    z-index: 2;
+}
+
+/* Fix popup header text color from background-clip gradient */
+.freeze-popup h3,
+.draw-three-popup h3,
+.remove-card-popup h3 {
+    color: white !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+}
+
+/* Specifically fix select-card-popup which uses gradient text */
+.select-card-popup h3 {
+    position: relative;
+}
+
+.select-card-popup h3 span.emoji {
+    color: initial !important;
+    z-index: 1;
+}
+
+/* Fix round summary alignment - make grid headers align with content */
+.round-summary-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    text-align: center;
+    align-items: center;
+}
+
+/* Align individual column content */
+.round-summary-header span:first-child,
+.player-summary-row .name {
+    text-align: left;
+    padding-left: 0.5rem;
+}
+
+.round-summary-header span:nth-child(2),
+.player-summary-row .status {
+    text-align: center;
+}
+
+/* Add styles to make the player-summary-row align properly */
+.player-summary-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    align-items: center;
+}
+
+.player-summary-row .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.player-summary-row .status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+/* Override any styles using -webkit-background-clip for emoji elements */
+h3 span.emoji {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: inherit !important;
+}
+
+/* Fix for emojis in popup titles being masked by color */
 .freeze-popup h3::before,
 .draw-three-popup h3::before,
 .remove-card-popup h3::before,
