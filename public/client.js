@@ -912,21 +912,70 @@ function handleAllBusted() {
 }
 
 function showWinnerPopup(winner, isHost) {
+    // Get all players from the current game state
+    const container = document.getElementById('playersContainer');
+    const allPlayerElements = container.querySelectorAll('.player');
+    const allPlayers = [];
+    
+    // Extract player data from the DOM
+    allPlayerElements.forEach(playerEl => {
+        const playerName = playerEl.querySelector('h3').textContent.replace('(YOU)', '').trim();
+        const playerTotalScore = parseInt(playerEl.querySelectorAll('.score-value')[1].textContent);
+        const playerId = playerEl.dataset.playerId;
+        
+        allPlayers.push({
+            name: playerName,
+            totalScore: playerTotalScore,
+            id: playerId,
+            isWinner: playerId === winner.id
+        });
+    });
+    
+    // Sort players by score (descending)
+    allPlayers.sort((a, b) => b.totalScore - a.totalScore);
+    
+    // Create leaderboard HTML
+    const topPlayers = allPlayers.slice(0, 3); // Get top 3 players
+    const leaderboardHTML = topPlayers.map((player, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+        const isCurrentPlayer = player.id === socket.id;
+        const winnerClass = player.isWinner ? 'winner' : '';
+        
+        return `
+            <div class="leaderboard-row ${winnerClass} ${isCurrentPlayer ? 'current-player' : ''}">
+                <div class="rank">${medal}</div>
+                <div class="player-name">${player.name} ${isCurrentPlayer ? '(YOU)' : ''}</div>
+                <div class="player-score">${player.totalScore}</div>
+            </div>
+        `;
+    }).join('');
+
     const popup = document.createElement('div');
     popup.className = 'winner-popup';
     popup.innerHTML = `
-        <h2>🏆 TOTAL WINNER! 🏆</h2>
-        <div class="winner-name">${winner.name}</div>
-        <div class="winner-score">${winner.totalScore} Points</div>
-        ${isHost ? `
-            <button id="rematchButton" class="game-button green">
-                Rematch?
-            </button>
-        ` : `
-            <div class="waiting-message">
-                Waiting for host to start rematch...
+        <div class="popup-content">
+            <div class="trophy-banner">🏆</div>
+            <h2>WINNER!</h2>
+            <div class="winner-name">${winner.name}</div>
+            <div class="winner-score">${winner.totalScore} Points</div>
+            
+            <div class="leaderboard">
+                <h3>Top Players</h3>
+                <div class="leaderboard-container">
+                    ${leaderboardHTML}
+                </div>
             </div>
-        `}
+            
+            ${isHost ? `
+                <button id="rematchButton" class="game-button green">
+                    Rematch?
+                </button>
+            ` : `
+                <div class="waiting-message">
+                    Waiting for host to start rematch...
+                </div>
+            `}
+        </div>
     `;
     document.body.appendChild(popup);
 
@@ -943,8 +992,6 @@ function handleGameOver({ players, winner }) {
     playSound('winSound');
     toggleActionButtons(false);
     showWinnerPopup(winner, isHost); // Pass isHost flag
-    const container = document.getElementById('playersContainer');
-    container.innerHTML = '';
 }
 
 function handleGameReset() {
