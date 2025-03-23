@@ -38,26 +38,58 @@
         width: auto;
     }
 
-    /* Game Header Adjustments */
+    /* Game Header Adjustments - Fixed version */
     .game-header {
         height: auto;
-        padding: 0.5rem;
+        min-height: 80px; /* Set minimum height */
+        padding: 0.75rem;
+        flex-direction: row; /* Ensure flex direction is row */
         flex-wrap: wrap;
         gap: 0.5rem;
         margin: 0;
         border-radius: 0;
+        width: 100%;
+        display: flex !important; /* Force display */
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .header-left {
+        flex: 0 0 auto;
+        min-width: 80px;
+        display: flex !important;
+        align-items: center;
     }
 
     .header-left .game-logo {
         font-size: 1.5rem;
+        display: flex !important;
+        justify-content: flex-start;
+    }
+
+    .header-left .logo-image {
+        height: 50px;
+        width: auto;
     }
 
     .header-right {
+        flex: 1 1 100%;
         width: 100%;
         justify-content: space-between;
-        display: flex;
         gap: 0.5rem;
-        align-items: center;
+        padding-top: 0.5rem;
+    }
+
+    .header-right .game-button {
+        padding: 0.5rem 1rem;
+        min-width: auto;
+        font-size: 0.8rem;
+        height: 35px;
+    }
+
+    .game-header .game-code-display {
+        display: none; /* Hide the game code display on mobile */
     }
 
     /* Game Container */
@@ -402,6 +434,20 @@
     .game-button {
         height: 50px;
     }
+
+    .game-header {
+        height: auto;
+        min-height: 90px;
+        padding: 0.75rem;
+    }
+
+    .header-left .logo-image {
+        height: 60px;
+    }
+
+    .header-right {
+        flex-wrap: nowrap;
+    }
 }
 
 /* Landscape mode adjustments */
@@ -440,5 +486,19 @@
 
     .card-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+
+    .game-header {
+        height: auto;
+        min-height: 70px;
+    }
+
+    .header-left .logo-image {
+        height: 45px;
+    }
+
+    .header-right {
+        flex: 1;
+        justify-content: flex-end;
     }
 }

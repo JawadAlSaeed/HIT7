@@ -252,12 +252,20 @@ body::before {
     align-items: center;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    height: 80px;
+    height: 100px; /* Increase height from 80px to 100px */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header-left, .header-right {
     display: flex;
     align-items: center;
+    height: 100%;
+}
+
+.header-left {
+    flex: 0 0 auto;
+    min-width: 120px; /* Add minimum width to ensure logo space */
 }
 
 .header-left .game-logo {
@@ -269,20 +277,23 @@ body::before {
     align-items: center;
 }
 
+.header-left .logo-image {
+    height: 80px; /* Increase logo height */
+    width: auto; /* Maintain aspect ratio */
+    object-fit: contain;
+    margin-right: 0.5rem;
+}
+
 .header-right {
     display: flex;
     align-items: center;
-    gap: 1rem; /* Increased from 0.6rem */
+    gap: 1rem;
+    flex: 1;
+    justify-content: flex-end;
 }
 
-.header-right .game-button {
-    min-width: unset; /* Remove minimum width constraint */
-    padding: 0.8rem 1.2rem; /* Slightly reduce padding */
-    margin-left: 0.5rem; /* Add margin to separate buttons */
-}
-
-.header-right .game-button:first-child {
-    margin-left: 0; /* Remove margin from first button */
+.header-right .game-code-display {
+    margin-right: auto; /* Push to left within header-right */
 }
 
 .game-header::before {
@@ -1484,6 +1495,8 @@ body::before {
     box-shadow: 0 8px 32px rgba(52, 152, 219, 0.4);
     padding: 2.5rem;
     border: none;
+    padding-bottom: 80px; /* Increase bottom padding for button space */
+    position: relative; /* Ensure proper positioning of absolute elements */
 }
 
 .freeze-popup h3 {
@@ -3231,7 +3244,98 @@ draw-three-target.self-target:hover {
   content: "Multiply your total round score (2× or 3×)";
 }
 
-/* Fix for emojis in popups - ensure they're not covered by background colors */
+/* Fix for emojis in popup headers - ensure they display properly */
+.freeze-popup h3 span.emoji,
+.draw-three-popup h3 span.emoji,
+.remove-card-popup h3 span.emoji,
+.select-card-popup h3 span.emoji {
+    display: inline-block;
+    margin-right: 10px;
+    color: white !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    text-shadow: none;
+    position: relative;
+    z-index: 2;
+}
+
+/* Fix popup header text color from background-clip gradient */
+.freeze-popup h3,
+.draw-three-popup h3,
+.remove-card-popup h3 {
+    color: white !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+}
+
+/* Specifically fix select-card-popup which uses gradient text */
+.select-card-popup h3 {
+    position: relative;
+}
+
+.select-card-popup h3 span.emoji {
+    color: initial !important;
+    z-index: 1;
+}
+
+/* Fix round summary alignment - make grid headers align with content */
+.round-summary-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    text-align: center;
+    align-items: center;
+}
+
+/* Align individual column content */
+.round-summary-header span:first-child,
+.player-summary-row .name {
+    text-align: left;
+    padding-left: 0.5rem;
+}
+
+.round-summary-header span:nth-child(2),
+.player-summary-row .status {
+    text-align: center;
+}
+
+/* Add styles to make the player-summary-row align properly */
+.player-summary-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    align-items: center;
+}
+
+.player-summary-row .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.player-summary-row .status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+/* Override any styles using -webkit-background-clip for emoji elements */
+h3 span.emoji {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: inherit !important;
+}
+
+/* Fix for emojis in popup titles being masked by color */
 .freeze-popup h3::before,
 .draw-three-popup h3::before,
 .remove-card-popup h3::before,
