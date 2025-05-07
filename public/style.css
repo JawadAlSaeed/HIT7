@@ -231,6 +231,8 @@ body::before {
     flex-direction: column;
     position: relative;
     overflow: hidden;
+    overflow-y: auto;
+    max-height: 100vh; /* Ensure it doesn't exceed the viewport height */
 }
 
 .game-container.active {
@@ -373,7 +375,8 @@ body::before {
     scrollbar-width: thin;
     scrollbar-color: var(--highlight) var(--secondary);
     justify-content: center; /* Center players horizontally */
-    overflow-y: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 150px); /* Adjust for header and controls */
     flex: 1;
 }
 
@@ -956,7 +959,7 @@ body::before {
 .remaining-pile .regular-cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 1.5rem;
     background: rgba(15, 52, 96, 0.5);
     border-radius: 15px;
@@ -970,7 +973,7 @@ body::before {
 .remaining-pile .special-cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 1.5rem;
     background: rgba(15, 52, 96, 0.5);
     border-radius: 15px;
@@ -1643,7 +1646,8 @@ body::before {
   padding: 1rem;
   border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
   font-family: 'Poppins', sans-serif;
   font-weight: 500;
 }
