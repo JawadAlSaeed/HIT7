@@ -172,7 +172,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   popup.className = 'draw-three-popup active';
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>🎯 Select player to draw three cards:</h3>
+      <h3><span class="emoji">🎯</span> Select player to draw three cards:</h3>
       <div class="draw-three-targets">
         ${targets.map(p => `
           <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
@@ -180,6 +180,9 @@ socket.on('select-draw-three-target', (gameId, targets) => {
           </button>
         `).join('')}
       </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
     </div>
   `;
 
@@ -187,12 +190,45 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     btn.addEventListener('click', () => {
       socket.emit('draw-three-select', currentGameId, btn.dataset.id);
       popup.remove();
-      activeDrawThreePopup = null;
     });
   });
 
+  // Add HOLD TO VIEW GAME button functionality
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+  
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+  
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
   document.body.appendChild(popup);
   activeDrawThreePopup = popup;
+  
+  // Clean up event listeners when popup is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        observer.disconnect();
+      }
+    });
+  });
+  
+  observer.observe(document.body, { childList: true });
 });
 
 socket.on('connect', () => console.log('Connected to server'));
@@ -334,14 +370,42 @@ function handleGameCreated({ gameId, gameUrl }) {
 
 function copyShareLink() {
     if (!currentGameUrl) return;
+
+    // Attempt to copy the link using the Clipboard API
     navigator.clipboard.writeText(currentGameUrl).then(() => {
-        const btn = document.querySelector('.copy-link-btn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Link Copied!';
-        setTimeout(() => btn.textContent = originalText, 2000);
+        showCopyConfirmationInButton();
     }).catch(err => {
-        console.error('Copy failed:', err);
+        console.error('Failed to copy link:', err);
+
+        // Fallback for older browsers: create a temporary input element
+        const tempInput = document.createElement('input');
+        tempInput.value = currentGameUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        tempInput.setSelectionRange(0, 99999); // For mobile devices
+
+        try {
+            document.execCommand('copy');
+            showCopyConfirmationInButton();
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            alert('Failed to copy the link. Please copy it manually.');
+        }
+
+        document.body.removeChild(tempInput);
     });
+}
+
+function showCopyConfirmationInButton() {
+    const copyButton = document.querySelector('.game-button.copy-link-btn');
+    if (!copyButton) return;
+
+    const originalText = copyButton.textContent;
+    copyButton.textContent = 'Link copied!';
+
+    setTimeout(() => {
+        copyButton.textContent = originalText;
+    }, 2000);
 }
 
 // Remove bust sound from handleGameUpdate since server will handle it
