@@ -43,17 +43,17 @@ const initializeButtons = () => {
     const resetBtn = document.getElementById('resetButton');
 
     if (flipCardBtn) flipCardBtn.onclick = function() {
+        if (flipCardBtn.disabled) return;
         playSound('cardFlip');
         flipCard();
     };
     if (standBtn) standBtn.onclick = function() {
+        if (standBtn.disabled) return;
         playSound('buttonClick');
         stand();
     };
     if (resetBtn) resetBtn.onclick = function() {
-        if (confirm('Reset game and start a new round with all players?')) {
-            resetGame();
-        }
+        showResetConfirmation();
     };
     
     const headerTutorialBtn = document.getElementById('headerTutorialBtn');
@@ -90,6 +90,10 @@ socket.on('cancel-freeze', () => {
 });
 
 socket.on('select-freeze-target', (gameId, targets) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   // Remove any existing popups
   document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
   
@@ -214,6 +218,9 @@ socket.on('game-reset-with-players', (game) => {
 
 // Add select-card-from-pile event listener with other socket listeners
 socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
   showSelectCardPopup(gameId, deck, fullDeck);
 });
 
@@ -724,21 +731,15 @@ function toggleActionButtons(active) {
     const flipCardBtn = document.getElementById('flipCard');
     const standButton = document.getElementById('standButton');
     
-    // Get current player object from container
-    const game = getCurrentGameState();
-    const currentPlayer = game?.players.find(p => p.id === socket.id);
-    
-    // Show buttons only if:
-    // 1. It's the player's turn (active is true)
-    // 2. Player exists
-    // 3. Game is in playing state
-    const showButtons = active && currentPlayer;
-    
-    if (flipCardBtn) flipCardBtn.style.display = showButtons ? 'block' : 'none';
-    if (standButton) standButton.style.display = 
-        (showButtons && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) 
-        ? 'block' 
-        : 'none';
+    // Always show buttons but disable them when not active
+    if (flipCardBtn) {
+        flipCardBtn.disabled = !active;
+        flipCardBtn.style.display = 'block';
+    }
+    if (standButton) {
+        standButton.disabled = !active;
+        standButton.style.display = 'block';
+    }
 }
 
 // Add this helper function to get current game state
@@ -1018,6 +1019,39 @@ function handleError(message) {
     alert(message);
 }
 
+function showResetConfirmation() {
+    const popup = document.createElement('div');
+    popup.className = 'reset-confirmation-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <h2>Reset Game?</h2>
+            <p>Start a new round with all players?</p>
+            <div class="button-group">
+                <button class="game-button red" onclick="confirmReset(event)">
+                    Yes, Reset
+                </button>
+                <button class="game-button blue" onclick="cancelReset(event)">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function confirmReset(event) {
+    event.preventDefault();
+    const popup = document.querySelector('.reset-confirmation-popup');
+    if (popup) popup.remove();
+    resetGame();
+}
+
+function cancelReset(event) {
+    event.preventDefault();
+    const popup = document.querySelector('.reset-confirmation-popup');
+    if (popup) popup.remove();
+}
+
 function handleRoundSummary({ players, allBusted }) {
     playSound(allBusted ? 'bustSound' : 'roundEnd');
     const popup = document.createElement('div');
@@ -1163,6 +1197,10 @@ function showFreezePopup(gameId, targets) {
 
 // Update showRemoveCardPopup function to properly display special cards
 function showRemoveCardPopup(gameId, players) {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   const popup = document.createElement('div');
   popup.className = 'remove-card-popup';
   
@@ -1256,6 +1294,7 @@ function showRemoveCardPopup(gameId, players) {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });
@@ -1403,6 +1442,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });
@@ -1615,6 +1655,10 @@ function handleNumberCard(game, player, card) {
 }
 
 socket.on('select-draw-three-target', (gameId, targets) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   if (activeDrawThreePopup) {
     activeDrawThreePopup.remove();
     activeDrawThreePopup = null;
@@ -1675,6 +1719,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });
