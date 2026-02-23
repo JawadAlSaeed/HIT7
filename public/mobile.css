@@ -179,13 +179,17 @@
         margin: 0.4rem auto; /* center each player card */
         box-sizing: border-box;
         padding: 0.8rem;
-        min-height: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: stretch;
-        overflow: auto;
-        height: auto;
+        height: fit-content;
+        gap: 0.6rem;
+    }
+
+    .player.current-turn {
+        border: 2px solid var(--highlight) !important;
+        animation: border-pulse 2s infinite;
     }
 
     /* Card Grid */
@@ -289,118 +293,56 @@
         padding: 1rem;
     }
 
+    /* Tutorial Popup - Full Screen Mobile */
     .tutorial-popup {
-        padding: 0.5rem;
-    }
-
-    .tutorial-popup .popup-content {
-        max-width: 100%;
-        width: 100%;
-        max-height: 95vh;
-        padding: 1.5rem 1rem;
-        border-radius: 10px;
-    }
-
-    .tutorial-popup .close-button {
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        position: fixed !important;
-        top: max(1rem, env(safe-area-inset-top)) !important;
-        right: 1rem !important;
-        z-index: 1001 !important;
-    }
-
-    .tutorial-popup .tutorial-title {
-        font-size: 1.8rem;
-        margin: 0 0 1rem 0;
-    }
-
-    .tutorial-popup .tutorial-tabs {
-        gap: 0.3rem;
-        margin-bottom: 1rem;
-        padding-bottom: 0.8rem;
-    }
-
-    .tutorial-popup .tab-button {
-        padding: 0.5rem 0.9rem;
-        font-size: 0.7rem;
-        flex: 1;
-        min-width: 50px;
-    }
-
-    .tutorial-popup .tab-content {
-        padding: 0.5rem;
-    }
-
-    .tutorial-popup .tutorial-section {
         padding: 0;
     }
 
+    .tutorial-popup .popup-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .tutorial-popup .tutorial-title {
+        font-size: 1.4rem;
+        margin: 0.8rem 0 0.5rem 0;
+        padding: 0 1rem;
+    }
+
+    .tutorial-popup .tutorial-content {
+        padding: 0 1rem 5rem 1rem;
+    }
+
     .tutorial-popup .tutorial-section h3 {
-        font-size: 1.1rem;
-        margin: 0.8rem 0 0.4rem 0;
+        font-size: 1rem;
+        margin: 0.8rem 0 0.3rem 0;
     }
 
     .tutorial-popup .tutorial-section p {
-        font-size: 0.9rem;
-        margin: 0.5rem 0;
-    }
-
-    .tutorial-popup .rules-list {
-        padding-left: 1.2rem;
         font-size: 0.85rem;
-        margin: 0.5rem 0;
-    }
-
-    .tutorial-popup .rules-list li {
         margin: 0.3rem 0;
     }
 
-    .cards-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-    }
-
-    .card-example {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem;
-    }
-
-    .card-example .card {
-        width: 40px;
-        height: 56px;
-        flex-shrink: 0;
-    }
-
-    .card-explanation {
+    .tutorial-popup .tutorial-section ul {
         font-size: 0.8rem;
-        line-height: 1.3;
+        padding-left: 1rem;
+        margin: 0.4rem 0;
     }
 
-    .card-explanation strong {
-        display: block;
-        font-size: 0.85rem;
-    }
-
-    .score-formula {
-        flex-direction: column;
-        gap: 0.4rem;
-        font-size: 0.85rem;
-    }
-
-    .score-calculation {
-        padding-left: 1.2rem;
-        font-size: 0.8rem;
-        margin: 0.5rem 0;
-    }
-
-    .score-calculation li {
+    .tutorial-popup .tutorial-section li {
         margin: 0.2rem 0;
+        line-height: 1.2;
+    }
+
+    .card-table {
+        font-size: 0.75rem;
+        margin: 0.6rem 0;
+    }
+
+    .card-table td {
+        padding: 0.4rem;
     }
 
     /* Round Summary */

@@ -1463,198 +1463,95 @@ function showTutorial() {
             <button class="close-button">×</button>
             <h2 class="tutorial-title">HOW TO PLAY</h2>
             
-            <div class="tutorial-tabs">
-                <button class="tab-button active" data-tab="basics">Basics</button>
-                <button class="tab-button" data-tab="cards">Regular Cards</button>
-                <button class="tab-button" data-tab="special">Special Cards</button>
-                <button class="tab-button" data-tab="scoring">Scoring</button>
-                <button class="tab-button" data-tab="strategy">Strategy</button>
-            </div>
+            <div class="tutorial-content">
+                <section class="tutorial-section">
+                    <h3>🎮 OBJECTIVE</h3>
+                    <p>Be the first to reach 200 points!</p>
+                </section>
 
-            <div class="tab-content active" id="basics-tab">
-                <div class="tutorial-section">
-                    <h3>Game Objective</h3>
-                    <p>Be the first player to reach 200 points across multiple rounds.</p>
-                    
-                    <h3>Game Flow</h3>
-                    <ul class="rules-list">
-                        <li>Players take turns drawing cards to collect points</li>
-                        <li>Each player can hold up to 7 regular number cards</li>
-                        <li>Drawing a duplicate regular number will "bust" you</li>
-                        <li>You can "Stand" to bank your points at any time</li>
-                        <li>After all players have stood or busted, a new round begins</li>
-                        <li>If all players bust, the round restarts with no points gained</li>
+                <section class="tutorial-section">
+                    <h3>📋 GAME FLOW</h3>
+                    <ul>
+                        <li>Draw cards to collect points</li>
+                        <li>Max 7 regular cards per hand</li>
+                        <li>Duplicate number = BUST</li>
+                        <li>Stand to bank your points</li>
+                        <li>7 cards filled = +15 bonus!</li>
                     </ul>
-                </div>
-            </div>
+                </section>
 
-            <div class="tab-content" id="cards-tab">
-                <div class="tutorial-section">
-                    <h3>Regular Cards</h3>
-                    <p>The deck contains 78 numbered cards (1-12) and one zero card.</p>
-                    
-                    <div class="cards-grid">
-                        <div class="card-example">
-                            <div class="card">0</div>
-                            <div class="card-explanation">
-                                <strong>Zero Card</strong><br>
-                                Appears once in the deck. Worth 0 points but doesn't cause a bust if drawn repeatedly.
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card">1</div>
-                            <div class="card-explanation">
-                                <strong>Number 1</strong><br>
-                                Appears once in the deck. Worth 1 point.
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card">7</div>
-                            <div class="card-explanation">
-                                <strong>Number Cards</strong><br>
-                                Each number (1-12) appears as many times as its value. For example, there are 7 "7" cards.
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <h3>Important</h3>
-                    <ul class="rules-list">
-                        <li>Drawing a duplicate number card will cause you to "bust" (lose all points for the round)</li>
-                        <li>Getting all 7 slots filled with regular cards gives you a 15-point bonus!</li>
+                <section class="tutorial-section">
+                    <h3>🃏 REGULAR CARDS</h3>
+                    <p><strong>Zero:</strong> Worth 0, can't bust you (1 copy)</p>
+                    <p><strong>1-12:</strong> Worth face value (e.g., 7 copies of "7")</p>
+                    <p><strong>Rule:</strong> Drawing a duplicate = Lose all round points!</p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>⭐ SPECIAL CARDS</h3>
+                    <table class="card-table">
+                        <tr>
+                            <td><strong>🃏 Select</strong></td>
+                            <td>Pick any card from deck</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🛡️ 2nd Chance</strong></td>
+                            <td>Undo one bust</td>
+                        </tr>
+                        <tr>
+                            <td><strong>❄️ Freeze</strong></td>
+                            <td>Skip opponent's turn</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🎯 Draw 3</strong></td>
+                            <td>Force 3 draws</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🗑️ Remove</strong></td>
+                            <td>Delete opponent card</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2+ / 6+ / 10+</strong></td>
+                            <td>Add points</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2- / 6- / 10-</strong></td>
+                            <td>Lose points</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2×</strong></td>
+                            <td>Double score</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>🧮 SCORING EXAMPLE</h3>
+                    <p><strong>Your hand:</strong> [3, 5, 7] + 2+ + 2×</p>
+                    <p>3 + 5 + 7 = 15</p>
+                    <p>15 + 2 = 17</p>
+                    <p>17 × 2 = <strong>34 points!</strong></p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>💡 PRO TIPS</h3>
+                    <ul>
+                        <li>Save 2nd Chance for high scores</li>
+                        <li>Go for 7 cards = +15 bonus</li>
+                        <li>Grab multipliers early</li>
+                        <li>Use Freeze on leaders</li>
+                        <li>Balance risk vs. reward</li>
                     </ul>
-                </div>
-            </div>
-
-            <div class="tab-content" id="special-tab">
-                <div class="tutorial-section">
-                    <h3>Special Cards</h3>
-                    <p>Special cards don't count toward your 7-card limit and have unique effects.</p>
-                    
-                    <div class="cards-grid">
-                        <div class="card-example">
-                            <div class="card special select-card">🃏</div>
-                            <div class="card-explanation">
-                                <strong>Select Card</strong><br>
-                                Choose any card from the remaining deck to add to your hand
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special second-chance">🛡️</div>
-                            <div class="card-explanation">
-                                <strong>Second Chance</strong><br>
-                                Protects you once from busting when drawing a duplicate
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special freeze">❄️</div>
-                            <div class="card-explanation">
-                                <strong>Freeze</strong><br>
-                                Forces any player to skip their next turn
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special draw-three">🎯</div>
-                            <div class="card-explanation">
-                                <strong>Draw Three</strong><br>
-                                Forces any player to draw 3 cards in a row
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special remove-card">🗑️</div>
-                            <div class="card-explanation">
-                                <strong>Remove Card</strong><br>
-                                Remove any card from any player's collection
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special adder">2+</div>
-                            <div class="card-explanation">
-                                <strong>Add Cards</strong><br>
-                                Adds points to your score (2+, 6+, 10+)
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special minus">2-</div>
-                            <div class="card-explanation">
-                                <strong>Minus Cards</strong><br>
-                                Subtracts points from your score (2-, 6-, 10-)
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special multiplier">2×</div>
-                            <div class="card-explanation">
-                                <strong>Multiply Card</strong><br>
-                                2× doubles your total round score
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="scoring-tab">
-                <div class="tutorial-section">
-                    <h3>Calculating Your Score</h3>
-                    
-                    <div class="score-example">
-                        <div class="score-formula">
-                            <span class="formula-step">Base Score: Sum of all unique regular cards</span>
-                            <span class="formula-step">+ Add Card values</span>
-                            <span class="formula-step">- Minus Card values</span>
-                            <span class="formula-step">× Multiplier effect (2×)</span>
-                            <span class="formula-step">+ Bonus (15 points for filling all 7 slots)</span>
-                        </div>
-                    </div>
-                    
-                    <h3>Example</h3>
-                    <div class="score-example">
-                        <p class="score-scenario">
-                            Player has: [3,5,7] + 2+ and 6+ + 2- + 2×
-                        </p>
-                        <ul class="score-calculation">
-                            <li>Base score: 3 + 5 + 7 = 15</li>
-                            <li>Add cards: 2 + 6 = 8</li>
-                            <li>Minus cards: -2</li>
-                            <li>Subtotal: 15 + 8 - 2 = 21</li>
-                            <li>Multiplier: 21 × 2 = 42</li>
-                            <li>Final round score: 42 points</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="strategy-tab">
-                <div class="tutorial-section">
-                    <h3>Tips & Strategies</h3>
-                    <ul class="rules-list">
-                        <li><strong>Risk Management:</strong> The more cards you have, the higher your potential score but also the higher risk of busting</li>
-                        <li><strong>Second Chance:</strong> Save this card for when you have a high score at risk</li>
-                        <li><strong>Select Card:</strong> Use this to grab a multiplier or a number you know is safe</li>
-                        <li><strong>Multipliers:</strong> The 2× multiplier can significantly increase your score - prioritize getting it</li>
-                        <li><strong>Targeting:</strong> Use Freeze or Draw Three on players with high scores or nearly full hands</li>
-                        <li><strong>Seven's Bonus:</strong> If you're close to having all 7 slots filled, it might be worth risking one more card for the 15-point bonus</li>
-                    </ul>
-                </div>
+                </section>
             </div>
         </div>
     `;
-
-    // Add event listeners for tabs
-    popup.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => {
-            popup.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            popup.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            button.classList.add('active');
-            popup.querySelector(`#${button.dataset.tab}-tab`).classList.add('active');
-            
-            playSound('buttonClick');
-        });
-    });
 
     // Close button functionality
     popup.querySelector('.close-button').addEventListener('click', () => {
         playSound('buttonClick');
         popup.remove();
+        document.removeEventListener('keydown', handleEscape);
     });
 
     // Close on escape key

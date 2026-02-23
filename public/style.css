@@ -403,11 +403,10 @@ body::before {
     border-radius: 15px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(233, 69, 96, 0.2);
-    position: relative;
-    height: auto;
-    overflow: auto;
+    height: fit-content;
     display: flex;
     flex-direction: column;
+    gap: 0.8rem;
 }
 
 .player:hover {
@@ -432,15 +431,8 @@ body::before {
     transition: opacity 0.3s ease;
 }
 
-.player.current-turn::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border: 2px solid var(--highlight);
-    border-radius: 12px;
+.player.current-turn {
+    border: 2px solid var(--highlight) !important;
     animation: border-pulse 2s infinite;
     box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
 }
@@ -1801,57 +1793,57 @@ body::before {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 20px;
+    padding: 0;
 }
 
 .tutorial-popup .popup-content {
     background: var(--secondary);
-    padding: 2.5rem;
-    border-radius: 15px;
-    max-width: 800px;
-    width: 95%;
-    max-height: 90vh;
-    overflow-y: auto;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     position: relative;
-    border: 3px solid var(--highlight);
-    box-shadow: 0 0 50px rgba(233, 69, 96, 0.2);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
 .tutorial-popup .close-button {
     position: fixed;
-    top: env(safe-area-inset-top, 1rem);
+    top: max(1rem, env(safe-area-inset-top));
     right: 1rem;
     background: var(--highlight);
     color: var(--text-light);
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    font-size: 1.5rem;
+    font-size: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.5);
     z-index: 1001;
     transition: all 0.2s ease;
     padding: 0;
-    min-width: 44px;
-    min-height: 44px;
+    line-height: 1;
 }
 
 .tutorial-popup .close-button:hover {
     transform: scale(1.1) rotate(90deg);
     background: #d63d56;
-    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
 }
 
 .tutorial-popup .tutorial-title {
     text-align: center;
-    font-size: 2.5rem;
-    margin: 0 0 1.5rem 0;
+    font-size: 1.8rem;
+    margin: 1rem 0;
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -1859,53 +1851,82 @@ body::before {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
+    flex-shrink: 0;
+    padding: 0 1rem;
 }
 
-.tutorial-popup .tutorial-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    justify-content: center;
-    border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+.tutorial-popup .tutorial-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1rem 2rem 1rem;
+}
+
+.tutorial-popup .tutorial-section {
+    margin: 1rem 0;
     padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.2);
 }
 
-.tutorial-popup .tab-button {
-    background: rgba(15, 52, 96, 0.3);
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    border-radius: 30px;
-    color: var(--text-light);
-    padding: 0.7rem 1.4rem;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: 'Roboto', sans-serif;
-    font-weight: 500;
+.tutorial-popup .tutorial-section:last-child {
+    border-bottom: none;
+}
+
+.tutorial-popup .tutorial-section h3 {
+    font-size: 1.1rem;
+    color: var(--highlight);
+    margin: 0.8rem 0 0.5rem 0;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-.tutorial-popup .tab-button:hover {
-    transform: translateY(-2px);
-    background: rgba(233, 69, 96, 0.15);
+.tutorial-popup .tutorial-section p {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    margin: 0.4rem 0;
+    color: var(--text-light);
 }
 
-.tutorial-popup .tab-button.active {
-    background: var(--highlight);
-    border-color: var(--highlight);
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+.tutorial-popup .tutorial-section ul {
+    padding-left: 1.2rem;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
 }
 
-.tutorial-popup .tab-content {
-    display: none;
-    padding: 1rem;
+.tutorial-popup .tutorial-section li {
+    margin: 0.4rem 0;
+    line-height: 1.3;
 }
 
-.tutorial-popup .tab-content.active {
-    display: block;
-    animation: fadeIn 0.3s ease;
+.card-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0;
+    font-size: 0.85rem;
+}
+
+.card-table tr {
+    border-bottom: 1px solid rgba(233, 69, 96, 0.15);
+}
+
+.card-table td {
+    padding: 0.6rem;
+    text-align: left;
+}
+
+.card-table td:first-child {
+    width: 30%;
+    color: var(--highlight);
+    font-weight: bold;
+}
+
+.card-table td:last-child {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 }
 
 @keyframes fadeIn {
