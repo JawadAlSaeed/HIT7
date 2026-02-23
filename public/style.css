@@ -69,10 +69,11 @@ body::before {
 }
 
 .logo-image {
-    width: 120px;
-    height: 120px;
+    max-width: 140px;
+    width: auto;
+    height: auto;
     object-fit: contain;
-    margin-right: 1rem;
+    margin-right: 0.75rem;
 }
 
 .game-logo .hit {
@@ -220,7 +221,7 @@ body::before {
     width: 100vw;
     height: 100vh;
     max-width: none;
-    margin: -20px;
+    margin: 0; /* remove negative margin to avoid layout shift */
     padding: 1rem;
     background: rgba(22, 33, 62, 0.8);
     -webkit-backdrop-filter: blur(10px);
@@ -254,7 +255,7 @@ body::before {
     align-items: center;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    height: 100px; /* Increase height from 80px to 100px */
+    min-height: 72px; /* allow flexible height on small screens */
     width: 100%;
     box-sizing: border-box;
 }
@@ -271,16 +272,16 @@ body::before {
 }
 
 .header-left .game-logo {
-    font-size: 2rem;
+    font-size: 1.6rem;
     margin: 0;
-    text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
-    height: 100%;
+    text-shadow: 0 0 14px rgba(233, 69, 96, 0.35);
     display: flex;
     align-items: center;
 }
 
 .header-left .logo-image {
-    height: 80px; /* Increase logo height */
+    height: 64px; /* sensible desktop logo height */
+    max-height: 10vh;
     width: auto; /* Maintain aspect ratio */
     object-fit: contain;
     margin-right: 0.5rem;
@@ -318,9 +319,9 @@ body::before {
 
 .game-logo.header-logo {
     font-size: 2.5rem;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
+    left: auto;
+    transform: none;
     margin: 0;
 }
 
