@@ -185,6 +185,21 @@ const handleSocketConnection = (io) => {
           game.discardPile.push('Select');
           game.deck = newDeck;
           
+          // Set a timeout in case player doesn't select within 30 seconds
+          setTimeout(() => {
+            const currentGame = games.get(gameId);
+            if (currentGame && currentGame.status === 'playing') {
+              const currentPlayer = currentGame.players[currentGame.currentPlayer];
+              if (currentPlayer && currentPlayer.id === socket.id) {
+                // Player still hasn't selected, auto-advance
+                console.log(`Player ${socket.id} timed out on Select Card, auto-advancing`);
+                advanceTurn(currentGame);
+                checkGameStatus(currentGame);
+                io.to(gameId).emit('game-update', currentGame);
+              }
+            }
+          }, 30000);
+          
           // No need for further processing - we'll handle the card selection in the select-card-choice event
           return;
         }
@@ -257,8 +272,24 @@ const handleSocketConnection = (io) => {
           }
         } else {
           // Show select card popup with the current deck state
-          socket.emit('select-card-from-pile', gameId, game.deck);
+          // Send consistent 3 parameters: gameId, currentDeck, and null for fullDeck (since we're not reshuffling)
+          socket.emit('select-card-from-pile', gameId, game.deck, null);
           game.discardPile.push('Select');
+          
+          // Set a timeout in case player doesn't select within 30 seconds
+          setTimeout(() => {
+            const currentGame = games.get(gameId);
+            if (currentGame && currentGame.status === 'playing') {
+              const currentPlayer = currentGame.players[currentGame.currentPlayer];
+              if (currentPlayer && currentPlayer.id === socket.id) {
+                // Player still hasn't selected, auto-advance
+                console.log(`Player ${socket.id} timed out on Select Card, auto-advancing`);
+                advanceTurn(currentGame);
+                checkGameStatus(currentGame);
+                io.to(gameId).emit('game-update', currentGame);
+              }
+            }
+          }, 30000);
         }
       }
       // Handle other special cards
@@ -337,7 +368,8 @@ const handleSocketConnection = (io) => {
       
       if (player && target && player.specialCards.includes('Freeze')) {
         player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
-        target.status = 'frozen';
+        // Force the target to stand for the rest of the round
+        target.status = 'stood';
         // Add Freeze to discard only when used
         game.discardPile.push('Freeze');
         
@@ -356,7 +388,8 @@ const handleSocketConnection = (io) => {
     if (player && target && player.specialCards.includes('Freeze')) {
       player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
       game.discardPile.push('Freeze'); // Add to discard when used
-      target.status = 'frozen';
+      // Force the target to stand for the rest of the round
+      target.status = 'stood';
       checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
     }
@@ -433,9 +466,16 @@ const handleSocketConnection = (io) => {
       // Check if both player and target exist and player has RC card
       if (!player || !target || !player.specialCards.includes('RC')) return;
       
-      // NEW: Check if target is in active status - only allow removing cards from active players
+      // Check if target is in active status - only allow removing cards from active players
       if (target.status !== 'active') {
         socket.emit('error', 'You can only remove cards from active players.');
+        return;
+      }
+      
+      // Validate card index bounds
+      const cardArray = isSpecial ? target.specialCards : target.regularCards;
+      if (cardIndex < 0 || cardIndex >= cardArray.length) {
+        socket.emit('error', 'Invalid card index.');
         return;
       }
     
@@ -454,7 +494,7 @@ const handleSocketConnection = (io) => {
         game.discardPile.push(removedCard); // Add removed card to discard pile
       }
     
-      // NEW: Recalculate target's score after card removal
+      // Recalculate target's score after card removal
       updatePlayerScore(target);
       
       advanceTurn(game);
@@ -522,51 +562,6 @@ const handleSocketConnection = (io) => {
       checkGameStatus(game);
       
       // Always emit game update to refresh the deck display
-      io.to(gameId).emit('game-update', game);
-    });
-
-    // Add new socket event handler for select-card 
-    socket.on('select-card-choice', (gameId, selectedCard) => {
-      const game = games.get(gameId);
-      if (!game || game.status !== 'playing') return;
-      
-      const player = game.players[game.currentPlayer];
-      if (player.id !== socket.id || player.status !== 'active') return;
-
-      // Find and remove the selected card from the deck
-      const cardIndex = game.deck.findIndex(card => card === selectedCard);
-      if (cardIndex === -1) return; // Card not found
-      
-      game.deck.splice(cardIndex, 1);
-      
-      // Process the selected card similarly to a drawn card
-      if (typeof selectedCard === 'number') {
-        handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
-        if (player.status === 'busted') {
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-          player.status = 'stood';
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else {
-          advanceTurn(game);
-        }
-      }
-      else {
-        // For special cards, add to player's hand
-        player.specialCards.push(selectedCard);
-        advanceTurn(game);
-      }
-      
-      updatePlayerScore(player);
-      checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -705,57 +700,6 @@ const handleSocketConnection = (io) => {
       socket.emit('select-remove-card-target', game.id, targets);
     });
     
-    // Update select-card-choice event handler to make it work with special cards immediately
-    socket.on('select-card-choice', (gameId, selectedCard) => {
-      const game = games.get(gameId);
-      if (!game || game.status !== 'playing') return;
-      
-      const player = game.players[game.currentPlayer];
-      if (player.id !== socket.id || player.status !== 'active') return;
-    
-      // Find and remove the selected card from the deck
-      const cardIndex = game.deck.findIndex(card => card === selectedCard);
-      if (cardIndex === -1) return; // Card not found
-      
-      game.deck.splice(cardIndex, 1);
-      
-      // Process the selected card
-      if (typeof selectedCard === 'number') {
-        handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
-        if (player.status === 'busted') {
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-          player.status = 'stood';
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else {
-          advanceTurn(game);
-        }
-      }
-      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
-        // For special cards that need targeting, add to hand but don't advance turn yet
-        player.specialCards.push(selectedCard);
-        // The client will request targets immediately
-        // Turn will advance when the special card effect is applied
-      }
-      else {
-        // For other special cards, add to player's hand
-        player.specialCards.push(selectedCard);
-        advanceTurn(game);
-      }
-      
-      updatePlayerScore(player);
-      checkGameStatus(game);
-      io.to(gameId).emit('game-update', game);
-    });
-
     // Inside handleSocketConnection function, add these socket events
     socket.on('play-sound', (gameId, soundId) => {
       // Broadcast sound to all players in the game except sender
@@ -774,8 +718,8 @@ const createPlayer = (id, name) => ({
   roundScore: 0,
   totalScore: 0,
   bustedCard: null,
-  drawThreeRemaining: 0,  // Add this property
-  pendingSpecialCard: null  // Add this to track pending special cards
+  drawThreeRemaining: 0,  // Track how many more cards player must draw
+  pendingSpecialCard: null  // Track pending special cards during D3 sequences
 });
 
 const advanceTurn = game => {
