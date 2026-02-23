@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo+Play:wght@700&display=swap');
 
 :root {
-    --primary: #ffffff
+    --primary: #ffffff;
     --secondary: #16213e;
     --accent: #0f3460;
     --highlight: #e94560;
@@ -837,7 +837,7 @@ body::before {
 
 .winner-score {
     font-size: 2rem;
-    color: var (--success);
+    color: var(--success);
     margin: 1rem 0;
 }
 
@@ -1098,7 +1098,7 @@ body::before {
 /* Regular Number Cards */
 .remaining-card.regular-card {
     background: white !important;
-    color: var (--text-dark) !important;
+    color: var(--text-dark) !important;
     border: 2px solid var(--secondary);
 }
 
@@ -1319,7 +1319,7 @@ body::before {
 .player-name {
     font-size: 1.3rem;
     font-weight: 600;
-    color: var (--text-light);
+    color: var(--text-light);
     margin-bottom: 0.3rem;
     display: block;
 }

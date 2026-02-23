@@ -2,12 +2,12 @@
   "name": "flip7",
   "version": "1.0.0",
   "description": "A game about cards",
-  "main": "script.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "postinstall": "npm run build",
     "build": "echo 'No build step required'",
-    "heroku-postbuild": "npm install",
+    
     "dev": "cross-env NODE_ENV=development node server.js",
     "stop": "npx kill-port 3000"
   },

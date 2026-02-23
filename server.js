@@ -24,13 +24,26 @@ const createIoServer = (server) => {
 };
 
 // Middleware
+// Build allowed connect-src list (include ws/wss for production)
+const allowedConnect = ["'self'"];
+if (process.env.PRODUCTION_URL) {
+  allowedConnect.push(process.env.PRODUCTION_URL);
+  // Allow websocket origin for production URL (replace http(s) with ws(s))
+  try {
+    const wsUrl = process.env.PRODUCTION_URL.replace(/^http/, 'ws');
+    allowedConnect.push(wsUrl);
+  } catch (e) {
+    // ignore
+  }
+} else {
+  allowedConnect.push('http://localhost:3000', 'ws://localhost:3000');
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", ...(process.env.PRODUCTION_URL 
-        ? [process.env.PRODUCTION_URL] 
-        : ['ws://localhost:3000'])]
+      connectSrc: allowedConnect
     }
   }
 }));
@@ -90,9 +103,7 @@ const handleSocketConnection = (io) => {
   io.on('connection', socket => {
     console.log(`New connection: ${socket.id}`);
 
-    const BASE_URL = process.env.NODE_ENV === 'production' 
-      ? 'https://hit7.xyz'
-      : 'http://localhost:3000';
+    // Use the module-level BASE_URL (calculated at startup) instead of hardcoding here
 
     // Update game creation to include full URL
     socket.on('create-game', playerName => {

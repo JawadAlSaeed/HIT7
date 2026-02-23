@@ -82,15 +82,7 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
-socket.on('select-freeze-target', showFreezePopup);
 socket.on('cancel-freeze', () => {
-  if (activeFreezePopup) {
-    activeFreezePopup.remove();
-    activeFreezePopup = null;
-  }
-});
-
-socket.on('game-update', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
     activeFreezePopup = null;
@@ -162,75 +154,9 @@ socket.on('select-freeze-target', (gameId, targets) => {
   observer.observe(document.body, { childList: true });
 });
 
-socket.on('select-draw-three-target', (gameId, targets) => {
-  if (activeDrawThreePopup) {
-    activeDrawThreePopup.remove();
-    activeDrawThreePopup = null;
-  }
+// draw-three popup handler (single instance kept earlier in file)
 
-  const popup = document.createElement('div');
-  popup.className = 'draw-three-popup active';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3><span class="emoji">🎯</span> Select player to draw three cards:</h3>
-      <div class="draw-three-targets">
-        ${targets.map(p => `
-          <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
-          </button>
-        `).join('')}
-      </div>
-      <button class="view-game-button" id="viewGameButton">
-        <span class="icon">👁️</span> Hold to view game
-      </button>
-    </div>
-  `;
-
-  popup.querySelectorAll('.draw-three-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      socket.emit('draw-three-select', currentGameId, btn.dataset.id);
-      popup.remove();
-    });
-  });
-
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-  
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
-
-  document.body.appendChild(popup);
-  activeDrawThreePopup = popup;
-  
-  // Clean up event listeners when popup is removed
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
-        observer.disconnect();
-      }
-    });
-  });
-  
-  observer.observe(document.body, { childList: true });
-});
-
+// keep a single connect/disconnect handler
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
 
@@ -369,31 +295,34 @@ function handleGameCreated({ gameId, gameUrl }) {
 }
 
 function copyShareLink() {
-    if (!currentGameUrl) return;
+  // Prefer the visible share input if present
+  const shareInput = document.getElementById('shareLinkInput');
+  let link = shareInput?.value || currentGameUrl || (currentGameId ? `${window.location.origin}/join/${currentGameId}` : '');
+  if (!link) return alert('No share link available');
 
-    // Attempt to copy the link using the Clipboard API
-    navigator.clipboard.writeText(currentGameUrl).then(() => {
-        showCopyConfirmationInButton();
-    }).catch(err => {
-        console.error('Failed to copy link:', err);
+  // Attempt to copy the link using the Clipboard API
+  navigator.clipboard.writeText(link).then(() => {
+    showCopyConfirmationInButton();
+  }).catch(err => {
+    console.error('Failed to copy link:', err);
 
-        // Fallback for older browsers: create a temporary input element
-        const tempInput = document.createElement('input');
-        tempInput.value = currentGameUrl;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        tempInput.setSelectionRange(0, 99999); // For mobile devices
+    // Fallback for older browsers: create a temporary input element
+    const tempInput = document.createElement('input');
+    tempInput.value = link;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999); // For mobile devices
 
-        try {
-            document.execCommand('copy');
-            showCopyConfirmationInButton();
-        } catch (err) {
-            console.error('Fallback copy failed:', err);
-            alert('Failed to copy the link. Please copy it manually.');
-        }
+    try {
+      document.execCommand('copy');
+      showCopyConfirmationInButton();
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      alert('Failed to copy the link. Please copy it manually.');
+    }
 
-        document.body.removeChild(tempInput);
-    });
+    document.body.removeChild(tempInput);
+  });
 }
 
 function showCopyConfirmationInButton() {
@@ -437,9 +366,12 @@ function handleGameUpdate(game) {
                 `).join('');
             }
             // Always update the start button when we get a game update in lobby
-            if (isHost) {
-                updateStartButton(game.players.length);
-            }
+        // Update share link input too
+        const shareInput = waitingScreen.querySelector('#shareLinkInput');
+        if (shareInput) {
+          shareInput.value = currentGameUrl || (window.location.origin + '/join/' + (game.id || currentGameId || ''));
+        }
+        if (isHost) updateStartButton(game.players.length);
         } else {
             // Show waiting screen if it doesn't exist
             showWaitingScreen(game);
@@ -850,11 +782,12 @@ function showWaitingScreen(gameData) {
         <h2>${isHost ? '🎮 Waiting Room' : '⏳ Waiting for Host'}</h2>
         ${isHost ? `
         <div class="share-section">
-            <p class="share-text">Share this link with your friends:</p>
-            <button class="game-button copy-link-btn" onclick="copyShareLink()">
-                Copy Game Link
-            </button>
-            <div class="copied-message">Link copied!</div>
+          <p class="share-text">Share this link with your friends:</p>
+          <input id="shareLinkInput" class="share-link-input" readonly value="${currentGameUrl || (window.location.origin + '/join/' + gameData.id || '')}">
+          <button class="game-button copy-link-btn" onclick="copyShareLink()">
+            Copy Game Link
+          </button>
+          <div class="copied-message">Link copied!</div>
         </div>
         ` : ''}
         <div class="players-list">
@@ -882,6 +815,15 @@ function showWaitingScreen(gameData) {
     
     waitingScreen.innerHTML = content;
     document.body.appendChild(waitingScreen);
+
+    // Ensure start button calls startGame and is wired (in case innerHTML changes later)
+    const startBtn = document.getElementById('startGameBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', (e) => {
+        if (startBtn.disabled) return;
+        startGame();
+      });
+    }
 
     // Hide the game area completely while in waiting room
     document.getElementById('gameArea').style.display = 'none';
