@@ -15,13 +15,14 @@ HIT 7 is an exciting multiplayer card game that combines luck, strategy, and ris
 - Three '3' cards
 - And so on until twelve '12' cards
 
-### Special Cards (25 cards)
+### Special Cards (27 cards)
 
 #### Power Cards
 - 🛡️ Second Chance (3) - Protects you from busting on a duplicate
 - ❄️ Freeze (3) - Skip another player's turn
 - 🎯 Draw Three (3) - Force a player to draw three cards in succession
 - 🗑️ Remove Card (3) - Remove any card from any player's collection
+- 🥷 Steal Card (2) - Steal a card from another player
 - 🃏 Select Card (1) - Select any card from the Deck
 
 #### Point Modifier Cards

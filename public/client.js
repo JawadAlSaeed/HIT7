@@ -441,19 +441,20 @@ function updateRemainingPile(deck) {
             'SC': 2,        // 2. Second Chance
             'Freeze': 3,    // 3. Freeze
             'D3': 4,        // 4. Draw Three
-            'RC': 5,        // 5. Remove Card
-            '2+': 6,        // 6. 2+
-            '4+': 7,        // 7. 4+
-            '6+': 8,        // 8. 6+
-            '8+': 9,        // 9. 8+
-            '10+': 10,      // 10. 10+
-            '2x': 11,       // 11. 2x Multiplier
-            '2-': 12,       // 12. 2-
-            '4-': 13,       // 13. 4-
-            '6-': 14,       // 14. 6-
-            '8-': 15,       // 15. 8-
-            '10-': 16,      // 16. 10-
-            '2÷': 17,       // 17. 2÷ Divide
+          'RC': 5,        // 5. Remove Card
+          'ST': 6,        // 6. Steal Card
+          '2+': 7,        // 7. 2+
+          '4+': 8,        // 8. 4+
+          '6+': 9,        // 9. 6+
+          '8+': 10,       // 10. 8+
+          '10+': 11,      // 11. 10+
+          '2x': 12,       // 12. 2x Multiplier
+          '2-': 13,       // 13. 2-
+          '4-': 14,       // 14. 4-
+          '6-': 15,       // 15. 6-
+          '8-': 16,       // 16. 8-
+          '10-': 17,      // 17. 10-
+          '2÷': 18,       // 18. 2÷ Divide
         };
         return specialOrder[card] || 99;  // Default high number for unknown cards
     };
@@ -462,13 +463,14 @@ function updateRemainingPile(deck) {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-            cardStr === 'RC' || cardStr === 'Select' || cardStr === '2÷' ||
+          cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' || cardStr === '2÷' ||
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
                 cardStr === 'RC' ? 'remove-card' :
+            cardStr === 'ST' ? 'steal-card' :
                 cardStr === 'Select' ? 'select-card' :
                 cardStr === '2÷' ? 'divide' :
                 cardStr.includes('+') ? 'adder' :
@@ -479,6 +481,7 @@ function updateRemainingPile(deck) {
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
                 cardStr === 'RC' ? '🗑️' :
+            cardStr === 'ST' ? '🥷' :
                 cardStr === 'Select' ? '🃏' :
                 cardStr === '2÷' ? '2÷' :
                 cardStr;
@@ -531,7 +534,8 @@ function renderCard({ cardType, displayValue, count }) {
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
                     cardType === 'draw-three' ? '#f1c40f' :
-                    cardType === 'remove-card' ? '#9b59b6' : 'inherit'
+                    cardType === 'remove-card' ? '#9b59b6' :
+                    cardType === 'steal-card' ? '#e67e22' : 'inherit'
                 } !important;
                 color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
             `;
@@ -567,12 +571,27 @@ function updateDiscardPile(discardPile) {
       } else if (cardStr === 'D3') {
         cardType = 'draw-three';
         displayValue = '🎯';
+      } else if (cardStr === 'RC') {
+        cardType = 'remove-card';
+        displayValue = '🗑️';
+      } else if (cardStr === 'ST') {
+        cardType = 'steal-card';
+        displayValue = '🥷';
+      } else if (cardStr === 'Select') {
+        cardType = 'select-card';
+        displayValue = '🃏';
       } else if (cardStr.includes('+')) {
         cardType = 'adder';
         displayValue = cardStr;
+      } else if (cardStr === '2÷') {
+        cardType = 'divide';
+        displayValue = '2÷';
       } else if (cardStr.includes('x')) {
         cardType = 'multiplier';
         displayValue = cardStr.replace('x', '×');
+      } else if (cardStr.includes('-')) {
+        cardType = 'minus';
+        displayValue = cardStr;
       } else {
         cardType = 'number';
         displayValue = cardStr;
@@ -584,7 +603,11 @@ function updateDiscardPile(discardPile) {
           cardType === 'multiplier' ? '#27ae60' :
           cardType === 'second-chance' ? '#e74c3c' :
           cardType === 'freeze' ? '#3498db' :
-          cardType === 'draw-three' ? '#f1c40f' : 'inherit'
+          cardType === 'draw-three' ? '#f1c40f' :
+          cardType === 'remove-card' ? '#9b59b6' :
+          cardType === 'steal-card' ? '#e67e22' :
+          cardType === 'divide' ? '#1a1a1a' :
+          cardType === 'minus' ? '#1a1a1a' : 'inherit'
         } !important;
       ` : '';
 
@@ -600,9 +623,13 @@ function updateDiscardPile(discardPile) {
           'second-chance': 1,
           'freeze': 2,
           'draw-three': 3,
-          'adder': 4,
-          'multiplier': 5,
-          'number': 6
+          'remove-card': 4,
+          'steal-card': 5,
+          'adder': 6,
+          'multiplier': 7,
+          'divide': 8,
+          'minus': 9,
+          'number': 10
         }[cardType] || 999
       };
     })
@@ -663,7 +690,9 @@ function playerTemplate(player, isCurrentTurn) {
                             if (card === 'Select') {
                                 cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
                             } else if (card.endsWith('+') || card === '2x') {
-                                cardStyle = 'background: #27ae60 !important; color: white !important;';
+                              cardStyle = 'background: #27ae60 !important; color: white !important;';
+                            } else if (card === 'ST') {
+                              cardStyle = 'background: #e67e22 !important; color: white !important;';
                             } else if (card === '2÷' || card.endsWith('-')) {
                                 cardStyle = 'background: #1a1a1a !important; color: white !important;';
                             }
@@ -702,6 +731,7 @@ function getSpecialCardClass(card) {
     if (card === 'Freeze') return 'freeze';
     if (card === 'D3') return 'draw-three';
     if (card === 'RC') return 'remove-card';
+  if (card === 'ST') return 'steal-card';
     if (card === 'Select') return 'select-card';
     if (card === '2÷') return 'divide';
     if (card.endsWith('+')) return 'adder';
@@ -717,6 +747,7 @@ function getSpecialCardDisplay(card) {
     if (card === 'Freeze') return '❄️';
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
+  if (card === 'ST') return '🥷';
     if (card === 'Select') return '🃏';
     
     // For numeric modifier cards, format them
@@ -1266,7 +1297,7 @@ function showRemoveCardPopup(gameId, players) {
       <h3><span class="emoji">🗑️</span> Select a card to remove:</h3>
       <div class="players-list">
         ${players.map(player => {
-          const isDisabled = player.status !== 'active';
+          const isDisabled = player.status === 'busted';
           return `
             <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
               <h4>${player.name} ${player.id === socket.id ? '(You)' : ''} 
@@ -1282,16 +1313,19 @@ function showRemoveCardPopup(gameId, players) {
                     ${card}
                   </button>
                 `).join('')}
-                ${player.specialCards.map((card, index) => `
+                ${player.specialCards.map((card, index) => {
+                  const isRemoveCard = card === 'RC';
+                  return `
                   <button class="card-button special ${getSpecialCardClass(card)}"
                     style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
                     data-player="${player.id}" 
                     data-index="${index}"
                     data-special="true"
-                    ${isDisabled ? 'disabled' : ''}>
+                    ${isDisabled || isRemoveCard ? 'disabled' : ''}>
                     ${getSpecialCardDisplay(card)}
                   </button>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
               ${isDisabled ? `
                 <div class="status-overlay">
@@ -1360,12 +1394,118 @@ function showRemoveCardPopup(gameId, players) {
   observer.observe(document.body, { childList: true });
 }
 
+function showStealCardPopup(gameId, players) {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+
+  const popup = document.createElement('div');
+  popup.className = 'steal-card-popup';
+
+  const content = `
+    <div class="popup-content">
+      <h3><span class="emoji">🥷</span> Select a card to steal:</h3>
+      <div class="players-list">
+        ${players.map(player => {
+          const isDisabled = player.status === 'busted';
+          const showStatusBadge = player.status !== 'active';
+          return `
+            <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
+              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}
+                  ${showStatusBadge ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
+              </h4>
+              <div class="cards-list">
+                ${player.regularCards.map((card, index) => `
+                  <button class="card-button regular"
+                    data-player="${player.id}"
+                    data-index="${index}"
+                    data-special="false"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${card}
+                  </button>
+                `).join('')}
+                ${player.specialCards.map((card, index) => `
+                  <button class="card-button special ${getSpecialCardClass(card)}"
+                    style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                    data-player="${player.id}"
+                    data-index="${index}"
+                    data-special="true"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${getSpecialCardDisplay(card)}
+                  </button>
+                `).join('')}
+              </div>
+              ${isDisabled ? `
+                <div class="status-overlay">
+                  <span class="status-message">Player is ${player.status.toUpperCase()}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
+    </div>
+  `;
+
+  popup.innerHTML = content;
+
+  popup.querySelectorAll('.card-button:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.player;
+      const cardIndex = parseInt(btn.dataset.index);
+      const isSpecial = btn.dataset.special === 'true';
+
+      socket.emit('steal-card', gameId, targetId, cardIndex, isSpecial);
+      popup.remove();
+    });
+  });
+
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
+  document.body.appendChild(popup);
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
+        observer.disconnect();
+      }
+    });
+  });
+
+  observer.observe(document.body, { childList: true });
+}
+
 // Add helper function to get card background color
 function getCardColor(card) {
     if (card === 'SC') return '#e74c3c';
     if (card === 'Freeze') return '#3498db';
     if (card === 'D3') return '#f1c40f';
     if (card === 'RC') return '#9b59b6';
+  if (card === 'ST') return '#e67e22';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
     if (card.endsWith('+')) return '#27ae60'; // Green for all adders
     if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
@@ -1376,6 +1516,10 @@ function getCardColor(card) {
 
 socket.on('select-remove-card-target', (gameId, players) => {
   showRemoveCardPopup(gameId, players);
+});
+
+socket.on('select-steal-card-target', (gameId, players) => {
+  showStealCardPopup(gameId, players);
 });
 
 // Add this function to show the Select Card popup
@@ -1398,7 +1542,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   // Sort card groups
   Object.entries(cardCounts).forEach(([cardStr, count]) => {
     if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-        cardStr === 'RC' || cardStr === 'Select' ||
+        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' ||
         cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
       specialCards.push({ card: cardStr, count });
     } else {
@@ -1417,18 +1561,19 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
         'Freeze': 3,    // 3. Freeze
         'D3': 4,        // 4. Draw Three
         'RC': 5,        // 5. Remove Card
-        '2+': 6,        // 6. 2+
-        '4+': 7,        // 7. 4+
-        '6+': 8,        // 8. 6+
-        '8+': 9,        // 9. 8+
-        '10+': 10,      // 10. 10+
-        '2x': 11,       // 11. 2x Multiplier
-        '2-': 12,       // 12. 2-
-        '4-': 13,       // 13. 4-
-        '6-': 14,       // 14. 6-
-        '8-': 15,       // 15. 8-
-        '10-': 16,      // 16. 10-
-        '2÷': 17,       // 17. 2÷ Divide
+        'ST': 6,        // 6. Steal Card
+        '2+': 7,        // 7. 2+
+        '4+': 8,        // 8. 4+
+        '6+': 9,        // 9. 6+
+        '8+': 10,       // 10. 8+
+        '10+': 11,      // 11. 10+
+        '2x': 12,       // 12. 2x Multiplier
+        '2-': 13,       // 13. 2-
+        '4-': 14,       // 14. 4-
+        '6-': 15,       // 15. 6-
+        '8-': 16,       // 16. 8-
+        '10-': 17,      // 17. 10-
+        '2÷': 18,       // 18. 2÷ Divide
     };
     return specialOrder[card] || 99;
   };
@@ -1558,6 +1703,9 @@ function handleSelectedCard(gameId, selectedCard) {
   } else if (selectedCard === 'RC') {
     // Show remove card popup immediately
     socket.emit('request-remove-card-targets', gameId);
+  } else if (selectedCard === 'ST') {
+    // Show steal card popup immediately
+    socket.emit('request-steal-card-targets', gameId);
   }
   // For other cards, no immediate action needed
 }
@@ -1568,6 +1716,7 @@ function getCardColorStyle(card) {
   if (card === 'Freeze') return 'background: #3498db !important;';
   if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
   if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
+  if (card === 'ST') return 'background: #e67e22 !important; color: white !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
   if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
   if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier
@@ -1633,6 +1782,10 @@ function showTutorial() {
                         <tr>
                             <td><strong>🗑️ Remove</strong></td>
                             <td>Delete opponent card</td>
+                        </tr>
+                        <tr>
+                          <td><strong>🥷 Steal</strong></td>
+                          <td>Steal a card from another player</td>
                         </tr>
                         <tr>
                             <td><strong>2+ / 4+ / 6+ / 8+ / 10+</strong></td>

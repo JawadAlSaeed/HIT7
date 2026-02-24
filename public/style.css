@@ -1202,6 +1202,12 @@ body::before {
     color: #2c3e50 !important;
 }
 
+.remaining-card.special.steal-card { 
+    background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    border-color: #d35400;
+    color: white !important;
+}
+
 .remaining-card.special.multiplier { 
     background: linear-gradient(135deg, #27ae60, #229954) !important;
     border-color: #219a52;
@@ -2239,6 +2245,13 @@ body::before {
     font-size: 1.8rem;
 }
 
+.tutorial-popup .card.special.steal-card {
+    background: #e67e22 !important;
+    border-color: #d35400 !important;
+    color: white !important;
+    font-size: 1.8rem;
+}
+
 .tutorial-popup .card.special.adder {
     background: #27ae60 !important;
     border-color: #219a52 !important;
@@ -2567,9 +2580,21 @@ body::before {
     color: white !important;
 }
 
+.card.special.steal-card,
+.discard-card.special.steal-card {
+    background: #e67e22 !important;
+    border-color: #d35400 !important;
+    color: white !important;
+}
+
 .remaining-card.special.remove-card {
     background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
     border-color: #8e44ad !important;
+}
+
+.remaining-card.special.steal-card {
+    background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    border-color: #d35400 !important;
 }
 
 /* Remove cancel button styles */
@@ -2599,16 +2624,78 @@ body::before {
   box-sizing: border-box;
 }
 
+/* Steal Card Popup */
+.steal-card-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    min-width: 100vw;
+    min-height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    pointer-events: auto;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
 .remove-card-popup .popup-content {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: linear-gradient(135deg, #7f8c8d, #95a5a6);
-  box-shadow: 0 8px 32px rgba(127, 140, 141, 0.3);
+    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    box-shadow: 0 8px 32px rgba(155, 89, 182, 0.35) !important;
   padding: 0;
   border: none;
   padding-bottom: 80px; /* Increase bottom padding for button space */
   position: relative; /* Ensure proper positioning of absolute elements */
+}
+
+.steal-card-popup .popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+        background: linear-gradient(135deg, #e67e22, #d35400) !important;
+        box-shadow: 0 8px 32px rgba(230, 126, 34, 0.35) !important;
+    padding: 0;
+    border: none;
+    padding-bottom: 80px; /* Increase bottom padding for button space */
+    position: relative; /* Ensure proper positioning of absolute elements */
+}
+
+.remove-card-popup .players-list {
+    background: rgba(155, 89, 182, 0.2) !important;
+    border-color: rgba(155, 89, 182, 0.35) !important;
+}
+
+.remove-card-popup .player-section {
+    background: rgba(155, 89, 182, 0.18) !important;
+    border-color: rgba(155, 89, 182, 0.35) !important;
+}
+
+.remove-card-popup .cards-list {
+    background: rgba(155, 89, 182, 0.18) !important;
+    border-color: rgba(155, 89, 182, 0.35) !important;
+}
+
+.steal-card-popup .players-list {
+    background: rgba(230, 126, 34, 0.2) !important;
+    border-color: rgba(230, 126, 34, 0.35) !important;
+}
+
+.steal-card-popup .player-section {
+    background: rgba(230, 126, 34, 0.18) !important;
+    border-color: rgba(230, 126, 34, 0.35) !important;
+}
+
+.steal-card-popup .cards-list {
+    background: rgba(230, 126, 34, 0.18) !important;
+    border-color: rgba(230, 126, 34, 0.35) !important;
 }
 
 .remove-card-popup h3 {
@@ -2619,7 +2706,16 @@ body::before {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.remove-card-popup .players-list {
+.steal-card-popup h3 {
+    color: white;
+    text-align: center;
+    margin: 0 0 1rem 0;
+    font-size: 1.4rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.remove-card-popup .players-list,
+.steal-card-popup .players-list {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -2627,14 +2723,16 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.remove-card-popup .player-section {
+.remove-card-popup .player-section,
+.steal-card-popup .player-section {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1rem;
   border-radius: 12px;
 }
 
-.remove-card-popup .player-section h4 {
+.remove-card-popup .player-section h4,
+.steal-card-popup .player-section h4 {
   color: white;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   font-size: 1.2rem;
@@ -2643,7 +2741,8 @@ body::before {
   text-transform: uppercase;
 }
 
-.remove-card-popup .cards-list {
+.remove-card-popup .cards-list,
+.steal-card-popup .cards-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -2652,7 +2751,8 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.remove-card-popup .card-button {
+.remove-card-popup .card-button,
+.steal-card-popup .card-button {
   width: 50px;
   height: 70px;
   border-radius: 8px;
@@ -2665,7 +2765,8 @@ body::before {
   background: white;
 }
 
-.remove-card-popup .card-button.special {
+.remove-card-popup .card-button.special,
+.steal-card-popup .card-button.special {
   color: white;
 }
 
@@ -2690,13 +2791,15 @@ body::before {
 }
 
 /* Update remove card popup card styles */
-.remove-card-popup .card-button.special {
+.remove-card-popup .card-button.special,
+.steal-card-popup .card-button.special {
     color: white;
     font-weight: bold;
     text-shadow: none;
 }
 
-.remove-card-popup .card-button.special.minus {
+.remove-card-popup .card-button.special.minus,
+.steal-card-popup .card-button.special.minus {
     background: #2c3e50 !important;
     border-color: #34495e !important;
 }
@@ -2777,6 +2880,7 @@ body::before {
 .freeze-popup .popup-content,
 .draw-three-popup .popup-content,
 .remove-card-popup .popup-content,
+.steal-card-popup .popup-content,
 .round-summary-popup .popup-content,
 .winner-popup .popup-content,
 .tutorial-popup .popup-content {
@@ -2796,7 +2900,8 @@ body::before {
 /* Popup Headers */
 .freeze-popup h3,
 .draw-three-popup h3,
-.remove-card-popup h3 {
+.remove-card-popup h3,
+.steal-card-popup h3 {
     color: var(--text-light);
     text-align: center;
     font-size: 1.6rem;
@@ -2860,8 +2965,9 @@ draw-three-target.self-target:hover {
     border-color: var(--highlight);
 }
 
-/* Remove Card Popup Specific */
-.remove-card-popup .player-section {
+/* Remove/Steal Card Popup Specific */
+.remove-card-popup .player-section,
+.steal-card-popup .player-section {
     background: rgba(15, 52, 96, 0.3);
     border-radius: 12px;
     padding: 1.5rem;
@@ -2869,7 +2975,8 @@ draw-three-target.self-target:hover {
     border: 1px solid rgba(233, 69, 96, 0.2);
 }
 
-.remove-card-popup .player-section h4 {
+.remove-card-popup .player-section h4,
+.steal-card-popup .player-section h4 {
     color: var(--text-light);
     font-size: 1.2rem;
     margin: 0 0 1rem 0;
@@ -2877,7 +2984,8 @@ draw-three-target.self-target:hover {
     text-transform: uppercase;
 }
 
-.remove-card-popup .cards-list {
+.remove-card-popup .cards-list,
+.steal-card-popup .cards-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
     gap: 0.8rem;
@@ -2888,7 +2996,8 @@ draw-three-target.self-target:hover {
 }
 
 /* Special Card Buttons in Remove Card Popup */
-.remove-card-popup .card-button.special {
+.remove-card-popup .card-button.special,
+.steal-card-popup .card-button.special {
     padding: 0;
     width: 50px;
     height: 70px;
@@ -2898,50 +3007,65 @@ draw-three-target.self-target:hover {
     font-size: 1.4rem;
 }
 
-.remove-card-popup .card-button.special.adder {
+.remove-card-popup .card-button.special.adder,
+.steal-card-popup .card-button.special.adder {
     background: #27ae60 !important;
     border-color: #219a52 !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.multiplier {
+.remove-card-popup .card-button.special.multiplier,
+.steal-card-popup .card-button.special.multiplier {
     background: #27ae60 !important;
     border-color: #219a52 !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.second-chance {
+.remove-card-popup .card-button.special.second-chance,
+.steal-card-popup .card-button.special.second-chance {
     background: #e74c3c !important;
     border-color: #c0392b !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.freeze {
+.remove-card-popup .card-button.special.freeze,
+.steal-card-popup .card-button.special.freeze {
     background: #3498db !important;
     border-color: #2980b9 !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.draw-three {
-    background: #9b59b6 !important;
-    border-color: #8e44ad !important;
+.remove-card-popup .card-button.special.draw-three,
+.steal-card-popup .card-button.special.draw-three {
+    background: #f1c40f !important;
+    border-color: #f39c12 !important;
+    color: #2c3e50 !important;
+}
+
+.remove-card-popup .card-button.special.steal-card,
+.steal-card-popup .card-button.special.steal-card {
+    background: #e67e22 !important;
+    border-color: #d35400 !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.minus {
+.remove-card-popup .card-button.special.minus,
+.steal-card-popup .card-button.special.minus {
     background: #1a1a1a !important;
     border-color: #34495e !important;
     color: white !important;
 }
 
-.remove-card-popup .card-button.special.divide {
+.remove-card-popup .card-button.special.divide,
+.steal-card-popup .card-button.special.divide {
     background: #1a1a1a !important;
     border-color: #34495e !important;
     color: white !important;
 }
 
 /* Regular cards in remove-card popup */
-.remove-card-popup .card-button.regular {
+.remove-card-popup .card-button.regular,
+.steal-card-popup .card-button.regular {
     background: white !important;
     color: var(--text-dark) !important;
     border: 2px solid var(--secondary);
@@ -2954,7 +3078,8 @@ draw-three-target.self-target:hover {
 }
 
 /* Remove Card Popup - Update card alignment and busted state */
-.remove-card-popup .card-button {
+.remove-card-popup .card-button,
+.steal-card-popup .card-button {
     position: relative;
     display: flex;
     align-items: center;
@@ -2963,12 +3088,14 @@ draw-three-target.self-target:hover {
     font-weight: bold;
 }
 
-.remove-card-popup .player-section.busted {
+.remove-card-popup .player-section.busted,
+.steal-card-popup .player-section.busted {
     opacity: 0.7;
     position: relative;
 }
 
-.remove-card-popup .player-section.busted::before {
+.remove-card-popup .player-section.busted::before,
+.steal-card-popup .player-section.busted::before {
     content: "BUSTED";
     position: absolute;
     top: 50%;
@@ -2985,12 +3112,14 @@ draw-three-target.self-target:hover {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.remove-card-popup .player-section.busted .cards-list {
+.remove-card-popup .player-section.busted .cards-list,
+.steal-card-popup .player-section.busted .cards-list {
     pointer-events: none;
     filter: grayscale(0.8);
 }
 
-.remove-card-popup .player-section.busted .card-button {
+.remove-card-popup .player-section.busted .card-button,
+.steal-card-popup .player-section.busted .card-button {
     cursor: not-allowed;
 }
 
