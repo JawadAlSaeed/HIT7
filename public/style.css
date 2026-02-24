@@ -388,18 +388,21 @@ body::before {
     flex-wrap: nowrap;
 }
 
-/* Desktop layout for players - horizontal */
-@media (min-width: 1024px) {
+/* Desktop/tablet layout for players - responsive grid */
+@media (min-width: 768px) {
     .players-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         justify-content: center;
-        flex-wrap: wrap;
-        flex-direction: row;
+        align-items: start;
+        width: 100%;
+        overflow-x: visible;
     }
 
     .players-container .player {
-        flex: 0 0 calc(25% - 0.75rem);
-        min-width: 300px;
+        width: 100%;
         max-width: 450px;
+        margin: 0 auto;
     }
 }
 
