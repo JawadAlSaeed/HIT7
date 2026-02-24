@@ -371,6 +371,7 @@ body::before {
 /* Players Container - Updated for centered layout */
 .players-container {
     display: flex;
+    flex-direction: row;
     gap: 1rem;
     width: calc(100vw - 2rem);
     overflow-x: auto;
@@ -380,10 +381,11 @@ body::before {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: var(--highlight) var(--secondary);
-    justify-content: flex-start;
-    overflow-y: auto;
+    justify-content: center;
+    overflow-y: visible;
     max-height: calc(100vh - 150px); /* Adjust for header and controls */
     flex: 1;
+    flex-wrap: nowrap;
 }
 
 /* Desktop layout for players - horizontal */
@@ -391,6 +393,13 @@ body::before {
     .players-container {
         justify-content: center;
         flex-wrap: wrap;
+        flex-direction: row;
+    }
+
+    .players-container .player {
+        flex: 0 0 calc(25% - 0.75rem);
+        min-width: 300px;
+        max-width: 450px;
     }
 }
 
