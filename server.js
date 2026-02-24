@@ -177,29 +177,20 @@ const handleSocketConnection = (io) => {
           
           // Pop the Select card from the current deck
           game.deck.pop();
-          
-          // Send a special event with both empty deck and the full deck
-          socket.emit('select-card-from-pile', gameId, [], newDeck);
-          
+
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
+
           // Update the game's deck with the new deck
-          game.discardPile.push('Select');
           game.deck = newDeck;
-          
-          // Set a timeout in case player doesn't select within 30 seconds
-          setTimeout(() => {
-            const currentGame = games.get(gameId);
-            if (currentGame && currentGame.status === 'playing') {
-              const currentPlayer = currentGame.players[currentGame.currentPlayer];
-              if (currentPlayer && currentPlayer.id === socket.id) {
-                // Player still hasn't selected, auto-advance
-                console.log(`Player ${socket.id} timed out on Select Card, auto-advancing`);
-                advanceTurn(currentGame);
-                checkGameStatus(currentGame);
-                io.to(gameId).emit('game-update', currentGame);
-              }
-            }
-          }, 30000);
-          
+
+          handleSelectCard(game, player, socket, io, [], newDeck);
+
+          updatePlayerScore(player);
+          checkGameStatus(game);
+          io.to(gameId).emit('game-update', game);
+
           // No need for further processing - we'll handle the card selection in the select-card-choice event
           return;
         }
@@ -266,30 +257,20 @@ const handleSocketConnection = (io) => {
         if (player.drawThreeRemaining > 0) {
           // Store the special card as pending and continue with D3 sequence
           player.pendingSpecialCard = card;
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
           player.drawThreeRemaining--;
           if (player.drawThreeRemaining === 0) {
             handlePendingSpecialCard(game, player, socket, io);
           }
         } else {
-          // Show select card popup with the current deck state
-          // Send consistent 3 parameters: gameId, currentDeck, and null for fullDeck (since we're not reshuffling)
-          socket.emit('select-card-from-pile', gameId, game.deck, null);
-          game.discardPile.push('Select');
-          
-          // Set a timeout in case player doesn't select within 30 seconds
-          setTimeout(() => {
-            const currentGame = games.get(gameId);
-            if (currentGame && currentGame.status === 'playing') {
-              const currentPlayer = currentGame.players[currentGame.currentPlayer];
-              if (currentPlayer && currentPlayer.id === socket.id) {
-                // Player still hasn't selected, auto-advance
-                console.log(`Player ${socket.id} timed out on Select Card, auto-advancing`);
-                advanceTurn(currentGame);
-                checkGameStatus(currentGame);
-                io.to(gameId).emit('game-update', currentGame);
-              }
-            }
-          }, 30000);
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
+          // Emit game-update so clients see Select in special cards before popup shows
+          io.to(gameId).emit('game-update', game);
+          handleSelectCard(game, player, socket, io);
         }
       }
       // Handle other special cards
@@ -509,6 +490,8 @@ const handleSocketConnection = (io) => {
       
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
+
+      player.specialCards = player.specialCards.filter(c => c !== 'Select');
     
       // Find and remove the selected card from the deck (with safety checks)
       let cardFound = false;
@@ -795,6 +778,10 @@ const updatePlayerScore = player => {
 const handlePendingSpecialCard = (game, player, socket, io) => {
   const card = player.pendingSpecialCard;
   player.pendingSpecialCard = null; // Clear the pending card
+  if (card === 'Select') {
+    handleSelectCard(game, player, socket, io);
+    return;
+  }
   handleSpecialCard(game, player, card, socket, io);
 };
 
@@ -831,6 +818,29 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     player.specialCards.push(card);
     socket.emit('select-remove-card-target', game.id, game.players);
   }
+};
+
+const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDeck = null) => {
+  const popupDeck = Array.isArray(deckForPopup) ? deckForPopup : game.deck;
+  socket.emit('select-card-from-pile', game.id, popupDeck, fullDeck);
+  game.discardPile.push('Select');
+
+  const playerId = player.id;
+  const gameId = game.id;
+
+  setTimeout(() => {
+    const currentGame = games.get(gameId);
+    if (currentGame && currentGame.status === 'playing') {
+      const currentPlayer = currentGame.players[currentGame.currentPlayer];
+      if (currentPlayer && currentPlayer.id === playerId) {
+        currentPlayer.specialCards = currentPlayer.specialCards.filter(c => c !== 'Select');
+        console.log(`Player ${playerId} timed out on Select Card, auto-advancing`);
+        advanceTurn(currentGame);
+        checkGameStatus(currentGame);
+        io.to(gameId).emit('game-update', currentGame);
+      }
+    }
+  }, 30000);
 };
 
 // Server startup

@@ -1044,6 +1044,9 @@ function handleError(message) {
 }
 
 function showResetConfirmation() {
+  const existingPopup = document.querySelector('.reset-confirmation-popup');
+  if (existingPopup) existingPopup.remove();
+
     const popup = document.createElement('div');
     popup.className = 'reset-confirmation-popup';
     popup.innerHTML = `
@@ -1051,27 +1054,42 @@ function showResetConfirmation() {
             <h2>Reset Game?</h2>
             <p>Start a new round with all players?</p>
             <div class="button-group">
-                <button class="game-button red" onclick="confirmReset(event)">
+        <button id="confirmResetBtn" class="game-button red" type="button">
                     Yes, Reset
                 </button>
-                <button class="game-button blue" onclick="cancelReset(event)">
+        <button id="cancelResetBtn" class="game-button blue" type="button">
                     Cancel
                 </button>
             </div>
         </div>
     `;
     document.body.appendChild(popup);
+
+  const confirmBtn = popup.querySelector('#confirmResetBtn');
+  const cancelBtn = popup.querySelector('#cancelResetBtn');
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      confirmReset();
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      cancelReset();
+    });
+  }
 }
 
-function confirmReset(event) {
-    event.preventDefault();
+function confirmReset() {
     const popup = document.querySelector('.reset-confirmation-popup');
     if (popup) popup.remove();
     resetGame();
 }
 
-function cancelReset(event) {
-    event.preventDefault();
+function cancelReset() {
     const popup = document.querySelector('.reset-confirmation-popup');
     if (popup) popup.remove();
 }
