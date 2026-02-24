@@ -13,7 +13,7 @@ const createIoServer = (server) => {
   return new Server(server, {
     cors: {
       origin: [
-        'https://hit7.xyz',
+        'https://hit7.click',
         'http://localhost:3000'
       ],
       methods: ['GET', 'POST'],
@@ -880,7 +880,7 @@ const server = http.createServer(app);
 // Update port configuration for production
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://hit7.xyz'
+  ? 'https://hit7.click'
   : `http://localhost:${PORT}`;
 
 // Initialize Socket.IO with the server

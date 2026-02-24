@@ -307,29 +307,45 @@ function copyShareLink() {
   let link = shareInput?.value || currentGameUrl || (currentGameId ? `${window.location.origin}/join/${currentGameId}` : '');
   if (!link) return alert('No share link available');
 
-  // Attempt to copy the link using the Clipboard API
-  navigator.clipboard.writeText(link).then(() => {
-    showCopyConfirmationInButton();
-  }).catch(err => {
-    console.error('Failed to copy link:', err);
-
-    // Fallback for older browsers: create a temporary input element
-    const tempInput = document.createElement('input');
-    tempInput.value = link;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    tempInput.setSelectionRange(0, 99999); // For mobile devices
-
-    try {
-      document.execCommand('copy');
+  const canUseClipboard = !!(navigator.clipboard && window.isSecureContext);
+  if (canUseClipboard) {
+    navigator.clipboard.writeText(link).then(() => {
       showCopyConfirmationInButton();
-    } catch (err) {
-      console.error('Fallback copy failed:', err);
-      alert('Failed to copy the link. Please copy it manually.');
-    }
+    }).catch(err => {
+      console.error('Clipboard API failed, falling back:', err);
+      fallbackCopyLink(link, shareInput);
+    });
+    return;
+  }
 
+  fallbackCopyLink(link, shareInput);
+}
+
+function fallbackCopyLink(link, shareInput) {
+  if (shareInput) {
+    shareInput.focus();
+    shareInput.select();
+    shareInput.setSelectionRange(0, link.length);
+  }
+
+  const tempInput = document.createElement('textarea');
+  tempInput.value = link;
+  tempInput.setAttribute('readonly', '');
+  tempInput.style.position = 'absolute';
+  tempInput.style.left = '-9999px';
+  document.body.appendChild(tempInput);
+  tempInput.select();
+
+  try {
+    const copied = document.execCommand('copy');
+    if (!copied) throw new Error('execCommand returned false');
+    showCopyConfirmationInButton();
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+    alert('Failed to copy the link. Please copy it manually.');
+  } finally {
     document.body.removeChild(tempInput);
-  });
+  }
 }
 
 function showCopyConfirmationInButton() {
@@ -785,7 +801,7 @@ function showWaitingScreen(gameData) {
         <div class="share-section">
           <p class="share-text">Share this link with your friends:</p>
           <input id="shareLinkInput" class="share-link-input" readonly value="${currentGameUrl || (window.location.origin + '/join/' + gameData.id || '')}">
-          <button class="game-button copy-link-btn" onclick="copyShareLink()">
+          <button id="copyLinkBtn" class="game-button copy-link-btn" type="button">
             Copy Game Link
           </button>
           <div class="copied-message">Link copied!</div>
@@ -823,6 +839,14 @@ function showWaitingScreen(gameData) {
       startBtn.addEventListener('click', (e) => {
         if (startBtn.disabled) return;
         startGame();
+      });
+    }
+
+    const copyBtn = document.getElementById('copyLinkBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        copyShareLink();
       });
     }
 

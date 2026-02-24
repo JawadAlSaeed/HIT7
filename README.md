@@ -75,13 +75,13 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 - Cross-platform compatibility
 
 ## 🚀 Quick Start
-1. Visit [HIT7.xyz](https://hit7.xyz)
+1. Visit [HIT7.click](https://hit7.click)
 2. Create a new game
 3. Share the link with friends
 4. Start playing!
 
 ## 🔗 Links
-- [Play Now](https://hit7.xyz)
+- [Play Now](https://hit7.click)
 - [Report Issues](https://github.com/JawadAlSaeed/HIT7/issues)
 - [Contribute](https://github.com/JawadAlSaeed/HIT7)
 
