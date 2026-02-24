@@ -530,8 +530,8 @@ function renderCard({ cardType, displayValue, count }) {
                     cardType === 'multiplier' ? '#27ae60' :
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
-                    cardType === 'draw-three' ? '#9b59b6' :
-                    cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
+                    cardType === 'draw-three' ? '#f1c40f' :
+                    cardType === 'remove-card' ? '#9b59b6' : 'inherit'
                 } !important;
                 color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
             `;
@@ -584,7 +584,7 @@ function updateDiscardPile(discardPile) {
           cardType === 'multiplier' ? '#27ae60' :
           cardType === 'second-chance' ? '#e74c3c' :
           cardType === 'freeze' ? '#3498db' :
-          cardType === 'draw-three' ? '#9b59b6' : 'inherit'
+          cardType === 'draw-three' ? '#f1c40f' : 'inherit'
         } !important;
       ` : '';
 
@@ -1364,8 +1364,8 @@ function showRemoveCardPopup(gameId, players) {
 function getCardColor(card) {
     if (card === 'SC') return '#e74c3c';
     if (card === 'Freeze') return '#3498db';
-    if (card === 'D3') return '#9b59b6';
-    if (card === 'RC') return '#7f8c8d';
+    if (card === 'D3') return '#f1c40f';
+    if (card === 'RC') return '#9b59b6';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
     if (card.endsWith('+')) return '#27ae60'; // Green for all adders
     if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
@@ -1566,8 +1566,8 @@ function handleSelectedCard(gameId, selectedCard) {
 function getCardColorStyle(card) {
   if (card === 'SC') return 'background: #e74c3c !important;';
   if (card === 'Freeze') return 'background: #3498db !important;';
-  if (card === 'D3') return 'background: #9b59b6 !important;';
-  if (card === 'RC') return 'background: #7f8c8d !important;';
+  if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
+  if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
   if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
   if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier
