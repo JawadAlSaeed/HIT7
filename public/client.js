@@ -526,13 +526,14 @@ function renderCard({ cardType, displayValue, count }) {
                 background: ${
                     cardType === 'adder' ? '#27ae60' : 
                     cardType === 'minus' ? '#1a1a1a' :
+                    cardType === 'divide' ? '#1a1a1a' :
                     cardType === 'multiplier' ? '#27ae60' :
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
                     cardType === 'draw-three' ? '#9b59b6' :
                     cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
                 } !important;
-                color: ${(cardType === 'minus' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
+                color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
             `;
         }
     }
