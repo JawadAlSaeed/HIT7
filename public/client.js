@@ -43,17 +43,17 @@ const initializeButtons = () => {
     const resetBtn = document.getElementById('resetButton');
 
     if (flipCardBtn) flipCardBtn.onclick = function() {
+        if (flipCardBtn.disabled) return;
         playSound('cardFlip');
         flipCard();
     };
     if (standBtn) standBtn.onclick = function() {
+        if (standBtn.disabled) return;
         playSound('buttonClick');
         stand();
     };
     if (resetBtn) resetBtn.onclick = function() {
-        if (confirm('Reset game and start a new round with all players?')) {
-            resetGame();
-        }
+        showResetConfirmation();
     };
     
     const headerTutorialBtn = document.getElementById('headerTutorialBtn');
@@ -82,7 +82,6 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
-socket.on('select-freeze-target', showFreezePopup);
 socket.on('cancel-freeze', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
@@ -90,14 +89,11 @@ socket.on('cancel-freeze', () => {
   }
 });
 
-socket.on('game-update', () => {
-  if (activeFreezePopup) {
-    activeFreezePopup.remove();
-    activeFreezePopup = null;
-  }
-});
-
 socket.on('select-freeze-target', (gameId, targets) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   // Remove any existing popups
   document.querySelectorAll('.freeze-popup').forEach(p => p.remove());
   
@@ -162,39 +158,9 @@ socket.on('select-freeze-target', (gameId, targets) => {
   observer.observe(document.body, { childList: true });
 });
 
-socket.on('select-draw-three-target', (gameId, targets) => {
-  if (activeDrawThreePopup) {
-    activeDrawThreePopup.remove();
-    activeDrawThreePopup = null;
-  }
+// draw-three popup handler (single instance kept earlier in file)
 
-  const popup = document.createElement('div');
-  popup.className = 'draw-three-popup active';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3>🎯 Select player to draw three cards:</h3>
-      <div class="draw-three-targets">
-        ${targets.map(p => `
-          <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  popup.querySelectorAll('.draw-three-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      socket.emit('draw-three-select', currentGameId, btn.dataset.id);
-      popup.remove();
-      activeDrawThreePopup = null;
-    });
-  });
-
-  document.body.appendChild(popup);
-  activeDrawThreePopup = popup;
-});
-
+// keep a single connect/disconnect handler
 socket.on('connect', () => console.log('Connected to server'));
 socket.on('disconnect', () => alert('Lost connection to server!'));
 
@@ -252,6 +218,9 @@ socket.on('game-reset-with-players', (game) => {
 
 // Add select-card-from-pile event listener with other socket listeners
 socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
   showSelectCardPopup(gameId, deck, fullDeck);
 });
 
@@ -333,15 +302,62 @@ function handleGameCreated({ gameId, gameUrl }) {
 }
 
 function copyShareLink() {
-    if (!currentGameUrl) return;
-    navigator.clipboard.writeText(currentGameUrl).then(() => {
-        const btn = document.querySelector('.copy-link-btn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Link Copied!';
-        setTimeout(() => btn.textContent = originalText, 2000);
+  // Prefer the visible share input if present
+  const shareInput = document.getElementById('shareLinkInput');
+  let link = shareInput?.value || currentGameUrl || (currentGameId ? `${window.location.origin}/join/${currentGameId}` : '');
+  if (!link) return alert('No share link available');
+
+  const canUseClipboard = !!(navigator.clipboard && window.isSecureContext);
+  if (canUseClipboard) {
+    navigator.clipboard.writeText(link).then(() => {
+      showCopyConfirmationInButton();
     }).catch(err => {
-        console.error('Copy failed:', err);
+      console.error('Clipboard API failed, falling back:', err);
+      fallbackCopyLink(link, shareInput);
     });
+    return;
+  }
+
+  fallbackCopyLink(link, shareInput);
+}
+
+function fallbackCopyLink(link, shareInput) {
+  if (shareInput) {
+    shareInput.focus();
+    shareInput.select();
+    shareInput.setSelectionRange(0, link.length);
+  }
+
+  const tempInput = document.createElement('textarea');
+  tempInput.value = link;
+  tempInput.setAttribute('readonly', '');
+  tempInput.style.position = 'absolute';
+  tempInput.style.left = '-9999px';
+  document.body.appendChild(tempInput);
+  tempInput.select();
+
+  try {
+    const copied = document.execCommand('copy');
+    if (!copied) throw new Error('execCommand returned false');
+    showCopyConfirmationInButton();
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+    alert('Failed to copy the link. Please copy it manually.');
+  } finally {
+    document.body.removeChild(tempInput);
+  }
+}
+
+function showCopyConfirmationInButton() {
+    const copyButton = document.querySelector('.game-button.copy-link-btn');
+    if (!copyButton) return;
+
+    const originalText = copyButton.textContent;
+    copyButton.textContent = 'Link copied!';
+
+    setTimeout(() => {
+        copyButton.textContent = originalText;
+    }, 2000);
 }
 
 // Remove bust sound from handleGameUpdate since server will handle it
@@ -373,9 +389,12 @@ function handleGameUpdate(game) {
                 `).join('');
             }
             // Always update the start button when we get a game update in lobby
-            if (isHost) {
-                updateStartButton(game.players.length);
-            }
+        // Update share link input too
+        const shareInput = waitingScreen.querySelector('#shareLinkInput');
+        if (shareInput) {
+          shareInput.value = currentGameUrl || (window.location.origin + '/join/' + (game.id || currentGameId || ''));
+        }
+        if (isHost) updateStartButton(game.players.length);
         } else {
             // Show waiting screen if it doesn't exist
             showWaitingScreen(game);
@@ -422,15 +441,20 @@ function updateRemainingPile(deck) {
             'SC': 2,        // 2. Second Chance
             'Freeze': 3,    // 3. Freeze
             'D3': 4,        // 4. Draw Three
-            'RC': 5,        // 5. Remove Card
-            '2x': 6,        // 6. 2x Multiplier
-            '3x': 7,        // 7. 3x Multiplier (new)
-            '2+': 8,        // 8. 2+
-            '6+': 9,        // 9. 6+
-            '10+': 10,      // 10. 10+
-            '2-': 11,       // 11. 2-
-            '6-': 12,       // 12. 6-
-            '10-': 13,      // 13. 10-
+          'RC': 5,        // 5. Remove Card
+          'ST': 6,        // 6. Steal Card
+          '2+': 7,        // 7. 2+
+          '4+': 8,        // 8. 4+
+          '6+': 9,        // 9. 6+
+          '8+': 10,       // 10. 8+
+          '10+': 11,      // 11. 10+
+          '2x': 12,       // 12. 2x Multiplier
+          '2-': 13,       // 13. 2-
+          '4-': 14,       // 14. 4-
+          '6-': 15,       // 15. 6-
+          '8-': 16,       // 16. 8-
+          '10-': 17,      // 17. 10-
+          '2÷': 18,       // 18. 2÷ Divide
         };
         return specialOrder[card] || 99;  // Default high number for unknown cards
     };
@@ -439,14 +463,16 @@ function updateRemainingPile(deck) {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-            cardStr === 'RC' || cardStr === 'Select' ||  // Add Select to the check
+          cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' || cardStr === '2÷' ||
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
                 cardStr === 'RC' ? 'remove-card' :
-                cardStr === 'Select' ? 'select-card' :  // Add select-card type
+            cardStr === 'ST' ? 'steal-card' :
+                cardStr === 'Select' ? 'select-card' :
+                cardStr === '2÷' ? 'divide' :
                 cardStr.includes('+') ? 'adder' :
                 cardStr.includes('-') ? 'minus' :
                 'multiplier';
@@ -455,7 +481,9 @@ function updateRemainingPile(deck) {
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
                 cardStr === 'RC' ? '🗑️' :
-                cardStr === 'Select' ? '🃏' :  // Add joker emoji
+            cardStr === 'ST' ? '🥷' :
+                cardStr === 'Select' ? '🃏' :
+                cardStr === '2÷' ? '2÷' :
                 cardStr;
             specialCards.push({ cardStr, count, cardType, displayValue });
         } else {
@@ -500,14 +528,16 @@ function renderCard({ cardType, displayValue, count }) {
             cardStyle = `
                 background: ${
                     cardType === 'adder' ? '#27ae60' : 
-                    cardType === 'minus' ? '#2c3e50' :
-                    cardType === 'multiplier' ? '#f1c40f' :
+                    cardType === 'minus' ? '#1a1a1a' :
+                    cardType === 'divide' ? '#1a1a1a' :
+                    cardType === 'multiplier' ? '#27ae60' :
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
-                    cardType === 'draw-three' ? '#9b59b6' :
-                    cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
+                    cardType === 'draw-three' ? '#f1c40f' :
+                    cardType === 'remove-card' ? '#9b59b6' :
+                    cardType === 'steal-card' ? '#e67e22' : 'inherit'
                 } !important;
-                color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
+                color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
             `;
         }
     }
@@ -541,12 +571,27 @@ function updateDiscardPile(discardPile) {
       } else if (cardStr === 'D3') {
         cardType = 'draw-three';
         displayValue = '🎯';
+      } else if (cardStr === 'RC') {
+        cardType = 'remove-card';
+        displayValue = '🗑️';
+      } else if (cardStr === 'ST') {
+        cardType = 'steal-card';
+        displayValue = '🥷';
+      } else if (cardStr === 'Select') {
+        cardType = 'select-card';
+        displayValue = '🃏';
       } else if (cardStr.includes('+')) {
         cardType = 'adder';
         displayValue = cardStr;
+      } else if (cardStr === '2÷') {
+        cardType = 'divide';
+        displayValue = '2÷';
       } else if (cardStr.includes('x')) {
         cardType = 'multiplier';
         displayValue = cardStr.replace('x', '×');
+      } else if (cardStr.includes('-')) {
+        cardType = 'minus';
+        displayValue = cardStr;
       } else {
         cardType = 'number';
         displayValue = cardStr;
@@ -555,10 +600,14 @@ function updateDiscardPile(discardPile) {
       const cardStyle = cardType !== 'number' ? `
         background: ${
           cardType === 'adder' ? '#27ae60' : 
-          cardType === 'multiplier' ? '#f1c40f' :
+          cardType === 'multiplier' ? '#27ae60' :
           cardType === 'second-chance' ? '#e74c3c' :
           cardType === 'freeze' ? '#3498db' :
-          cardType === 'draw-three' ? '#9b59b6' : 'inherit'
+          cardType === 'draw-three' ? '#f1c40f' :
+          cardType === 'remove-card' ? '#9b59b6' :
+          cardType === 'steal-card' ? '#e67e22' :
+          cardType === 'divide' ? '#1a1a1a' :
+          cardType === 'minus' ? '#1a1a1a' : 'inherit'
         } !important;
       ` : '';
 
@@ -574,9 +623,13 @@ function updateDiscardPile(discardPile) {
           'second-chance': 1,
           'freeze': 2,
           'draw-three': 3,
-          'adder': 4,
-          'multiplier': 5,
-          'number': 6
+          'remove-card': 4,
+          'steal-card': 5,
+          'adder': 6,
+          'multiplier': 7,
+          'divide': 8,
+          'minus': 9,
+          'number': 10
         }[cardType] || 999
       };
     })
@@ -632,10 +685,16 @@ function playerTemplate(player, isCurrentTurn) {
                             const cardClass = getSpecialCardClass(card);
                             const cardDisplay = getSpecialCardDisplay(card);
                             
-                            // Add inline style for select-card gradient
+                            // Add inline style for special cards
                             let cardStyle = '';
                             if (card === 'Select') {
                                 cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
+                            } else if (card.endsWith('+') || card === '2x') {
+                              cardStyle = 'background: #27ae60 !important; color: white !important;';
+                            } else if (card === 'ST') {
+                              cardStyle = 'background: #e67e22 !important; color: white !important;';
+                            } else if (card === '2÷' || card.endsWith('-')) {
+                                cardStyle = 'background: #1a1a1a !important; color: white !important;';
                             }
                             
                             return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
@@ -666,34 +725,40 @@ function scoreBox(label, value) {
     `;
 }
 
-// Update special card class function to include "Select" card
+// Update special card class function to include all special cards
 function getSpecialCardClass(card) {
     if (card === 'SC') return 'second-chance';
     if (card === 'Freeze') return 'freeze';
     if (card === 'D3') return 'draw-three';
     if (card === 'RC') return 'remove-card';
+  if (card === 'ST') return 'steal-card';
     if (card === 'Select') return 'select-card';
+    if (card === '2÷') return 'divide';
     if (card.endsWith('+')) return 'adder';
     if (card.endsWith('x')) return 'multiplier';
     if (card.endsWith('-')) return 'minus';
     return '';
 }
 
-// Update special card display function to include "Select" card
+// Update special card display function to include all special cards
 function getSpecialCardDisplay(card) {
     // Special cards with emojis
     if (card === 'SC') return '🛡️';
     if (card === 'Freeze') return '❄️';
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
+  if (card === 'ST') return '🥷';
     if (card === 'Select') return '🃏';
     
-    // For adder and multiplier cards, extract the number and symbol
+    // For numeric modifier cards, format them
     if (card.endsWith('+') || card.endsWith('x') || card.endsWith('-')) {
         const number = card.slice(0, -1);  // Get everything except last character
         const symbol = card.slice(-1);     // Get last character (+ or x or -)
         return `${number}${symbol}`;       // Combine them (e.g., "2+")
     }
+    
+    // For divide card
+    if (card === '2÷') return '2÷';
     
     return card;
 }
@@ -728,21 +793,15 @@ function toggleActionButtons(active) {
     const flipCardBtn = document.getElementById('flipCard');
     const standButton = document.getElementById('standButton');
     
-    // Get current player object from container
-    const game = getCurrentGameState();
-    const currentPlayer = game?.players.find(p => p.id === socket.id);
-    
-    // Show buttons only if:
-    // 1. It's the player's turn (active is true)
-    // 2. Player exists
-    // 3. Game is in playing state
-    const showButtons = active && currentPlayer;
-    
-    if (flipCardBtn) flipCardBtn.style.display = showButtons ? 'block' : 'none';
-    if (standButton) standButton.style.display = 
-        (showButtons && (!currentPlayer || currentPlayer.drawThreeRemaining === 0)) 
-        ? 'block' 
-        : 'none';
+    // Always show buttons but disable them when not active
+    if (flipCardBtn) {
+        flipCardBtn.disabled = !active;
+        flipCardBtn.style.display = 'block';
+    }
+    if (standButton) {
+        standButton.disabled = !active;
+        standButton.style.display = 'block';
+    }
 }
 
 // Add this helper function to get current game state
@@ -786,11 +845,12 @@ function showWaitingScreen(gameData) {
         <h2>${isHost ? '🎮 Waiting Room' : '⏳ Waiting for Host'}</h2>
         ${isHost ? `
         <div class="share-section">
-            <p class="share-text">Share this link with your friends:</p>
-            <button class="game-button copy-link-btn" onclick="copyShareLink()">
-                Copy Game Link
-            </button>
-            <div class="copied-message">Link copied!</div>
+          <p class="share-text">Share this link with your friends:</p>
+          <input id="shareLinkInput" class="share-link-input" readonly value="${currentGameUrl || (window.location.origin + '/join/' + gameData.id || '')}">
+          <button id="copyLinkBtn" class="game-button copy-link-btn" type="button">
+            Copy Game Link
+          </button>
+          <div class="copied-message">Link copied!</div>
         </div>
         ` : ''}
         <div class="players-list">
@@ -818,6 +878,23 @@ function showWaitingScreen(gameData) {
     
     waitingScreen.innerHTML = content;
     document.body.appendChild(waitingScreen);
+
+    // Ensure start button calls startGame and is wired (in case innerHTML changes later)
+    const startBtn = document.getElementById('startGameBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', (e) => {
+        if (startBtn.disabled) return;
+        startGame();
+      });
+    }
+
+    const copyBtn = document.getElementById('copyLinkBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        copyShareLink();
+      });
+    }
 
     // Hide the game area completely while in waiting room
     document.getElementById('gameArea').style.display = 'none';
@@ -1012,6 +1089,57 @@ function handleError(message) {
     alert(message);
 }
 
+function showResetConfirmation() {
+  const existingPopup = document.querySelector('.reset-confirmation-popup');
+  if (existingPopup) existingPopup.remove();
+
+    const popup = document.createElement('div');
+    popup.className = 'reset-confirmation-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <h2>Reset Game?</h2>
+            <p>Start a new round with all players?</p>
+            <div class="button-group">
+        <button id="confirmResetBtn" class="game-button red" type="button">
+                    Yes, Reset
+                </button>
+        <button id="cancelResetBtn" class="game-button blue" type="button">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+  const confirmBtn = popup.querySelector('#confirmResetBtn');
+  const cancelBtn = popup.querySelector('#cancelResetBtn');
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      confirmReset();
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      cancelReset();
+    });
+  }
+}
+
+function confirmReset() {
+    const popup = document.querySelector('.reset-confirmation-popup');
+    if (popup) popup.remove();
+    resetGame();
+}
+
+function cancelReset() {
+    const popup = document.querySelector('.reset-confirmation-popup');
+    if (popup) popup.remove();
+}
+
 function handleRoundSummary({ players, allBusted }) {
     playSound(allBusted ? 'bustSound' : 'roundEnd');
     const popup = document.createElement('div');
@@ -1157,6 +1285,10 @@ function showFreezePopup(gameId, targets) {
 
 // Update showRemoveCardPopup function to properly display special cards
 function showRemoveCardPopup(gameId, players) {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   const popup = document.createElement('div');
   popup.className = 'remove-card-popup';
   
@@ -1165,7 +1297,7 @@ function showRemoveCardPopup(gameId, players) {
       <h3><span class="emoji">🗑️</span> Select a card to remove:</h3>
       <div class="players-list">
         ${players.map(player => {
-          const isDisabled = player.status !== 'active';
+          const isDisabled = player.status === 'busted';
           return `
             <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
               <h4>${player.name} ${player.id === socket.id ? '(You)' : ''} 
@@ -1181,16 +1313,19 @@ function showRemoveCardPopup(gameId, players) {
                     ${card}
                   </button>
                 `).join('')}
-                ${player.specialCards.map((card, index) => `
+                ${player.specialCards.map((card, index) => {
+                  const isRemoveCard = card === 'RC';
+                  return `
                   <button class="card-button special ${getSpecialCardClass(card)}"
                     style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
                     data-player="${player.id}" 
                     data-index="${index}"
                     data-special="true"
-                    ${isDisabled ? 'disabled' : ''}>
+                    ${isDisabled || isRemoveCard ? 'disabled' : ''}>
                     ${getSpecialCardDisplay(card)}
                   </button>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
               ${isDisabled ? `
                 <div class="status-overlay">
@@ -1250,6 +1385,7 @@ function showRemoveCardPopup(gameId, players) {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });
@@ -1258,21 +1394,132 @@ function showRemoveCardPopup(gameId, players) {
   observer.observe(document.body, { childList: true });
 }
 
+function showStealCardPopup(gameId, players) {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+
+  const popup = document.createElement('div');
+  popup.className = 'steal-card-popup';
+
+  const content = `
+    <div class="popup-content">
+      <h3><span class="emoji">🥷</span> Select a card to steal:</h3>
+      <div class="players-list">
+        ${players.map(player => {
+          const isDisabled = player.status === 'busted';
+          const showStatusBadge = player.status !== 'active';
+          return `
+            <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
+              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}
+                  ${showStatusBadge ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
+              </h4>
+              <div class="cards-list">
+                ${player.regularCards.map((card, index) => `
+                  <button class="card-button regular"
+                    data-player="${player.id}"
+                    data-index="${index}"
+                    data-special="false"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${card}
+                  </button>
+                `).join('')}
+                ${player.specialCards.map((card, index) => `
+                  <button class="card-button special ${getSpecialCardClass(card)}"
+                    style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                    data-player="${player.id}"
+                    data-index="${index}"
+                    data-special="true"
+                    ${isDisabled ? 'disabled' : ''}>
+                    ${getSpecialCardDisplay(card)}
+                  </button>
+                `).join('')}
+              </div>
+              ${isDisabled ? `
+                <div class="status-overlay">
+                  <span class="status-message">Player is ${player.status.toUpperCase()}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
+    </div>
+  `;
+
+  popup.innerHTML = content;
+
+  popup.querySelectorAll('.card-button:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.player;
+      const cardIndex = parseInt(btn.dataset.index);
+      const isSpecial = btn.dataset.special === 'true';
+
+      socket.emit('steal-card', gameId, targetId, cardIndex, isSpecial);
+      popup.remove();
+    });
+  });
+
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
+  document.body.appendChild(popup);
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
+        observer.disconnect();
+      }
+    });
+  });
+
+  observer.observe(document.body, { childList: true });
+}
+
 // Add helper function to get card background color
 function getCardColor(card) {
     if (card === 'SC') return '#e74c3c';
     if (card === 'Freeze') return '#3498db';
-    if (card === 'D3') return '#9b59b6';
-    if (card === 'RC') return '#7f8c8d'; // Changed to a lighter gray
+    if (card === 'D3') return '#f1c40f';
+    if (card === 'RC') return '#9b59b6';
+  if (card === 'ST') return '#e67e22';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
-    if (card.endsWith('+')) return '#27ae60';
-    if (card.endsWith('x')) return '#f1c40f';
-    if (card.endsWith('-')) return '#2c3e50'; // New dark color for minus cards
+    if (card.endsWith('+')) return '#27ae60'; // Green for all adders
+    if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
+    if (card === '2÷') return '#1a1a1a'; // Black for divide
+    if (card.endsWith('-')) return '#1a1a1a'; // Black for all minus
     return 'inherit';
 }
 
 socket.on('select-remove-card-target', (gameId, players) => {
   showRemoveCardPopup(gameId, players);
+});
+
+socket.on('select-steal-card-target', (gameId, players) => {
+  showStealCardPopup(gameId, players);
 });
 
 // Add this function to show the Select Card popup
@@ -1295,7 +1542,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   // Sort card groups
   Object.entries(cardCounts).forEach(([cardStr, count]) => {
     if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-        cardStr === 'RC' || cardStr === 'Select' ||
+        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' ||
         cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
       specialCards.push({ card: cardStr, count });
     } else {
@@ -1305,6 +1552,32 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   
   // Sort regular cards numerically
   regularCards.sort((a, b) => a.card - b.card);
+  
+  // Sort special cards by same order as remaining pile
+  const getSpecialCardOrder = card => {
+    const specialOrder = {
+        'Select': 1,    // 1. Select Card
+        'SC': 2,        // 2. Second Chance
+        'Freeze': 3,    // 3. Freeze
+        'D3': 4,        // 4. Draw Three
+        'RC': 5,        // 5. Remove Card
+        'ST': 6,        // 6. Steal Card
+        '2+': 7,        // 7. 2+
+        '4+': 8,        // 8. 4+
+        '6+': 9,        // 9. 6+
+        '8+': 10,       // 10. 8+
+        '10+': 11,      // 11. 10+
+        '2x': 12,       // 12. 2x Multiplier
+        '2-': 13,       // 13. 2-
+        '4-': 14,       // 14. 4-
+        '6-': 15,       // 15. 6-
+        '8-': 16,       // 16. 8-
+        '10-': 17,      // 17. 10-
+        '2÷': 18,       // 18. 2÷ Divide
+    };
+    return specialOrder[card] || 99;
+  };
+  specialCards.sort((a, b) => getSpecialCardOrder(a.card) - getSpecialCardOrder(b.card));
   
   // Create popup
   const popup = document.createElement('div');
@@ -1397,6 +1670,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });
@@ -1429,20 +1703,25 @@ function handleSelectedCard(gameId, selectedCard) {
   } else if (selectedCard === 'RC') {
     // Show remove card popup immediately
     socket.emit('request-remove-card-targets', gameId);
+  } else if (selectedCard === 'ST') {
+    // Show steal card popup immediately
+    socket.emit('request-steal-card-targets', gameId);
   }
   // For other cards, no immediate action needed
 }
 
-// Add helper function for card color styling - update gradient
+// Add helper function for card color styling
 function getCardColorStyle(card) {
   if (card === 'SC') return 'background: #e74c3c !important;';
   if (card === 'Freeze') return 'background: #3498db !important;';
-  if (card === 'D3') return 'background: #9b59b6 !important;';
-  if (card === 'RC') return 'background: #7f8c8d !important;';
+  if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
+  if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
+  if (card === 'ST') return 'background: #e67e22 !important; color: white !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
-  if (card.endsWith('+')) return 'background: #27ae60 !important;';
-  if (card.endsWith('x')) return 'background: #f1c40f !important; color: var(--text-dark) !important;';
-  if (card.endsWith('-')) return 'background: #2c3e50 !important; color: white !important;';
+  if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
+  if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier
+  if (card === '2÷') return 'background: #1a1a1a !important; color: white !important;'; // Black for divide
+  if (card.endsWith('-')) return 'background: #1a1a1a !important; color: white !important;'; // Black for minus
   return '';
 }
 
@@ -1457,198 +1736,103 @@ function showTutorial() {
             <button class="close-button">×</button>
             <h2 class="tutorial-title">HOW TO PLAY</h2>
             
-            <div class="tutorial-tabs">
-                <button class="tab-button active" data-tab="basics">Basics</button>
-                <button class="tab-button" data-tab="cards">Regular Cards</button>
-                <button class="tab-button" data-tab="special">Special Cards</button>
-                <button class="tab-button" data-tab="scoring">Scoring</button>
-                <button class="tab-button" data-tab="strategy">Strategy</button>
-            </div>
+            <div class="tutorial-content">
+                <section class="tutorial-section">
+                    <h3>🎮 OBJECTIVE</h3>
+                    <p>Be the first to reach 200 points!</p>
+                </section>
 
-            <div class="tab-content active" id="basics-tab">
-                <div class="tutorial-section">
-                    <h3>Game Objective</h3>
-                    <p>Be the first player to reach 200 points across multiple rounds.</p>
-                    
-                    <h3>Game Flow</h3>
-                    <ul class="rules-list">
-                        <li>Players take turns drawing cards to collect points</li>
-                        <li>Each player can hold up to 7 regular number cards</li>
-                        <li>Drawing a duplicate regular number will "bust" you</li>
-                        <li>You can "Stand" to bank your points at any time</li>
-                        <li>After all players have stood or busted, a new round begins</li>
-                        <li>If all players bust, the round restarts with no points gained</li>
+                <section class="tutorial-section">
+                    <h3>📋 GAME FLOW</h3>
+                    <ul>
+                        <li>Draw cards to collect points</li>
+                        <li>Max 7 regular cards per hand</li>
+                        <li>Duplicate number = BUST</li>
+                        <li>Stand to bank your points</li>
+                        <li>7 cards filled = +15 bonus!</li>
                     </ul>
-                </div>
-            </div>
+                </section>
 
-            <div class="tab-content" id="cards-tab">
-                <div class="tutorial-section">
-                    <h3>Regular Cards</h3>
-                    <p>The deck contains 78 numbered cards (1-12) and one zero card.</p>
-                    
-                    <div class="cards-grid">
-                        <div class="card-example">
-                            <div class="card">0</div>
-                            <div class="card-explanation">
-                                <strong>Zero Card</strong><br>
-                                Appears once in the deck. Worth 0 points but doesn't cause a bust if drawn repeatedly.
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card">1</div>
-                            <div class="card-explanation">
-                                <strong>Number 1</strong><br>
-                                Appears once in the deck. Worth 1 point.
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card">7</div>
-                            <div class="card-explanation">
-                                <strong>Number Cards</strong><br>
-                                Each number (1-12) appears as many times as its value. For example, there are 7 "7" cards.
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <h3>Important</h3>
-                    <ul class="rules-list">
-                        <li>Drawing a duplicate number card will cause you to "bust" (lose all points for the round)</li>
-                        <li>Getting all 7 slots filled with regular cards gives you a 15-point bonus!</li>
+                <section class="tutorial-section">
+                    <h3>🃏 REGULAR CARDS</h3>
+                    <p><strong>Zero:</strong> Worth 0, can't bust you (1 copy)</p>
+                    <p><strong>1-12:</strong> Worth face value (e.g., 7 copies of "7")</p>
+                    <p><strong>Rule:</strong> Drawing a duplicate = Lose all round points!</p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>⭐ SPECIAL CARDS</h3>
+                    <table class="card-table">
+                        <tr>
+                            <td><strong>🃏 Select</strong></td>
+                            <td>Pick any card from deck</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🛡️ 2nd Chance</strong></td>
+                            <td>Undo one bust</td>
+                        </tr>
+                        <tr>
+                            <td><strong>❄️ Freeze</strong></td>
+                            <td>Skip opponent's turn</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🎯 Draw 3</strong></td>
+                            <td>Force 3 draws</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🗑️ Remove</strong></td>
+                            <td>Delete opponent card</td>
+                        </tr>
+                        <tr>
+                          <td><strong>🥷 Steal</strong></td>
+                          <td>Steal a card from another player</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2+ / 4+ / 6+ / 8+ / 10+</strong></td>
+                            <td>Add points</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2- / 4- / 6- / 8- / 10-</strong></td>
+                            <td>Lose points</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2×</strong></td>
+                            <td>Double score</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2÷</strong></td>
+                            <td>Halve score (rounded)</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>🧮 SCORING EXAMPLE</h3>
+                    <p><strong>Your hand:</strong> [3, 5, 7] + 2+ + 2×</p>
+                    <p>3 + 5 + 7 = 15</p>
+                    <p>15 + 2 = 17</p>
+                    <p>17 × 2 = <strong>34 points!</strong></p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>💡 PRO TIPS</h3>
+                    <ul>
+                        <li>Save 2nd Chance for high scores</li>
+                        <li>Go for 7 cards = +15 bonus</li>
+                        <li>Grab multipliers early</li>
+                        <li>Use Freeze on leaders</li>
+                        <li>Balance risk vs. reward</li>
                     </ul>
-                </div>
-            </div>
-
-            <div class="tab-content" id="special-tab">
-                <div class="tutorial-section">
-                    <h3>Special Cards</h3>
-                    <p>Special cards don't count toward your 7-card limit and have unique effects.</p>
-                    
-                    <div class="cards-grid">
-                        <div class="card-example">
-                            <div class="card special select-card">🃏</div>
-                            <div class="card-explanation">
-                                <strong>Select Card</strong><br>
-                                Choose any card from the remaining deck to add to your hand
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special second-chance">🛡️</div>
-                            <div class="card-explanation">
-                                <strong>Second Chance</strong><br>
-                                Protects you once from busting when drawing a duplicate
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special freeze">❄️</div>
-                            <div class="card-explanation">
-                                <strong>Freeze</strong><br>
-                                Forces any player to skip their next turn
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special draw-three">🎯</div>
-                            <div class="card-explanation">
-                                <strong>Draw Three</strong><br>
-                                Forces any player to draw 3 cards in a row
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special remove-card">🗑️</div>
-                            <div class="card-explanation">
-                                <strong>Remove Card</strong><br>
-                                Remove any card from any player's collection
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special adder">2+</div>
-                            <div class="card-explanation">
-                                <strong>Add Cards</strong><br>
-                                Adds points to your score (2+, 6+, 10+)
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special minus">2-</div>
-                            <div class="card-explanation">
-                                <strong>Minus Cards</strong><br>
-                                Subtracts points from your score (2-, 6-, 10-)
-                            </div>
-                        </div>
-                        <div class="card-example">
-                            <div class="card special multiplier">2×</div>
-                            <div class="card-explanation">
-                                <strong>Multiply Card</strong><br>
-                                2× doubles your total round score
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="scoring-tab">
-                <div class="tutorial-section">
-                    <h3>Calculating Your Score</h3>
-                    
-                    <div class="score-example">
-                        <div class="score-formula">
-                            <span class="formula-step">Base Score: Sum of all unique regular cards</span>
-                            <span class="formula-step">+ Add Card values</span>
-                            <span class="formula-step">- Minus Card values</span>
-                            <span class="formula-step">× Multiplier effect (2×)</span>
-                            <span class="formula-step">+ Bonus (15 points for filling all 7 slots)</span>
-                        </div>
-                    </div>
-                    
-                    <h3>Example</h3>
-                    <div class="score-example">
-                        <p class="score-scenario">
-                            Player has: [3,5,7] + 2+ and 6+ + 2- + 2×
-                        </p>
-                        <ul class="score-calculation">
-                            <li>Base score: 3 + 5 + 7 = 15</li>
-                            <li>Add cards: 2 + 6 = 8</li>
-                            <li>Minus cards: -2</li>
-                            <li>Subtotal: 15 + 8 - 2 = 21</li>
-                            <li>Multiplier: 21 × 2 = 42</li>
-                            <li>Final round score: 42 points</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="strategy-tab">
-                <div class="tutorial-section">
-                    <h3>Tips & Strategies</h3>
-                    <ul class="rules-list">
-                        <li><strong>Risk Management:</strong> The more cards you have, the higher your potential score but also the higher risk of busting</li>
-                        <li><strong>Second Chance:</strong> Save this card for when you have a high score at risk</li>
-                        <li><strong>Select Card:</strong> Use this to grab a multiplier or a number you know is safe</li>
-                        <li><strong>Multipliers:</strong> The 2× multiplier can significantly increase your score - prioritize getting it</li>
-                        <li><strong>Targeting:</strong> Use Freeze or Draw Three on players with high scores or nearly full hands</li>
-                        <li><strong>Seven's Bonus:</strong> If you're close to having all 7 slots filled, it might be worth risking one more card for the 15-point bonus</li>
-                    </ul>
-                </div>
+                </section>
             </div>
         </div>
     `;
-
-    // Add event listeners for tabs
-    popup.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => {
-            popup.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            popup.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            button.classList.add('active');
-            popup.querySelector(`#${button.dataset.tab}-tab`).classList.add('active');
-            
-            playSound('buttonClick');
-        });
-    });
 
     // Close button functionality
     popup.querySelector('.close-button').addEventListener('click', () => {
         playSound('buttonClick');
         popup.remove();
+        document.removeEventListener('keydown', handleEscape);
     });
 
     // Close on escape key
@@ -1712,6 +1896,10 @@ function handleNumberCard(game, player, card) {
 }
 
 socket.on('select-draw-three-target', (gameId, targets) => {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+  
   if (activeDrawThreePopup) {
     activeDrawThreePopup.remove();
     activeDrawThreePopup = null;
@@ -1772,6 +1960,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
       if ([...mutation.removedNodes].includes(popup)) {
         document.removeEventListener('mouseup', handleUp);
         document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
         observer.disconnect();
       }
     });

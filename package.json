@@ -1,27 +1,27 @@
 {
-  "name": "flip7",
+  "name": "hit7",
   "version": "1.0.0",
   "description": "A game about cards",
-  "main": "script.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "postinstall": "npm run build",
     "build": "echo 'No build step required'",
-    "heroku-postbuild": "npm install",
+    
     "dev": "cross-env NODE_ENV=development node server.js",
     "stop": "npx kill-port 3000"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JawadAlSaeed/FLIP7.git"
+    "url": "git+https://github.com/JawadAlSaeed/hit7.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/JawadAlSaeed/FLIP7/issues"
+    "url": "https://github.com/JawadAlSaeed/hit7/issues"
   },
-  "homepage": "https://github.com/JawadAlSaeed/FLIP7#readme",
+  "homepage": "https://github.com/JawadAlSaeed/hit7#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -38,5 +38,5 @@
     "node": "18.x",
     "npm": "9.x"
   },
-  "domains": ["hit7.xyz"]
+  "domains": ["hit7.click"]
 }

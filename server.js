@@ -13,7 +13,7 @@ const createIoServer = (server) => {
   return new Server(server, {
     cors: {
       origin: [
-        'https://hit7.xyz',
+        'https://hit7.click',
         'http://localhost:3000'
       ],
       methods: ['GET', 'POST'],
@@ -24,13 +24,26 @@ const createIoServer = (server) => {
 };
 
 // Middleware
+// Build allowed connect-src list (include ws/wss for production)
+const allowedConnect = ["'self'"];
+if (process.env.PRODUCTION_URL) {
+  allowedConnect.push(process.env.PRODUCTION_URL);
+  // Allow websocket origin for production URL (replace http(s) with ws(s))
+  try {
+    const wsUrl = process.env.PRODUCTION_URL.replace(/^http/, 'ws');
+    allowedConnect.push(wsUrl);
+  } catch (e) {
+    // ignore
+  }
+} else {
+  allowedConnect.push('http://localhost:3000', 'ws://localhost:3000');
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", ...(process.env.PRODUCTION_URL 
-        ? [process.env.PRODUCTION_URL] 
-        : ['ws://localhost:3000'])]
+      connectSrc: allowedConnect
     }
   }
 }));
@@ -56,22 +69,24 @@ const createDeck = () => {
     }
   }
 
-  // Special cards = 20 cards (total 99 cards)
+  // Special cards = 27 cards (total 106 cards)
   const specialCards = [
-    '2+', '6+', '10+',                  // 3 adder cards
-    '2-', '6-', '10-',                  // 3 minus cards
-    '2x',                               // 1 multiplier card (removed 3x)
+    '2+', '4+', '6+', '8+', '10+',      // 5 adder cards
+    '2-', '4-', '6-', '8-', '10-',      // 5 minus cards
+    '2÷',                               // 1 divide card
+    '2x',                               // 1 multiplier card
     'SC', 'SC', 'SC',                   // 3 second chance cards
     'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
     'D3', 'D3', 'D3',                   // 3 draw three cards
     'RC', 'RC', 'RC',                   // 3 remove card cards
+    'ST', 'ST',                         // 2 steal card cards
     'Select'                            // 1 select card
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 99) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 99 cards.`);
+  if (deck.length !== 106) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 106 cards.`);
   }
   
   return shuffle(deck);
@@ -90,9 +105,7 @@ const handleSocketConnection = (io) => {
   io.on('connection', socket => {
     console.log(`New connection: ${socket.id}`);
 
-    const BASE_URL = process.env.NODE_ENV === 'production' 
-      ? 'https://hit7.xyz'
-      : 'http://localhost:3000';
+    // Use the module-level BASE_URL (calculated at startup) instead of hardcoding here
 
     // Update game creation to include full URL
     socket.on('create-game', playerName => {
@@ -166,14 +179,20 @@ const handleSocketConnection = (io) => {
           
           // Pop the Select card from the current deck
           game.deck.pop();
-          
-          // Send a special event with both empty deck and the full deck
-          socket.emit('select-card-from-pile', gameId, [], newDeck);
-          
+
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
+
           // Update the game's deck with the new deck
-          game.discardPile.push('Select');
           game.deck = newDeck;
-          
+
+          handleSelectCard(game, player, socket, io, [], newDeck);
+
+          updatePlayerScore(player);
+          checkGameStatus(game);
+          io.to(gameId).emit('game-update', game);
+
           // No need for further processing - we'll handle the card selection in the select-card-choice event
           return;
         }
@@ -223,7 +242,7 @@ const handleSocketConnection = (io) => {
           }
       }
       // Handle special cards - don't add to discard pile until they're used
-      else if (card === 'D3' || card === 'Freeze' || card === 'RC') {  // Add RC here
+      else if (card === 'D3' || card === 'Freeze' || card === 'RC' || card === 'ST') {
         if (player.drawThreeRemaining > 0) {
           // Store the special card as pending and continue with D3 sequence
           player.pendingSpecialCard = card;
@@ -240,14 +259,20 @@ const handleSocketConnection = (io) => {
         if (player.drawThreeRemaining > 0) {
           // Store the special card as pending and continue with D3 sequence
           player.pendingSpecialCard = card;
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
           player.drawThreeRemaining--;
           if (player.drawThreeRemaining === 0) {
             handlePendingSpecialCard(game, player, socket, io);
           }
         } else {
-          // Show select card popup with the current deck state
-          socket.emit('select-card-from-pile', gameId, game.deck);
-          game.discardPile.push('Select');
+          if (!player.specialCards.includes('Select')) {
+            player.specialCards.push('Select');
+          }
+          // Emit game-update so clients see Select in special cards before popup shows
+          io.to(gameId).emit('game-update', game);
+          handleSelectCard(game, player, socket, io);
         }
       }
       // Handle other special cards
@@ -326,7 +351,8 @@ const handleSocketConnection = (io) => {
       
       if (player && target && player.specialCards.includes('Freeze')) {
         player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
-        target.status = 'frozen';
+        // Force the target to stand for the rest of the round
+        target.status = 'stood';
         // Add Freeze to discard only when used
         game.discardPile.push('Freeze');
         
@@ -345,7 +371,8 @@ const handleSocketConnection = (io) => {
     if (player && target && player.specialCards.includes('Freeze')) {
       player.specialCards = player.specialCards.filter(c => c !== 'Freeze');
       game.discardPile.push('Freeze'); // Add to discard when used
-      target.status = 'frozen';
+      // Force the target to stand for the rest of the round
+      target.status = 'stood';
       checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
     }
@@ -422,9 +449,22 @@ const handleSocketConnection = (io) => {
       // Check if both player and target exist and player has RC card
       if (!player || !target || !player.specialCards.includes('RC')) return;
       
-      // NEW: Check if target is in active status - only allow removing cards from active players
+      // Check if target is in active status - only allow removing cards from active players
       if (target.status !== 'active') {
         socket.emit('error', 'You can only remove cards from active players.');
+        return;
+      }
+      
+      // Validate card index bounds
+      const cardArray = isSpecial ? target.specialCards : target.regularCards;
+      if (cardIndex < 0 || cardIndex >= cardArray.length) {
+        socket.emit('error', 'Invalid card index.');
+        return;
+      }
+
+      // Disallow removing the remove-card (RC) itself
+      if (isSpecial && target.specialCards[cardIndex] === 'RC') {
+        socket.emit('error', 'You cannot remove a Remove Card.');
         return;
       }
     
@@ -443,9 +483,53 @@ const handleSocketConnection = (io) => {
         game.discardPile.push(removedCard); // Add removed card to discard pile
       }
     
-      // NEW: Recalculate target's score after card removal
+      // Recalculate target's score after card removal
       updatePlayerScore(target);
       
+      advanceTurn(game);
+      checkGameStatus(game);
+      io.to(gameId).emit('game-update', game);
+    });
+
+    socket.on('steal-card', (gameId, targetPlayerId, cardIndex, isSpecial) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+
+      const player = game.players.find(p => p.id === socket.id);
+      const target = game.players.find(p => p.id === targetPlayerId);
+
+      if (!player || !target || !player.specialCards.includes('ST')) return;
+
+      if (target.id === player.id) {
+        socket.emit('error', 'You cannot steal from yourself.');
+        return;
+      }
+
+      if (target.status === 'busted') {
+        socket.emit('error', 'You cannot steal from busted players.');
+        return;
+      }
+
+      const cardArray = isSpecial ? target.specialCards : target.regularCards;
+      if (cardIndex < 0 || cardIndex >= cardArray.length) {
+        socket.emit('error', 'Invalid card index.');
+        return;
+      }
+
+      // Consume Steal Card
+      player.specialCards = player.specialCards.filter(c => c !== 'ST');
+      game.discardPile.push('ST');
+
+      const stolenCard = cardArray.splice(cardIndex, 1)[0];
+
+      if (isSpecial) {
+        player.specialCards.push(stolenCard);
+        updatePlayerScore(player);
+      } else {
+        handleNumberCard(game, player, stolenCard, io);
+      }
+
+      updatePlayerScore(target);
       advanceTurn(game);
       checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
@@ -458,6 +542,8 @@ const handleSocketConnection = (io) => {
       
       const player = game.players[game.currentPlayer];
       if (player.id !== socket.id || player.status !== 'active') return;
+
+      player.specialCards = player.specialCards.filter(c => c !== 'Select');
     
       // Find and remove the selected card from the deck (with safety checks)
       let cardFound = false;
@@ -495,7 +581,7 @@ const handleSocketConnection = (io) => {
           advanceTurn(game);
         }
       }
-      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
+      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC' || selectedCard === 'ST') {
         // For special cards that need targeting, add to hand but don't advance turn yet
         player.specialCards.push(selectedCard);
         // The client will request targets immediately
@@ -511,51 +597,6 @@ const handleSocketConnection = (io) => {
       checkGameStatus(game);
       
       // Always emit game update to refresh the deck display
-      io.to(gameId).emit('game-update', game);
-    });
-
-    // Add new socket event handler for select-card 
-    socket.on('select-card-choice', (gameId, selectedCard) => {
-      const game = games.get(gameId);
-      if (!game || game.status !== 'playing') return;
-      
-      const player = game.players[game.currentPlayer];
-      if (player.id !== socket.id || player.status !== 'active') return;
-
-      // Find and remove the selected card from the deck
-      const cardIndex = game.deck.findIndex(card => card === selectedCard);
-      if (cardIndex === -1) return; // Card not found
-      
-      game.deck.splice(cardIndex, 1);
-      
-      // Process the selected card similarly to a drawn card
-      if (typeof selectedCard === 'number') {
-        handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
-        if (player.status === 'busted') {
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-          player.status = 'stood';
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else {
-          advanceTurn(game);
-        }
-      }
-      else {
-        // For special cards, add to player's hand
-        player.specialCards.push(selectedCard);
-        advanceTurn(game);
-      }
-      
-      updatePlayerScore(player);
-      checkGameStatus(game);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -684,67 +725,55 @@ const handleSocketConnection = (io) => {
       const player = game.players.find(p => p.id === socket.id);
       if (!player || player.status !== 'active') return;
     
-      // NEW: Only send active players as potential targets
-      const activePlayers = game.players.filter(p => p.status === 'active');
-      
-      // If there are no active players besides the current player, send all players
-      // This prevents empty target list if player is the only active one
-      const targets = activePlayers.length > 1 ? activePlayers : game.players;
+      const hasRemovableCard = p =>
+        p.regularCards.length > 0 || p.specialCards.some(c => c !== 'RC');
+
+      // Only allow targets that are active and have at least one removable card
+      const targets = game.players.filter(p => 
+        p.status === 'active' &&
+        hasRemovableCard(p)
+      );
+
+      if (targets.length === 0) {
+        // No valid targets: discard RC and skip turn
+        player.specialCards = player.specialCards.filter(c => c !== 'RC');
+        game.discardPile.push('RC');
+        socket.emit('error', 'No cards to remove. Turn skipped.');
+        advanceTurn(game);
+        checkGameStatus(game);
+        io.to(gameId).emit('game-update', game);
+        return;
+      }
       
       socket.emit('select-remove-card-target', game.id, targets);
     });
-    
-    // Update select-card-choice event handler to make it work with special cards immediately
-    socket.on('select-card-choice', (gameId, selectedCard) => {
+
+    socket.on('request-steal-card-targets', (gameId) => {
       const game = games.get(gameId);
       if (!game || game.status !== 'playing') return;
-      
-      const player = game.players[game.currentPlayer];
-      if (player.id !== socket.id || player.status !== 'active') return;
-    
-      // Find and remove the selected card from the deck
-      const cardIndex = game.deck.findIndex(card => card === selectedCard);
-      if (cardIndex === -1) return; // Card not found
-      
-      game.deck.splice(cardIndex, 1);
-      
-      // Process the selected card
-      if (typeof selectedCard === 'number') {
-        handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
-        if (player.status === 'busted') {
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else if (player.regularCards.length >= MAX_REGULAR_CARDS) {
-          player.status = 'stood';
-          player.drawThreeRemaining = 0;
-          player.pendingSpecialCard = null;
-          advanceTurn(game);
-        }
-        else {
-          advanceTurn(game);
-        }
-      }
-      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC') {
-        // For special cards that need targeting, add to hand but don't advance turn yet
-        player.specialCards.push(selectedCard);
-        // The client will request targets immediately
-        // Turn will advance when the special card effect is applied
-      }
-      else {
-        // For other special cards, add to player's hand
-        player.specialCards.push(selectedCard);
-        advanceTurn(game);
-      }
-      
-      updatePlayerScore(player);
-      checkGameStatus(game);
-      io.to(gameId).emit('game-update', game);
-    });
 
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || player.status !== 'active') return;
+
+      const targets = game.players.filter(p =>
+        p.status !== 'busted' &&
+        p.id !== player.id &&
+        (p.regularCards.length > 0 || p.specialCards.length > 0)
+      );
+
+      if (targets.length === 0) {
+        player.specialCards = player.specialCards.filter(c => c !== 'ST');
+        game.discardPile.push('ST');
+        socket.emit('error', 'No cards to steal. Turn skipped.');
+        advanceTurn(game);
+        checkGameStatus(game);
+        io.to(gameId).emit('game-update', game);
+        return;
+      }
+
+      socket.emit('select-steal-card-target', game.id, targets);
+    });
+    
     // Inside handleSocketConnection function, add these socket events
     socket.on('play-sound', (gameId, soundId) => {
       // Broadcast sound to all players in the game except sender
@@ -763,8 +792,8 @@ const createPlayer = (id, name) => ({
   roundScore: 0,
   totalScore: 0,
   bustedCard: null,
-  drawThreeRemaining: 0,  // Add this property
-  pendingSpecialCard: null  // Add this to track pending special cards
+  drawThreeRemaining: 0,  // Track how many more cards player must draw
+  pendingSpecialCard: null  // Track pending special cards during D3 sequences
 });
 
 const advanceTurn = game => {
@@ -828,18 +857,34 @@ const updatePlayerScore = player => {
     .filter(c => c.endsWith('-'))
     .reduce((a, c) => a + parseInt(c), 0);
   
-  // Updated to handle only 2x multiplier
+  // Handle divide card (2÷)
+  let divide = 1;
+  if (player.specialCards.includes('2÷')) {
+    divide = 2;
+  }
+  
+  // Handle multiplier (2x)
   let multiplier = 1;
   if (player.specialCards.includes('2x'))
     multiplier *= 2;
 
-  player.roundScore = (base + add - minus) * multiplier;
+  // Calculate: (base + add - minus) * multiplier / divide
+  let score = (base + add - minus) * multiplier;
+  if (divide > 1) {
+    score = Math.round(score / divide);
+  }
+  // Keep score at 0 if it's already 0
+  player.roundScore = Math.max(0, score);
 };
 
 // Add these new helper functions
 const handlePendingSpecialCard = (game, player, socket, io) => {
   const card = player.pendingSpecialCard;
   player.pendingSpecialCard = null; // Clear the pending card
+  if (card === 'Select') {
+    handleSelectCard(game, player, socket, io);
+    return;
+  }
   handleSpecialCard(game, player, card, socket, io);
 };
 
@@ -873,9 +918,65 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     }
   }
   else if (card === 'RC') {
-    player.specialCards.push(card);
-    socket.emit('select-remove-card-target', game.id, game.players);
+    const hasRemovableCard = p =>
+      p.regularCards.length > 0 || p.specialCards.some(c => c !== 'RC');
+    const targets = game.players.filter(p =>
+      p.status === 'active' &&
+      hasRemovableCard(p)
+    );
+
+    if (targets.length > 0) {
+      player.specialCards.push(card);
+      socket.emit('select-remove-card-target', game.id, targets);
+    } else {
+      game.discardPile.push(card);
+      socket.emit('error', 'No cards to remove. Turn skipped.');
+      advanceTurn(game);
+      checkGameStatus(game);
+      io.to(game.id).emit('game-update', game);
+    }
   }
+  else if (card === 'ST') {
+    const targets = game.players.filter(p =>
+      p.status !== 'busted' &&
+      p.id !== player.id &&
+      (p.regularCards.length > 0 || p.specialCards.length > 0)
+    );
+
+    if (targets.length > 0) {
+      player.specialCards.push(card);
+      socket.emit('select-steal-card-target', game.id, targets);
+    } else {
+      game.discardPile.push(card);
+      socket.emit('error', 'No cards to steal. Turn skipped.');
+      advanceTurn(game);
+      checkGameStatus(game);
+      io.to(game.id).emit('game-update', game);
+    }
+  }
+};
+
+const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDeck = null) => {
+  const popupDeck = Array.isArray(deckForPopup) ? deckForPopup : game.deck;
+  socket.emit('select-card-from-pile', game.id, popupDeck, fullDeck);
+  game.discardPile.push('Select');
+
+  const playerId = player.id;
+  const gameId = game.id;
+
+  setTimeout(() => {
+    const currentGame = games.get(gameId);
+    if (currentGame && currentGame.status === 'playing') {
+      const currentPlayer = currentGame.players[currentGame.currentPlayer];
+      if (currentPlayer && currentPlayer.id === playerId) {
+        currentPlayer.specialCards = currentPlayer.specialCards.filter(c => c !== 'Select');
+        console.log(`Player ${playerId} timed out on Select Card, auto-advancing`);
+        advanceTurn(currentGame);
+        checkGameStatus(currentGame);
+        io.to(gameId).emit('game-update', currentGame);
+      }
+    }
+  }, 30000);
 };
 
 // Server startup
@@ -925,7 +1026,7 @@ const server = http.createServer(app);
 // Update port configuration for production
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://hit7.xyz'
+  ? 'https://hit7.click'
   : `http://localhost:${PORT}`;
 
 // Initialize Socket.IO with the server

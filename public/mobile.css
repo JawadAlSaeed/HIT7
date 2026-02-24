@@ -9,6 +9,7 @@
         overflow-x: hidden;
         position: relative;
     }
+        align-items: stretch; /* let containers fill width to avoid centering offsets */
 
     /* Lobby Screen Adjustments */
     .lobby-screen {
@@ -38,23 +39,6 @@
         width: auto;
     }
 
-    /* Game Header Adjustments - Fixed version */
-    .game-header {
-        height: auto;
-        min-height: 80px; /* Set minimum height */
-        padding: 0.75rem;
-        flex-direction: row; /* Ensure flex direction is row */
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin: 0;
-        border-radius: 0;
-        width: 100%;
-        display: flex !important; /* Force display */
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
-
     .header-left {
         flex: 0 0 auto;
         min-width: 80px;
@@ -69,16 +53,36 @@
     }
 
     .header-left .logo-image {
-        height: 50px;
+        height: 48px;
         width: auto;
+    }
+
+    /* Ensure header is visible and sized correctly on mobile */
+    .game-header {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        padding: 0.5rem 0.75rem;
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Make logo smaller and centered on very small screens */
+    .header-left .logo-image {
+        height: 44px;
     }
 
     .header-right {
         flex: 1 1 100%;
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-end; /* keep buttons on the right */
         gap: 0.5rem;
         padding-top: 0.5rem;
+        display: flex !important;
+        align-items: center;
+        flex-wrap: wrap; /* Allow buttons to wrap to next line instead of hiding */
+        z-index: 210; /* ensure buttons sit above other header layers */
     }
 
     .header-right .game-button {
@@ -89,19 +93,39 @@
     }
 
     .game-header .game-code-display {
-        display: none; /* Hide the game code display on mobile */
+        /* Keep the game-code display available on mobile but compact it */
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-right: 0.25rem;
+        font-size: 0.9rem;
+        opacity: 0.95;
+    }
+
+    /* Ensure header buttons remain visible and usable on small screens */
+    .header-right .game-button {
+        display: inline-flex !important;
+        box-sizing: border-box;
     }
 
     /* Game Container */
     .game-container {
-        padding: 0;
-        margin: 0;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        box-sizing: border-box;
         height: calc(100vh - 70px); /* Account for fixed controls */
         overflow-y: auto;
+        max-height: calc(100vh - 70px); /* Account for header and controls */
     }
 
     .game-board {
         padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow: visible;
+        max-height: none;
     }
 
     /* Deck Area */
@@ -109,6 +133,8 @@
         flex-direction: column;
         gap: 1rem;
         margin: 0.5rem 0;
+        align-items: stretch;
+        width: 100%;
     }
 
     .deck-count {
@@ -122,17 +148,34 @@
         flex-direction: column;
         gap: 0.5rem;
         margin-bottom: 80px;
-        width: 100%;
-        overflow-y: auto;
-        padding: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-y: visible;
+        padding: 0.5rem 0 !important;
+        max-height: none;
+        align-items: center !important; /* center player boxes horizontally */
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
 
     .player {
         min-width: unset;
-        width: 100%;
-        margin: 0;
+        width: calc(100% - 1rem);
+        max-width: 520px; /* constrain width on larger phones */
+        margin: 0.4rem auto; /* center each player card */
         box-sizing: border-box;
         padding: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        height: fit-content;
+        gap: 0.6rem;
+    }
+
+    .player.current-turn {
+        border: 2px solid var(--highlight) !important;
+        animation: border-pulse 2s infinite;
     }
 
     /* Card Grid */
@@ -140,6 +183,26 @@
         grid-template-columns: repeat(7, 1fr);
         gap: 0.3rem;
         padding: 0.3rem;
+        width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+    }
+
+    .card-grid.special {
+        background: rgba(15, 52, 96, 0.2);
+    }
+
+    .cards-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        margin: 0.5rem 0;
+    }
+
+    .cards-label {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+        margin: 0;
     }
 
     .card, .empty-slot {
@@ -152,6 +215,11 @@
     .special-cards-container {
         gap: 0.3rem;
         padding: 0.5rem;
+        min-height: 40px; /* Ensure space for special cards */
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        overflow: visible;
     }
 
     .card.special {
@@ -209,6 +277,58 @@
         width: 90%;
         max-height: 80vh;
         padding: 1rem;
+    }
+
+    /* Tutorial Popup - Full Screen Mobile */
+    .tutorial-popup {
+        padding: 0;
+    }
+
+    .tutorial-popup .popup-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .tutorial-popup .tutorial-title {
+        font-size: 1.4rem;
+        margin: 0.8rem 0 0.5rem 0;
+        padding: 0 1rem;
+    }
+
+    .tutorial-popup .tutorial-content {
+        padding: 0 1rem 5rem 1rem;
+    }
+
+    .tutorial-popup .tutorial-section h3 {
+        font-size: 1rem;
+        margin: 0.8rem 0 0.3rem 0;
+    }
+
+    .tutorial-popup .tutorial-section p {
+        font-size: 0.85rem;
+        margin: 0.3rem 0;
+    }
+
+    .tutorial-popup .tutorial-section ul {
+        font-size: 0.8rem;
+        padding-left: 1rem;
+        margin: 0.4rem 0;
+    }
+
+    .tutorial-popup .tutorial-section li {
+        margin: 0.2rem 0;
+        line-height: 1.2;
+    }
+
+    .card-table {
+        font-size: 0.75rem;
+        margin: 0.6rem 0;
+    }
+
+    .card-table td {
+        padding: 0.4rem;
     }
 
     /* Round Summary */
@@ -405,15 +525,16 @@
         font-size: 0.85rem;
     }
 
-    .header-right .game-button {
-        padding: 0.5rem 1rem;
-        min-width: auto;
-        font-size: 0.8rem;
-        height: 35px;
+    .tutorial-popup .close-button {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.5rem;
+        top: max(1rem, env(safe-area-inset-top));
+        right: 1rem;
     }
 }
-
-/* Additional styles for larger phones (max-width: 767px) */
 @media screen and (min-width: 431px) and (max-width: 767px) {
     /* Inherit most styles from smaller phones but adjust some dimensions */
     .player {
