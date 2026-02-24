@@ -622,9 +622,9 @@ body::before {
 }
 
 .card.special.multiplier {
-    background: #f1c40f !important; /* Solid yellow for multiplier */
-    border-color: #f1c40f;
-    color: var(--text-dark) !important;
+    background: #27ae60 !important; /* Solid green for multiplier */
+    border-color: #27ae60;
+    color: white !important;
 }
 
 .card.special.second-chance {
@@ -1202,14 +1202,20 @@ body::before {
 }
 
 .remaining-card.special.multiplier { 
-    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
-    border-color: #d35400;
-    color: var(--text-dark) !important;
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    border-color: #219a52;
+    color: white !important;
 }
 
 .remaining-card.special.adder { 
     background: linear-gradient(135deg, #27ae60, #27ae60) !important;
     border-color: #219a52;
+}
+
+.remaining-card.special.divide { 
+    background: linear-gradient(135deg, #1a1a1a, #0d0d0d) !important;
+    border-color: #34495e;
+    color: white !important;
 }
 
 /* Regular Cards Section */
@@ -2237,15 +2243,21 @@ body::before {
 }
 
 .tutorial-popup .card.special.minus {
-    background: #2c3e50 !important;
+    background: #1a1a1a !important;
     border-color: #34495e !important;
     color: white !important;
 }
 
 .tutorial-popup .card.special.multiplier {
-    background: #f1c40f !important;
-    border-color: #d0a90d !important;
-    color: var(--text-dark) !important;
+    background: #27ae60 !important;
+    border-color: #219a52 !important;
+    color: white !important;
+}
+
+.tutorial-popup .card.special.divide {
+    background: #1a1a1a !important;
+    border-color: #34495e !important;
+    color: white !important;
 }
 
 /* Mobile adjustments for tutorial popup */
@@ -2659,7 +2671,17 @@ body::before {
 .card.special.minus,
 .remaining-card.special.minus,
 .discard-card.special.minus {
-    background: linear-gradient(135deg, #2c3e50, #2c3e50) !important;
+    background: #1a1a1a !important;
+    border-color: #34495e !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Divide card styling */
+.card.special.divide,
+.remaining-card.special.divide,
+.discard-card.special.divide {
+    background: #1a1a1a !important;
     border-color: #34495e !important;
     color: white !important;
     text-shadow: none !important;
@@ -2881,9 +2903,9 @@ draw-three-target.self-target:hover {
 }
 
 .remove-card-popup .card-button.special.multiplier {
-    background: #f1c40f !important;
-    border-color: #d0a90d !important;
-    color: var(--text-dark) !important;
+    background: #27ae60 !important;
+    border-color: #219a52 !important;
+    color: white !important;
 }
 
 .remove-card-popup .card-button.special.second-chance {
@@ -2905,7 +2927,13 @@ draw-three-target.self-target:hover {
 }
 
 .remove-card-popup .card-button.special.minus {
-    background: #2c3e50 !important;
+    background: #1a1a1a !important;
+    border-color: #34495e !important;
+    color: white !important;
+}
+
+.remove-card-popup .card-button.special.divide {
+    background: #1a1a1a !important;
     border-color: #34495e !important;
     color: white !important;
 }

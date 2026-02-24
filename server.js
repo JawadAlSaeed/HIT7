@@ -69,11 +69,12 @@ const createDeck = () => {
     }
   }
 
-  // Special cards = 20 cards (total 99 cards)
+  // Special cards = 25 cards (total 104 cards)
   const specialCards = [
-    '2+', '6+', '10+',                  // 3 adder cards
-    '2-', '6-', '10-',                  // 3 minus cards
-    '2x',                               // 1 multiplier card (removed 3x)
+    '2+', '4+', '6+', '8+', '10+',      // 5 adder cards
+    '2-', '4-', '6-', '8-', '10-',      // 5 minus cards
+    '2÷',                               // 1 divide card
+    '2x',                               // 1 multiplier card
     'SC', 'SC', 'SC',                   // 3 second chance cards
     'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
     'D3', 'D3', 'D3',                   // 3 draw three cards
@@ -83,8 +84,8 @@ const createDeck = () => {
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 99) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 99 cards.`);
+  if (deck.length !== 104) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 104 cards.`);
   }
   
   return shuffle(deck);
@@ -766,12 +767,24 @@ const updatePlayerScore = player => {
     .filter(c => c.endsWith('-'))
     .reduce((a, c) => a + parseInt(c), 0);
   
-  // Updated to handle only 2x multiplier
+  // Handle divide card (2÷)
+  let divide = 1;
+  if (player.specialCards.includes('2÷')) {
+    divide = 2;
+  }
+  
+  // Handle multiplier (2x)
   let multiplier = 1;
   if (player.specialCards.includes('2x'))
     multiplier *= 2;
 
-  player.roundScore = (base + add - minus) * multiplier;
+  // Calculate: (base + add - minus) * multiplier / divide
+  let score = (base + add - minus) * multiplier;
+  if (divide > 1) {
+    score = Math.round(score / divide);
+  }
+  // Keep score at 0 if it's already 0
+  player.roundScore = Math.max(0, score);
 };
 
 // Add these new helper functions

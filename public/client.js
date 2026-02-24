@@ -442,14 +442,18 @@ function updateRemainingPile(deck) {
             'Freeze': 3,    // 3. Freeze
             'D3': 4,        // 4. Draw Three
             'RC': 5,        // 5. Remove Card
-            '2x': 6,        // 6. 2x Multiplier
-            '3x': 7,        // 7. 3x Multiplier (new)
-            '2+': 8,        // 8. 2+
-            '6+': 9,        // 9. 6+
+            '2+': 6,        // 6. 2+
+            '4+': 7,        // 7. 4+
+            '6+': 8,        // 8. 6+
+            '8+': 9,        // 9. 8+
             '10+': 10,      // 10. 10+
-            '2-': 11,       // 11. 2-
-            '6-': 12,       // 12. 6-
-            '10-': 13,      // 13. 10-
+            '2x': 11,       // 11. 2x Multiplier
+            '2÷': 12,       // 12. 2÷ Divide
+            '2-': 13,       // 13. 2-
+            '4-': 14,       // 14. 4-
+            '6-': 15,       // 15. 6-
+            '8-': 16,       // 16. 8-
+            '10-': 17,      // 17. 10-
         };
         return specialOrder[card] || 99;  // Default high number for unknown cards
     };
@@ -458,14 +462,15 @@ function updateRemainingPile(deck) {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-            cardStr === 'RC' || cardStr === 'Select' ||  // Add Select to the check
+            cardStr === 'RC' || cardStr === 'Select' || cardStr === '2÷' ||
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
                 cardStr === 'Freeze' ? 'freeze' :
                 cardStr === 'D3' ? 'draw-three' :
                 cardStr === 'RC' ? 'remove-card' :
-                cardStr === 'Select' ? 'select-card' :  // Add select-card type
+                cardStr === 'Select' ? 'select-card' :
+                cardStr === '2÷' ? 'divide' :
                 cardStr.includes('+') ? 'adder' :
                 cardStr.includes('-') ? 'minus' :
                 'multiplier';
@@ -474,7 +479,8 @@ function updateRemainingPile(deck) {
                 cardStr === 'Freeze' ? '❄️' :
                 cardStr === 'D3' ? '🎯' :
                 cardStr === 'RC' ? '🗑️' :
-                cardStr === 'Select' ? '🃏' :  // Add joker emoji
+                cardStr === 'Select' ? '🃏' :
+                cardStr === '2÷' ? '2÷' :
                 cardStr;
             specialCards.push({ cardStr, count, cardType, displayValue });
         } else {
@@ -519,14 +525,14 @@ function renderCard({ cardType, displayValue, count }) {
             cardStyle = `
                 background: ${
                     cardType === 'adder' ? '#27ae60' : 
-                    cardType === 'minus' ? '#2c3e50' :
-                    cardType === 'multiplier' ? '#f1c40f' :
+                    cardType === 'minus' ? '#1a1a1a' :
+                    cardType === 'multiplier' ? '#27ae60' :
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
                     cardType === 'draw-three' ? '#9b59b6' :
                     cardType === 'remove-card' ? '#7f8c8d' : 'inherit'
                 } !important;
-                color: ${cardType === 'minus' ? '#fff' : 'inherit'} !important;
+                color: ${(cardType === 'minus' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
             `;
         }
     }
@@ -574,7 +580,7 @@ function updateDiscardPile(discardPile) {
       const cardStyle = cardType !== 'number' ? `
         background: ${
           cardType === 'adder' ? '#27ae60' : 
-          cardType === 'multiplier' ? '#f1c40f' :
+          cardType === 'multiplier' ? '#27ae60' :
           cardType === 'second-chance' ? '#e74c3c' :
           cardType === 'freeze' ? '#3498db' :
           cardType === 'draw-three' ? '#9b59b6' : 'inherit'
@@ -651,10 +657,14 @@ function playerTemplate(player, isCurrentTurn) {
                             const cardClass = getSpecialCardClass(card);
                             const cardDisplay = getSpecialCardDisplay(card);
                             
-                            // Add inline style for select-card gradient
+                            // Add inline style for special cards
                             let cardStyle = '';
                             if (card === 'Select') {
                                 cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
+                            } else if (card.endsWith('+') || card === '2x') {
+                                cardStyle = 'background: #27ae60 !important; color: white !important;';
+                            } else if (card === '2÷' || card.endsWith('-')) {
+                                cardStyle = 'background: #1a1a1a !important; color: white !important;';
                             }
                             
                             return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
@@ -685,20 +695,21 @@ function scoreBox(label, value) {
     `;
 }
 
-// Update special card class function to include "Select" card
+// Update special card class function to include all special cards
 function getSpecialCardClass(card) {
     if (card === 'SC') return 'second-chance';
     if (card === 'Freeze') return 'freeze';
     if (card === 'D3') return 'draw-three';
     if (card === 'RC') return 'remove-card';
     if (card === 'Select') return 'select-card';
+    if (card === '2÷') return 'divide';
     if (card.endsWith('+')) return 'adder';
     if (card.endsWith('x')) return 'multiplier';
     if (card.endsWith('-')) return 'minus';
     return '';
 }
 
-// Update special card display function to include "Select" card
+// Update special card display function to include all special cards
 function getSpecialCardDisplay(card) {
     // Special cards with emojis
     if (card === 'SC') return '🛡️';
@@ -707,12 +718,15 @@ function getSpecialCardDisplay(card) {
     if (card === 'RC') return '🗑️';
     if (card === 'Select') return '🃏';
     
-    // For adder and multiplier cards, extract the number and symbol
+    // For numeric modifier cards, format them
     if (card.endsWith('+') || card.endsWith('x') || card.endsWith('-')) {
         const number = card.slice(0, -1);  // Get everything except last character
         const symbol = card.slice(-1);     // Get last character (+ or x or -)
         return `${number}${symbol}`;       // Combine them (e.g., "2+")
     }
+    
+    // For divide card
+    if (card === '2÷') return '2÷';
     
     return card;
 }
@@ -1350,11 +1364,12 @@ function getCardColor(card) {
     if (card === 'SC') return '#e74c3c';
     if (card === 'Freeze') return '#3498db';
     if (card === 'D3') return '#9b59b6';
-    if (card === 'RC') return '#7f8c8d'; // Changed to a lighter gray
+    if (card === 'RC') return '#7f8c8d';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
-    if (card.endsWith('+')) return '#27ae60';
-    if (card.endsWith('x')) return '#f1c40f';
-    if (card.endsWith('-')) return '#2c3e50'; // New dark color for minus cards
+    if (card.endsWith('+')) return '#27ae60'; // Green for all adders
+    if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
+    if (card === '2÷') return '#1a1a1a'; // Black for divide
+    if (card.endsWith('-')) return '#1a1a1a'; // Black for all minus
     return 'inherit';
 }
 
@@ -1392,6 +1407,31 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   
   // Sort regular cards numerically
   regularCards.sort((a, b) => a.card - b.card);
+  
+  // Sort special cards by same order as remaining pile
+  const getSpecialCardOrder = card => {
+    const specialOrder = {
+        'Select': 1,    // 1. Select Card
+        'SC': 2,        // 2. Second Chance
+        'Freeze': 3,    // 3. Freeze
+        'D3': 4,        // 4. Draw Three
+        'RC': 5,        // 5. Remove Card
+        '2+': 6,        // 6. 2+
+        '4+': 7,        // 7. 4+
+        '6+': 8,        // 8. 6+
+        '8+': 9,        // 9. 8+
+        '10+': 10,      // 10. 10+
+        '2x': 11,       // 11. 2x Multiplier
+        '2÷': 12,       // 12. 2÷ Divide
+        '2-': 13,       // 13. 2-
+        '4-': 14,       // 14. 4-
+        '6-': 15,       // 15. 6-
+        '8-': 16,       // 16. 8-
+        '10-': 17,      // 17. 10-
+    };
+    return specialOrder[card] || 99;
+  };
+  specialCards.sort((a, b) => getSpecialCardOrder(a.card) - getSpecialCardOrder(b.card));
   
   // Create popup
   const popup = document.createElement('div');
@@ -1521,16 +1561,17 @@ function handleSelectedCard(gameId, selectedCard) {
   // For other cards, no immediate action needed
 }
 
-// Add helper function for card color styling - update gradient
+// Add helper function for card color styling
 function getCardColorStyle(card) {
   if (card === 'SC') return 'background: #e74c3c !important;';
   if (card === 'Freeze') return 'background: #3498db !important;';
   if (card === 'D3') return 'background: #9b59b6 !important;';
   if (card === 'RC') return 'background: #7f8c8d !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
-  if (card.endsWith('+')) return 'background: #27ae60 !important;';
-  if (card.endsWith('x')) return 'background: #f1c40f !important; color: var(--text-dark) !important;';
-  if (card.endsWith('-')) return 'background: #2c3e50 !important; color: white !important;';
+  if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
+  if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier
+  if (card === '2÷') return 'background: #1a1a1a !important; color: white !important;'; // Black for divide
+  if (card.endsWith('-')) return 'background: #1a1a1a !important; color: white !important;'; // Black for minus
   return '';
 }
 
@@ -1593,16 +1634,20 @@ function showTutorial() {
                             <td>Delete opponent card</td>
                         </tr>
                         <tr>
-                            <td><strong>2+ / 6+ / 10+</strong></td>
+                            <td><strong>2+ / 4+ / 6+ / 8+ / 10+</strong></td>
                             <td>Add points</td>
                         </tr>
                         <tr>
-                            <td><strong>2- / 6- / 10-</strong></td>
+                            <td><strong>2- / 4- / 6- / 8- / 10-</strong></td>
                             <td>Lose points</td>
                         </tr>
                         <tr>
                             <td><strong>2×</strong></td>
                             <td>Double score</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2÷</strong></td>
+                            <td>Halve score (rounded)</td>
                         </tr>
                     </table>
                 </section>
