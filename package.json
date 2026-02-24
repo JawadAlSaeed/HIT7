@@ -1,5 +1,5 @@
 {
-  "name": "flip7",
+  "name": "hit7",
   "version": "1.0.0",
   "description": "A game about cards",
   "main": "server.js",
@@ -13,15 +13,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JawadAlSaeed/FLIP7.git"
+    "url": "git+https://github.com/JawadAlSaeed/hit7.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/JawadAlSaeed/FLIP7/issues"
+    "url": "https://github.com/JawadAlSaeed/hit7/issues"
   },
-  "homepage": "https://github.com/JawadAlSaeed/FLIP7#readme",
+  "homepage": "https://github.com/JawadAlSaeed/hit7#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
