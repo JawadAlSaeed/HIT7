@@ -190,7 +190,7 @@ const handleSocketConnection = (io) => {
           handleSelectCard(game, player, socket, io, [], newDeck);
 
           updatePlayerScore(player);
-          checkGameStatus(game);
+          checkGameStatus(game, io);
           io.to(gameId).emit('game-update', game);
 
           // No need for further processing - we'll handle the card selection in the select-card-choice event
@@ -289,7 +289,7 @@ const handleSocketConnection = (io) => {
       }
   
       updatePlayerScore(player);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -303,7 +303,7 @@ const handleSocketConnection = (io) => {
       player.status = 'stood';
       io.to(gameId).emit('play-sound', 'standSound'); // Broadcast stand sound
       advanceTurn(game);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -357,7 +357,7 @@ const handleSocketConnection = (io) => {
         game.discardPile.push('Freeze');
         
         advanceTurn(game);
-        checkGameStatus(game);
+        checkGameStatus(game, io);
         io.to(gameId).emit('game-update', game);
       }
     });
@@ -373,7 +373,7 @@ const handleSocketConnection = (io) => {
       game.discardPile.push('Freeze'); // Add to discard when used
       // Force the target to stand for the rest of the round
       target.status = 'stood';
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(gameId).emit('game-update', game);
     }
   });
@@ -487,7 +487,7 @@ const handleSocketConnection = (io) => {
       updatePlayerScore(target);
       
       advanceTurn(game);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -531,7 +531,7 @@ const handleSocketConnection = (io) => {
 
       updatePlayerScore(target);
       advanceTurn(game);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(gameId).emit('game-update', game);
     });
 
@@ -600,90 +600,6 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('game-update', game);
     });
 
-    // Game status checking
-    const checkGameStatus = game => {
-      // Check if round should end (all players are either busted, stood, or frozen)
-      const activePlayers = game.players.filter(p => p.status === 'active');
-      const allBusted = game.players.every(p => p.status === 'busted');
-
-      if (activePlayers.length === 0) {
-        io.to(game.id).emit('round-summary', {
-          players: game.players,
-          allBusted: allBusted
-        });
-
-        setTimeout(() => {
-          // Update total scores for non-busted players
-          game.players.forEach(player => {
-            if (player.status !== 'busted') {
-              player.totalScore += player.roundScore;
-            }
-          });
-
-          if (allBusted) {
-            startNewRound(game);
-          } else {
-            // Find highest scoring player among non-busted players
-            const nonBustedPlayers = game.players.filter(p => p.status !== 'busted');
-            const highestScore = Math.max(...nonBustedPlayers.map(p => p.totalScore));
-            const winners = nonBustedPlayers.filter(p => p.totalScore === highestScore);
-
-            // End game if any winner has 200+ points, otherwise start new round
-            if (highestScore >= 200) {
-              // In case of a tie, winner is the one who reached it first
-              endGame(game, winners[0]);
-            } else {
-              startNewRound(game);
-            }
-          }
-
-          io.to(game.id).emit('new-round', game);
-        }, 5000);
-      }
-    };
-
-    const endGame = (game, winner) => {
-      game.status = 'finished';
-      io.to(game.id).emit('game-over', {
-        players: game.players.map(p => ({
-          ...p,
-          status: p.id === winner.id ? 'winner' : p.status
-        })),
-        winner: winner
-      });
-    };
-
-    const checkFinalWinner = game => {
-      const winner = game.players.reduce((max, p) => 
-        p.totalScore > max.totalScore ? p : max, { totalScore: -1 });
-
-      if (winner.totalScore >= WINNING_SCORE) {
-        endGame(game, winner);
-      } else {
-        startNewRound(game);
-      }
-    };
-
-    const startNewRound = game => {
-      game.roundNumber++;
-      // Reset player states, but keep total scores
-      game.players.forEach(player => {
-          player.regularCards = [];
-          player.specialCards = [];
-          player.status = 'active';
-          player.roundScore = 0;
-          player.bustedCard = null;
-          player.drawThreeRemaining = 0;
-      });
-      
-      // Set starting player based on round number (cycling through players)
-      game.currentPlayer = (game.roundNumber - 1) % game.players.length;
-      game.status = 'playing'; // Ensure game status is set to playing
-      
-      // Immediately emit game update to ensure clients get the new state
-      io.to(game.id).emit('game-update', game);
-    };
-
     // Inside handleSocketConnection function, add these new event handlers
     socket.on('request-draw-three-targets', (gameId) => {
       const game = games.get(gameId);
@@ -740,7 +656,7 @@ const handleSocketConnection = (io) => {
         game.discardPile.push('RC');
         socket.emit('error', 'No cards to remove. Turn skipped.');
         advanceTurn(game);
-        checkGameStatus(game);
+        checkGameStatus(game, io);
         io.to(gameId).emit('game-update', game);
         return;
       }
@@ -766,7 +682,7 @@ const handleSocketConnection = (io) => {
         game.discardPile.push('ST');
         socket.emit('error', 'No cards to steal. Turn skipped.');
         advanceTurn(game);
-        checkGameStatus(game);
+        checkGameStatus(game, io);
         io.to(gameId).emit('game-update', game);
         return;
       }
@@ -932,7 +848,7 @@ const handleSpecialCard = (game, player, card, socket, io) => {
       game.discardPile.push(card);
       socket.emit('error', 'No cards to remove. Turn skipped.');
       advanceTurn(game);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(game.id).emit('game-update', game);
     }
   }
@@ -950,7 +866,7 @@ const handleSpecialCard = (game, player, card, socket, io) => {
       game.discardPile.push(card);
       socket.emit('error', 'No cards to steal. Turn skipped.');
       advanceTurn(game);
-      checkGameStatus(game);
+      checkGameStatus(game, io);
       io.to(game.id).emit('game-update', game);
     }
   }
@@ -960,23 +876,90 @@ const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDec
   const popupDeck = Array.isArray(deckForPopup) ? deckForPopup : game.deck;
   socket.emit('select-card-from-pile', game.id, popupDeck, fullDeck);
   game.discardPile.push('Select');
+};
 
-  const playerId = player.id;
-  const gameId = game.id;
+// Game status checking and round management functions
+const checkGameStatus = (game, io) => {
+  // Check if round should end (all players are either busted, stood, or frozen)
+  const activePlayers = game.players.filter(p => p.status === 'active');
+  const allBusted = game.players.every(p => p.status === 'busted');
 
-  setTimeout(() => {
-    const currentGame = games.get(gameId);
-    if (currentGame && currentGame.status === 'playing') {
-      const currentPlayer = currentGame.players[currentGame.currentPlayer];
-      if (currentPlayer && currentPlayer.id === playerId) {
-        currentPlayer.specialCards = currentPlayer.specialCards.filter(c => c !== 'Select');
-        console.log(`Player ${playerId} timed out on Select Card, auto-advancing`);
-        advanceTurn(currentGame);
-        checkGameStatus(currentGame);
-        io.to(gameId).emit('game-update', currentGame);
+  if (activePlayers.length === 0) {
+    io.to(game.id).emit('round-summary', {
+      players: game.players,
+      allBusted: allBusted
+    });
+
+    setTimeout(() => {
+      // Update total scores for non-busted players
+      game.players.forEach(player => {
+        if (player.status !== 'busted') {
+          player.totalScore += player.roundScore;
+        }
+      });
+
+      if (allBusted) {
+        startNewRound(game, io);
+      } else {
+        // Find highest scoring player among non-busted players
+        const nonBustedPlayers = game.players.filter(p => p.status !== 'busted');
+        const highestScore = Math.max(...nonBustedPlayers.map(p => p.totalScore));
+        const winners = nonBustedPlayers.filter(p => p.totalScore === highestScore);
+
+        // End game if any winner has 200+ points, otherwise start new round
+        if (highestScore >= 200) {
+          // In case of a tie, winner is the one who reached it first
+          endGame(game, winners[0], io);
+        } else {
+          startNewRound(game, io);
+        }
       }
-    }
-  }, 30000);
+
+      io.to(game.id).emit('new-round', game);
+    }, 5000);
+  }
+};
+
+const endGame = (game, winner, io) => {
+  game.status = 'finished';
+  io.to(game.id).emit('game-over', {
+    players: game.players.map(p => ({
+      ...p,
+      status: p.id === winner.id ? 'winner' : p.status
+    })),
+    winner: winner
+  });
+};
+
+const checkFinalWinner = (game, io) => {
+  const winner = game.players.reduce((max, p) => 
+    p.totalScore > max.totalScore ? p : max, { totalScore: -1 });
+
+  if (winner.totalScore >= WINNING_SCORE) {
+    endGame(game, winner, io);
+  } else {
+    startNewRound(game, io);
+  }
+};
+
+const startNewRound = (game, io) => {
+  game.roundNumber++;
+  // Reset player states, but keep total scores
+  game.players.forEach(player => {
+      player.regularCards = [];
+      player.specialCards = [];
+      player.status = 'active';
+      player.roundScore = 0;
+      player.bustedCard = null;
+      player.drawThreeRemaining = 0;
+  });
+  
+  // Set starting player based on round number (cycling through players)
+  game.currentPlayer = (game.roundNumber - 1) % game.players.length;
+  game.status = 'playing'; // Ensure game status is set to playing
+  
+  // Immediately emit game update to ensure clients get the new state
+  io.to(game.id).emit('game-update', game);
 };
 
 // Server startup
