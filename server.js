@@ -580,10 +580,71 @@ const handleSocketConnection = (io) => {
       player.specialCards = player.specialCards.filter(c => c !== 'Swap');
       game.discardPile.push('Swap');
 
-      // Perform the swap
-      const temp = array1[card1Data.index];
-      array1[card1Data.index] = array2[card2Data.index];
-      array2[card2Data.index] = temp;
+      // Extract both card values
+      const card1Value = array1[card1Data.index];
+      const card2Value = array2[card2Data.index];
+
+      // Remove both cards from their original arrays
+      array1.splice(card1Data.index, 1);
+      array2.splice(card2Data.index, 1);
+
+      // Place each card into the correct array on the receiving player
+      // Numbers go to regularCards, strings go to specialCards
+      if (typeof card2Value === 'number') {
+        player1.regularCards.push(card2Value);
+      } else {
+        player1.specialCards.push(card2Value);
+      }
+
+      if (typeof card1Value === 'number') {
+        player2.regularCards.push(card1Value);
+      } else {
+        player2.specialCards.push(card1Value);
+      }
+
+      const findDuplicateValue = (regularCards) => {
+        const seen = new Set();
+        for (const value of regularCards) {
+          if (seen.has(value)) {
+            return value;
+          }
+          seen.add(value);
+        }
+        return null;
+      };
+
+      const resolveSwapDuplicate = (targetPlayer, swappedValue) => {
+        const duplicateValue = findDuplicateValue(targetPlayer.regularCards);
+        if (duplicateValue === null) return;
+
+        const scIndex = targetPlayer.specialCards.indexOf('SC');
+        if (scIndex > -1) {
+          targetPlayer.specialCards.splice(scIndex, 1);
+          game.discardPile.push('SC');
+          io.to(game.id).emit('play-sound', 'secondChanceSound');
+
+          if (typeof swappedValue === 'number') {
+            const removeIndex = targetPlayer.regularCards.findIndex(v => v === swappedValue);
+            if (removeIndex !== -1) {
+              targetPlayer.regularCards.splice(removeIndex, 1);
+            }
+          }
+          return;
+        }
+
+        targetPlayer.status = 'busted';
+        targetPlayer.bustedCard = duplicateValue;
+        targetPlayer.roundScore = 0;
+        io.to(game.id).emit('play-sound', 'bustCardSound');
+      };
+
+      // Check for duplicates when a number was placed into regularCards
+      if (typeof card2Value === 'number') {
+        resolveSwapDuplicate(player1, card2Value);
+      }
+      if (typeof card1Value === 'number') {
+        resolveSwapDuplicate(player2, card1Value);
+      }
 
       // Update scores and check for busts
       updatePlayerScore(player1);
@@ -593,9 +654,9 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('swap-notification', {
         swapper: player.name,
         player1: player1.name,
-        card1: temp,
+        card1: card1Value,
         player2: player2.name,
-        card2: array1[card1Data.index]
+        card2: card2Value
       });
 
       advanceTurn(game);
@@ -664,9 +725,6 @@ const handleSocketConnection = (io) => {
         // For special cards that need targeting, add to hand but don't advance turn yet
         if (!player.specialCards.includes(selectedCard)) {
           player.specialCards.push(selectedCard);
-        }
-        if (selectedCard === 'Swap') {
-          handleSpecialCard(game, player, selectedCard, socket, io);
         }
         // The client will request targets immediately
         // Turn will advance when the special card effect is applied
@@ -772,6 +830,37 @@ const handleSocketConnection = (io) => {
       }
 
       socket.emit('select-steal-card-target', game.id, targets);
+    });
+
+    socket.on('request-swap-targets', (gameId) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || !player.status || !player.specialCards.includes('Swap')) return;
+
+      const swappableCards = (p) => {
+        const regular = p.regularCards.length;
+        const special = p.specialCards.filter(c =>
+          c === 'SC' || c === '2x' || c.includes('+') || c.includes('-') || c.includes('÷')
+        ).length;
+        return regular + special;
+      };
+
+      const playersWithCards = game.players.filter(p =>
+        p.status !== 'busted' && swappableCards(p) > 0
+      );
+
+      if (playersWithCards.length >= 2) {
+        socket.emit('select-swap-cards', game.id, game.players);
+      } else {
+        player.specialCards = player.specialCards.filter(c => c !== 'Swap');
+        game.discardPile.push('Swap');
+        socket.emit('error', 'Not enough players with cards to swap. Turn skipped.');
+        advanceTurn(game);
+        checkGameStatus(game, io);
+        io.to(gameId).emit('game-update', game);
+      }
     });
     
     // Inside handleSocketConnection function, add these socket events

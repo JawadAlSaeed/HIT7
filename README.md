@@ -23,7 +23,7 @@ HIT 7 is an exciting multiplayer card game that combines luck, strategy, and ris
 - 🎯 Draw Three (3) - Force a player to draw three cards in succession
 - 🗑️ Remove Card (3) - Remove any card from any player's collection
 - 🥷 Steal Card (2) - Steal a card from another player
-- 🔄️ Swap Card (2) - Swap two cards between different players (including yourself)
+- ⇄️ Swap Card (2) - Swap two cards between different players (including yourself)
 - 🃏 Select Card (1) - Select any card from the Deck
 
 #### Point Modifier Cards

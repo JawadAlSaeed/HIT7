@@ -627,6 +627,12 @@ body::before {
     color: white !important;
 }
 
+.card.special.swap-card {
+    background: #27ae60 !important; /* Solid green like modifiers */
+    border-color: #27ae60;
+    color: white !important;
+}
+
 .card.special.second-chance {
     background: #e74c3c !important; /* Red color */
     border-color: #c0392b !important;
@@ -2716,7 +2722,7 @@ body::before {
 .card.special.swap-card,
 .discard-card.special.swap-card {
     background: #27ae60 !important;
-    border-color: #229954 !important;
+    border-color: #27ae60 !important;
     color: white !important;
 }
 
@@ -2968,9 +2974,9 @@ body::before {
     gap: 1rem;
     background: linear-gradient(135deg, #27ae60, #229954) !important;
     box-shadow: 0 8px 32px rgba(39, 174, 96, 0.35) !important;
-    padding: 0;
+    padding: 2.5rem !important;
     border: none;
-    padding-bottom: 100px;
+    padding-bottom: 140px !important;
     position: relative;
 }
 
@@ -3043,6 +3049,11 @@ body::before {
     border: 3px solid white !important;
 }
 
+.swap-card-popup .card-button.same-player-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .confirm-swap-button {
     position: absolute;
     bottom: 15px;
@@ -3075,6 +3086,10 @@ body::before {
     cursor: not-allowed;
     background: linear-gradient(135deg, #ccc, #aaa);
     color: #666;
+}
+
+.swap-card-popup .view-game-button {
+    bottom: 85px;
 }
 
 /* Update remaining pile sort order */
@@ -3154,7 +3169,6 @@ body::before {
 .draw-three-popup .popup-content,
 .remove-card-popup .popup-content,
 .steal-card-popup .popup-content,
-.swap-card-popup .popup-content,
 .round-summary-popup .popup-content,
 .winner-popup .popup-content,
 .tutorial-popup .popup-content {

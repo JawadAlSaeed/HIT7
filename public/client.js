@@ -205,7 +205,7 @@ socket.on('game-reset-with-players', (game) => {
     const notification = document.createElement('div');
     notification.className = 'info-popup';
     notification.innerHTML = `
-        <h2>🔄 Game Reset!</h2>
+        <h2>⇄ Game Reset!</h2>
         <p class="popup-countdown">Starting new game...</p>
     `;
     document.body.appendChild(notification);
@@ -487,7 +487,7 @@ function updateRemainingPile(deck) {
                 cardStr === 'D3' ? '🎯' :
                 cardStr === 'RC' ? '🗑️' :
             cardStr === 'ST' ? '🥷' :
-                cardStr === 'Swap' ? '🔄️' :
+                cardStr === 'Swap' ? '⇄️' :
                 cardStr === 'Select' ? '🃏' :
                 cardStr === '2÷' ? '2÷' :
                 cardStr;
@@ -590,7 +590,7 @@ function updateLastCardDrawn(card) {
             cardStr === 'D3' ? '🎯' :
             cardStr === 'RC' ? '🗑️' :
             cardStr === 'ST' ? '🥷' :
-            cardStr === 'Swap' ? '🔄️' :
+            cardStr === 'Swap' ? '⇄️' :
             cardStr === 'Select' ? '🃏' :
             cardStr === '2÷' ? '2÷' :
             cardStr;
@@ -634,7 +634,7 @@ function updateDiscardPile(discardPile) {
         displayValue = '🥷';
       } else if (cardStr === 'Swap') {
         cardType = 'swap-card';
-        displayValue = '🔄️';
+        displayValue = '⇄️';
       } else if (cardStr === 'Select') {
         cardType = 'select-card';
         displayValue = '🃏';
@@ -749,6 +749,8 @@ function playerTemplate(player, isCurrentTurn) {
                             let cardStyle = '';
                             if (card === 'Select') {
                                 cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
+                            } else if (card === 'Swap') {
+                                cardStyle = 'background: #27ae60 !important; border-color: #27ae60 !important; color: white !important;';
                             } else if (card.endsWith('+') || card === '2x') {
                               cardStyle = 'background: #27ae60 !important; color: white !important;';
                             } else if (card === 'ST') {
@@ -809,7 +811,7 @@ function getSpecialCardDisplay(card) {
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
   if (card === 'ST') return '🥷';
-    if (card === 'Swap') return '🔄️';
+    if (card === 'Swap') return '⇄️';
     if (card === 'Select') return '🃏';
     
     // For numeric modifier cards, format them
@@ -1478,7 +1480,7 @@ function showSwapCardPopup(gameId, players) {
 
   const content = `
     <div class="popup-content">
-      <h3><span class="emoji">🔄️</span> Select 2 cards to swap (from different players):</h3>
+      <h3><span class="emoji">⇄️</span> Select 2 cards to swap (from different players):</h3>
       <div class="players-list">
         ${players.map(player => {
           const isDisabled = player.status === 'busted';
@@ -1499,6 +1501,7 @@ function showSwapCardPopup(gameId, players) {
                       data-player="${player.id}"
                       data-index="${actualIndex}"
                       data-special="false"
+                      data-initial-disabled="${isDisabled}"
                       ${isDisabled ? 'disabled' : ''}>
                       ${card}
                     </button>
@@ -1512,6 +1515,7 @@ function showSwapCardPopup(gameId, players) {
                       data-player="${player.id}"
                       data-index="${actualIndex}"
                       data-special="true"
+                      data-initial-disabled="${isDisabled}"
                       ${isDisabled ? 'disabled' : ''}>
                       ${getSpecialCardDisplay(card)}
                     </button>
@@ -1539,6 +1543,26 @@ function showSwapCardPopup(gameId, players) {
   popup.innerHTML = content;
 
   const confirmButton = popup.querySelector('#confirmSwapButton');
+
+  const updateSwapSelectionState = () => {
+    const selectedPlayerId = selectedCards.length === 1 ? selectedCards[0].playerId : null;
+    popup.querySelectorAll('.swap-selectable').forEach(btn => {
+      if (btn.dataset.initialDisabled === 'true') {
+        return;
+      }
+
+      const isSelected = btn.classList.contains('selected');
+      if (selectedPlayerId && btn.dataset.player === selectedPlayerId && !isSelected) {
+        btn.dataset.tempDisabled = 'true';
+        btn.setAttribute('disabled', '');
+        btn.classList.add('same-player-disabled');
+      } else if (btn.dataset.tempDisabled === 'true') {
+        btn.removeAttribute('disabled');
+        btn.dataset.tempDisabled = 'false';
+        btn.classList.remove('same-player-disabled');
+      }
+    });
+  };
 
   popup.querySelectorAll('.swap-selectable:not([disabled])').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1568,6 +1592,11 @@ function showSwapCardPopup(gameId, players) {
           if (firstBtn) firstBtn.classList.remove('selected');
         }
 
+        // Prevent selecting a second card from the same player
+        if (selectedCards.length === 1 && selectedCards[0].playerId === playerId) {
+          return;
+        }
+
         // Add new selection
         selectedCards.push({ playerId, index: cardIndex, isSpecial });
         btn.classList.add('selected');
@@ -1577,6 +1606,7 @@ function showSwapCardPopup(gameId, players) {
       const canConfirm = selectedCards.length === 2 && 
                          selectedCards[0].playerId !== selectedCards[1].playerId;
       confirmButton.disabled = !canConfirm;
+      updateSwapSelectionState();
     });
   });
 
@@ -1954,6 +1984,9 @@ function handleSelectedCard(gameId, selectedCard) {
   } else if (selectedCard === 'ST') {
     // Show steal card popup immediately
     socket.emit('request-steal-card-targets', gameId);
+  } else if (selectedCard === 'Swap') {
+    // Show swap card popup immediately
+    socket.emit('request-swap-targets', gameId);
   }
   // For other cards, no immediate action needed
 }
