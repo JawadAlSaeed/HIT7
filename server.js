@@ -244,7 +244,8 @@ const handleSocketConnection = (io) => {
       // Handle special cards - don't add to discard pile until they're used
       else if (card === 'D3' || card === 'Freeze' || card === 'RC' || card === 'ST') {
         if (player.drawThreeRemaining > 0) {
-          // Store the special card as pending and continue with D3 sequence
+          // Add the special card to hand and continue with D3 sequence
+          player.specialCards.push(card);
           player.pendingSpecialCard = card;
           player.drawThreeRemaining--;
           if (player.drawThreeRemaining === 0) {
@@ -813,9 +814,13 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     );
     
     if (targets.length > 0) {
-      player.specialCards.push(card);
+      if (!player.specialCards.includes(card)) {
+        player.specialCards.push(card);
+      }
       socket.emit('select-draw-three-target', game.id, targets);
     } else {
+      // Remove from specialCards if it was added during D3
+      player.specialCards = player.specialCards.filter(c => c !== card);
       game.discardPile.push(card);
       advanceTurn(game);
     }
@@ -826,9 +831,13 @@ const handleSpecialCard = (game, player, card, socket, io) => {
       p.status === 'active'
     );
     if (targets.length > 0) {
-      player.specialCards.push(card);
+      if (!player.specialCards.includes(card)) {
+        player.specialCards.push(card);
+      }
       socket.emit('select-freeze-target', game.id, targets);
     } else {
+      // Remove from specialCards if it was added during D3
+      player.specialCards = player.specialCards.filter(c => c !== card);
       game.discardPile.push(card);
       advanceTurn(game);
     }
@@ -842,9 +851,13 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     );
 
     if (targets.length > 0) {
-      player.specialCards.push(card);
+      if (!player.specialCards.includes(card)) {
+        player.specialCards.push(card);
+      }
       socket.emit('select-remove-card-target', game.id, targets);
     } else {
+      // Remove from specialCards if it was added during D3
+      player.specialCards = player.specialCards.filter(c => c !== card);
       game.discardPile.push(card);
       socket.emit('error', 'No cards to remove. Turn skipped.');
       advanceTurn(game);
@@ -860,9 +873,13 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     );
 
     if (targets.length > 0) {
-      player.specialCards.push(card);
+      if (!player.specialCards.includes(card)) {
+        player.specialCards.push(card);
+      }
       socket.emit('select-steal-card-target', game.id, targets);
     } else {
+      // Remove from specialCards if it was added during D3
+      player.specialCards = player.specialCards.filter(c => c !== card);
       game.discardPile.push(card);
       socket.emit('error', 'No cards to steal. Turn skipped.');
       advanceTurn(game);
