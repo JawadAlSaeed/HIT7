@@ -446,18 +446,19 @@ function updateRemainingPile(deck) {
             'D3': 4,        // 4. Draw Three
           'RC': 5,        // 5. Remove Card
           'ST': 6,        // 6. Steal Card
-          '2+': 7,        // 7. 2+
-          '4+': 8,        // 8. 4+
-          '6+': 9,        // 9. 6+
-          '8+': 10,       // 10. 8+
-          '10+': 11,      // 11. 10+
-          '2x': 12,       // 12. 2x Multiplier
-          '2-': 13,       // 13. 2-
-          '4-': 14,       // 14. 4-
-          '6-': 15,       // 15. 6-
-          '8-': 16,       // 16. 8-
-          '10-': 17,      // 17. 10-
-          '2÷': 18,       // 18. 2÷ Divide
+          'Swap': 7,      // 7. Swap Card
+          '2+': 8,        // 8. 2+
+          '4+': 9,        // 9. 4+
+          '6+': 10,       // 10. 6+
+          '8+': 11,       // 11. 8+
+          '10+': 12,      // 12. 10+
+          '2x': 13,       // 13. 2x Multiplier
+          '2-': 14,       // 14. 2-
+          '4-': 15,       // 15. 4-
+          '6-': 16,       // 16. 6-
+          '8-': 17,       // 17. 8-
+          '10-': 18,      // 18. 10-
+          '2÷': 19,       // 19. 2÷ Divide
         };
         return specialOrder[card] || 99;  // Default high number for unknown cards
     };
@@ -466,7 +467,7 @@ function updateRemainingPile(deck) {
         let cardType, displayValue;
         
         if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-          cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' || cardStr === '2÷' ||
+          cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Swap' || cardStr === 'Select' || cardStr === '2÷' ||
             cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
             cardType = 
                 cardStr === 'SC' ? 'second-chance' :
@@ -474,6 +475,7 @@ function updateRemainingPile(deck) {
                 cardStr === 'D3' ? 'draw-three' :
                 cardStr === 'RC' ? 'remove-card' :
             cardStr === 'ST' ? 'steal-card' :
+                cardStr === 'Swap' ? 'swap-card' :
                 cardStr === 'Select' ? 'select-card' :
                 cardStr === '2÷' ? 'divide' :
                 cardStr.includes('+') ? 'adder' :
@@ -485,6 +487,7 @@ function updateRemainingPile(deck) {
                 cardStr === 'D3' ? '🎯' :
                 cardStr === 'RC' ? '🗑️' :
             cardStr === 'ST' ? '🥷' :
+                cardStr === 'Swap' ? '🔄️' :
                 cardStr === 'Select' ? '🃏' :
                 cardStr === '2÷' ? '2÷' :
                 cardStr;
@@ -555,8 +558,6 @@ function renderCard({ cardType, displayValue, count }) {
 }
 
 function updateLastCardDrawn(card) {
-    console.log('updateLastCardDrawn called with:', card);
-    
     const container = document.getElementById('lastCardDrawn');
     if (!container) return;
     
@@ -569,7 +570,7 @@ function updateLastCardDrawn(card) {
     const cardStr = card.toString();
     
     if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' || cardStr === '2÷' ||
+        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Swap' || cardStr === 'Select' || cardStr === '2÷' ||
         cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
         cardType = 
             cardStr === 'SC' ? 'second-chance' :
@@ -577,6 +578,7 @@ function updateLastCardDrawn(card) {
             cardStr === 'D3' ? 'draw-three' :
             cardStr === 'RC' ? 'remove-card' :
             cardStr === 'ST' ? 'steal-card' :
+            cardStr === 'Swap' ? 'swap-card' :
             cardStr === 'Select' ? 'select-card' :
             cardStr === '2÷' ? 'divide' :
             cardStr.includes('+') ? 'adder' :
@@ -588,6 +590,7 @@ function updateLastCardDrawn(card) {
             cardStr === 'D3' ? '🎯' :
             cardStr === 'RC' ? '🗑️' :
             cardStr === 'ST' ? '🥷' :
+            cardStr === 'Swap' ? '🔄️' :
             cardStr === 'Select' ? '🃏' :
             cardStr === '2÷' ? '2÷' :
             cardStr;
@@ -629,6 +632,9 @@ function updateDiscardPile(discardPile) {
       } else if (cardStr === 'ST') {
         cardType = 'steal-card';
         displayValue = '🥷';
+      } else if (cardStr === 'Swap') {
+        cardType = 'swap-card';
+        displayValue = '🔄️';
       } else if (cardStr === 'Select') {
         cardType = 'select-card';
         displayValue = '🃏';
@@ -658,6 +664,7 @@ function updateDiscardPile(discardPile) {
           cardType === 'draw-three' ? '#f1c40f' :
           cardType === 'remove-card' ? '#9b59b6' :
           cardType === 'steal-card' ? '#e67e22' :
+          cardType === 'swap-card' ? '#27ae60' :
           cardType === 'divide' ? '#1a1a1a' :
           cardType === 'minus' ? '#1a1a1a' : 'inherit'
         } !important;
@@ -677,11 +684,12 @@ function updateDiscardPile(discardPile) {
           'draw-three': 3,
           'remove-card': 4,
           'steal-card': 5,
-          'adder': 6,
-          'multiplier': 7,
-          'divide': 8,
-          'minus': 9,
-          'number': 10
+          'swap-card': 6,
+          'adder': 7,
+          'multiplier': 8,
+          'divide': 9,
+          'minus': 10,
+          'number': 11
         }[cardType] || 999
       };
     })
@@ -784,6 +792,7 @@ function getSpecialCardClass(card) {
     if (card === 'D3') return 'draw-three';
     if (card === 'RC') return 'remove-card';
   if (card === 'ST') return 'steal-card';
+    if (card === 'Swap') return 'swap-card';
     if (card === 'Select') return 'select-card';
     if (card === '2÷') return 'divide';
     if (card.endsWith('+')) return 'adder';
@@ -800,6 +809,7 @@ function getSpecialCardDisplay(card) {
     if (card === 'D3') return '🎯';
     if (card === 'RC') return '🗑️';
   if (card === 'ST') return '🥷';
+    if (card === 'Swap') return '🔄️';
     if (card === 'Select') return '🃏';
     
     // For numeric modifier cards, format them
@@ -1018,8 +1028,6 @@ function checkUrlParams() {
 }
 
 function handleNewRound(game) {
-    console.log('New round started. LastCardDrawn:', game.lastCardDrawn);
-    
     // Update game display first
     updateGameDisplay(game);
     
@@ -1448,6 +1456,181 @@ function showRemoveCardPopup(gameId, players) {
   observer.observe(document.body, { childList: true });
 }
 
+function showSwapCardPopup(gameId, players) {
+  // Disable action buttons during popup
+  document.body.style.overflow = 'hidden';
+  toggleActionButtons(false);
+
+  const popup = document.createElement('div');
+  popup.className = 'swap-card-popup';
+
+  let selectedCards = [];
+
+  const isSwappable = (card) => {
+    const cardStr = card.toString();
+    return typeof card === 'number' || 
+           cardStr === 'SC' || 
+           cardStr === '2x' || 
+           cardStr.includes('+') || 
+           cardStr.includes('-') || 
+           cardStr.includes('÷');
+  };
+
+  const content = `
+    <div class="popup-content">
+      <h3><span class="emoji">🔄️</span> Select 2 cards to swap (from different players):</h3>
+      <div class="players-list">
+        ${players.map(player => {
+          const isDisabled = player.status === 'busted';
+          const showStatusBadge = player.status !== 'active';
+          const swappableRegular = player.regularCards.filter(isSwappable);
+          const swappableSpecial = player.specialCards.filter(isSwappable);
+          
+          return `
+            <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}" data-player-id="${player.id}">
+              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}
+                  ${showStatusBadge ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
+              </h4>
+              <div class="cards-list">
+                ${swappableRegular.map((card, index) => {
+                  const actualIndex = player.regularCards.indexOf(card);
+                  return `
+                    <button class="card-button regular swap-selectable"
+                      data-player="${player.id}"
+                      data-index="${actualIndex}"
+                      data-special="false"
+                      ${isDisabled ? 'disabled' : ''}>
+                      ${card}
+                    </button>
+                  `;
+                }).join('')}
+                ${swappableSpecial.map((card, index) => {
+                  const actualIndex = player.specialCards.indexOf(card);
+                  return `
+                    <button class="card-button special ${getSpecialCardClass(card)} swap-selectable"
+                      style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                      data-player="${player.id}"
+                      data-index="${actualIndex}"
+                      data-special="true"
+                      ${isDisabled ? 'disabled' : ''}>
+                      ${getSpecialCardDisplay(card)}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+              ${isDisabled ? `
+                <div class="status-overlay">
+                  <span class="status-message">Player is ${player.status.toUpperCase()}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button class="confirm-swap-button" id="confirmSwapButton" disabled>
+        <span class="icon">✓</span> Confirm Swap
+      </button>
+      <button class="view-game-button" id="viewGameButton">
+        <span class="icon">👁️</span> Hold to view game
+      </button>
+    </div>
+  `;
+
+  popup.innerHTML = content;
+
+  const confirmButton = popup.querySelector('#confirmSwapButton');
+
+  popup.querySelectorAll('.swap-selectable:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const playerId = btn.dataset.player;
+      const cardIndex = parseInt(btn.dataset.index);
+      const isSpecial = btn.dataset.special === 'true';
+
+      // Check if card is already selected
+      const alreadySelected = selectedCards.findIndex(c => 
+        c.playerId === playerId && 
+        c.index === cardIndex && 
+        c.isSpecial === isSpecial
+      );
+
+      if (alreadySelected !== -1) {
+        // Deselect
+        selectedCards.splice(alreadySelected, 1);
+        btn.classList.remove('selected');
+      } else {
+        // Check if already have 2 cards selected
+        if (selectedCards.length >= 2) {
+          // Remove first selection's highlight
+          const firstCard = selectedCards.shift();
+          const firstBtn = popup.querySelector(
+            `.swap-selectable[data-player="${firstCard.playerId}"][data-index="${firstCard.index}"][data-special="${firstCard.isSpecial}"]`
+          );
+          if (firstBtn) firstBtn.classList.remove('selected');
+        }
+
+        // Add new selection
+        selectedCards.push({ playerId, index: cardIndex, isSpecial });
+        btn.classList.add('selected');
+      }
+
+      // Enable confirm button only if 2 cards from different players are selected
+      const canConfirm = selectedCards.length === 2 && 
+                         selectedCards[0].playerId !== selectedCards[1].playerId;
+      confirmButton.disabled = !canConfirm;
+    });
+  });
+
+  confirmButton.addEventListener('click', () => {
+    if (selectedCards.length === 2 && selectedCards[0].playerId !== selectedCards[1].playerId) {
+      socket.emit('swap-cards', gameId, {
+        playerId: selectedCards[0].playerId,
+        index: selectedCards[0].index,
+        isSpecial: selectedCards[0].isSpecial
+      }, {
+        playerId: selectedCards[1].playerId,
+        index: selectedCards[1].index,
+        isSpecial: selectedCards[1].isSpecial
+      });
+      popup.remove();
+    }
+  });
+
+  const viewButton = popup.querySelector('#viewGameButton');
+  viewButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  viewButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    popup.classList.add('popup-hiding');
+  });
+
+  const handleUp = () => {
+    if (popup.parentElement) {
+      popup.classList.remove('popup-hiding');
+    }
+  };
+
+  document.addEventListener('mouseup', handleUp);
+  document.addEventListener('touchend', handleUp);
+
+  document.body.appendChild(popup);
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if ([...mutation.removedNodes].includes(popup)) {
+        document.removeEventListener('mouseup', handleUp);
+        document.removeEventListener('touchend', handleUp);
+        document.body.style.overflow = 'auto';
+        observer.disconnect();
+      }
+    });
+  });
+
+  observer.observe(document.body, { childList: true });
+}
+
 function showStealCardPopup(gameId, players) {
   // Disable action buttons during popup
   document.body.style.overflow = 'hidden';
@@ -1560,6 +1743,7 @@ function getCardColor(card) {
     if (card === 'D3') return '#f1c40f';
     if (card === 'RC') return '#9b59b6';
   if (card === 'ST') return '#e67e22';
+    if (card === 'Swap') return '#27ae60';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
     if (card.endsWith('+')) return '#27ae60'; // Green for all adders
     if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
@@ -1574,6 +1758,15 @@ socket.on('select-remove-card-target', (gameId, players) => {
 
 socket.on('select-steal-card-target', (gameId, players) => {
   showStealCardPopup(gameId, players);
+});
+
+socket.on('select-swap-cards', (gameId, players) => {
+  showSwapCardPopup(gameId, players);
+});
+
+socket.on('swap-notification', (data) => {
+  const message = `${data.swapper} swapped ${data.player1}'s ${data.card1} with ${data.player2}'s ${data.card2}`;
+  showNotification(message, 'info');
 });
 
 // Add this function to show the Select Card popup
@@ -1596,7 +1789,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
   // Sort card groups
   Object.entries(cardCounts).forEach(([cardStr, count]) => {
     if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' ||
+        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Swap' || cardStr === 'Select' ||
         cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
       specialCards.push({ card: cardStr, count });
     } else {
@@ -1616,18 +1809,19 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
         'D3': 4,        // 4. Draw Three
         'RC': 5,        // 5. Remove Card
         'ST': 6,        // 6. Steal Card
-        '2+': 7,        // 7. 2+
-        '4+': 8,        // 8. 4+
-        '6+': 9,        // 9. 6+
-        '8+': 10,       // 10. 8+
-        '10+': 11,      // 11. 10+
-        '2x': 12,       // 12. 2x Multiplier
-        '2-': 13,       // 13. 2-
-        '4-': 14,       // 14. 4-
-        '6-': 15,       // 15. 6-
-        '8-': 16,       // 16. 8-
-        '10-': 17,      // 17. 10-
-        '2÷': 18,       // 18. 2÷ Divide
+        'Swap': 7,      // 7. Swap Card
+        '2+': 8,        // 8. 2+
+        '4+': 9,        // 9. 4+
+        '6+': 10,       // 10. 6+
+        '8+': 11,       // 11. 8+
+        '10+': 12,      // 12. 10+
+        '2x': 13,       // 13. 2x Multiplier
+        '2-': 14,       // 14. 2-
+        '4-': 15,       // 15. 4-
+        '6-': 16,       // 16. 6-
+        '8-': 17,       // 17. 8-
+        '10-': 18,      // 18. 10-
+        '2÷': 19,       // 19. 2÷ Divide
     };
     return specialOrder[card] || 99;
   };
@@ -1771,6 +1965,7 @@ function getCardColorStyle(card) {
   if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
   if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
   if (card === 'ST') return 'background: #e67e22 !important; color: white !important;';
+  if (card === 'Swap') return 'background: #27ae60 !important; color: white !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
   if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
   if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier

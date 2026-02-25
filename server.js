@@ -69,7 +69,7 @@ const createDeck = () => {
     }
   }
 
-  // Special cards = 27 cards (total 106 cards)
+  // Special cards = 29 cards (total 108 cards)
   const specialCards = [
     '2+', '4+', '6+', '8+', '10+',      // 5 adder cards
     '2-', '4-', '6-', '8-', '10-',      // 5 minus cards
@@ -80,13 +80,14 @@ const createDeck = () => {
     'D3', 'D3', 'D3',                   // 3 draw three cards
     'RC', 'RC', 'RC',                   // 3 remove card cards
     'ST', 'ST',                         // 2 steal card cards
+    'Swap', 'Swap',                     // 2 swap cards
     'Select'                            // 1 select card
   ];
   deck.push(...specialCards);
   
   // Verify deck size
-  if (deck.length !== 106) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 106 cards.`);
+  if (deck.length !== 108) {
+    console.error(`Invalid deck size: ${deck.length}. Expected 108 cards.`);
   }
   
   return shuffle(deck);
@@ -175,8 +176,8 @@ const handleSocketConnection = (io) => {
         
         // If the last card is Select, we need special handling
         if (lastCard === 'Select') {
-          // Create a new full deck but don't assign it yet
-          const newDeck = createDeck();
+          // Create a new full deck for the popup only
+          const fullDeck = createDeck();
           
           // Pop the Select card from the current deck
           game.deck.pop();
@@ -188,10 +189,7 @@ const handleSocketConnection = (io) => {
             player.specialCards.push('Select');
           }
 
-          // Update the game's deck with the new deck
-          game.deck = newDeck;
-
-          handleSelectCard(game, player, socket, io, [], newDeck);
+          handleSelectCard(game, player, socket, io, [], fullDeck);
 
           updatePlayerScore(player);
           checkGameStatus(game, io);
@@ -249,7 +247,7 @@ const handleSocketConnection = (io) => {
           }
       }
       // Handle special cards - don't add to discard pile until they're used
-      else if (card === 'D3' || card === 'Freeze' || card === 'RC' || card === 'ST') {
+      else if (card === 'D3' || card === 'Freeze' || card === 'RC' || card === 'ST' || card === 'Swap') {
         if (player.drawThreeRemaining > 0) {
           // Add the special card to hand and continue with D3 sequence
           player.specialCards.push(card);
@@ -543,6 +541,68 @@ const handleSocketConnection = (io) => {
       io.to(gameId).emit('game-update', game);
     });
 
+    socket.on('swap-cards', (gameId, card1Data, card2Data) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'playing') return;
+
+      const player = game.players.find(p => p.id === socket.id);
+      if (!player || !player.specialCards.includes('Swap')) return;
+
+      const player1 = game.players.find(p => p.id === card1Data.playerId);
+      const player2 = game.players.find(p => p.id === card2Data.playerId);
+
+      if (!player1 || !player2) {
+        socket.emit('error', 'Invalid players selected.');
+        return;
+      }
+
+      if (player1.id === player2.id) {
+        socket.emit('error', 'Must swap cards from different players.');
+        return;
+      }
+
+      if (player1.status === 'busted' || player2.status === 'busted') {
+        socket.emit('error', 'Cannot swap cards with busted players.');
+        return;
+      }
+
+      // Get the card arrays
+      const array1 = card1Data.isSpecial ? player1.specialCards : player1.regularCards;
+      const array2 = card2Data.isSpecial ? player2.specialCards : player2.regularCards;
+
+      if (card1Data.index < 0 || card1Data.index >= array1.length ||
+          card2Data.index < 0 || card2Data.index >= array2.length) {
+        socket.emit('error', 'Invalid card selection.');
+        return;
+      }
+
+      // Consume Swap Card
+      player.specialCards = player.specialCards.filter(c => c !== 'Swap');
+      game.discardPile.push('Swap');
+
+      // Perform the swap
+      const temp = array1[card1Data.index];
+      array1[card1Data.index] = array2[card2Data.index];
+      array2[card2Data.index] = temp;
+
+      // Update scores and check for busts
+      updatePlayerScore(player1);
+      updatePlayerScore(player2);
+
+      // Notify all players about the swap
+      io.to(gameId).emit('swap-notification', {
+        swapper: player.name,
+        player1: player1.name,
+        card1: temp,
+        player2: player2.name,
+        card2: array1[card1Data.index]
+      });
+
+      advanceTurn(game);
+      checkGameStatus(game, io);
+      io.to(gameId).emit('game-update', game);
+    });
+
     // Update the select-card-from-pile event handling for better deck management
     socket.on('select-card-choice', (gameId, selectedCard) => {
       const game = games.get(gameId);
@@ -565,8 +625,16 @@ const handleSocketConnection = (io) => {
       
       // If card not found, it might mean we're in the special empty-deck scenario
       if (!cardFound) {
-        // No need to remove the card, it will be in the new deck
-        console.log(`Card ${selectedCard} selected from regenerated deck`);
+        if (game.deck.length === 0) {
+          const newDeck = createDeck();
+          const newIndex = newDeck.findIndex(card => card === selectedCard);
+          if (newIndex !== -1) {
+            newDeck.splice(newIndex, 1);
+          }
+          game.deck = newDeck;
+        } else {
+          console.log(`Card ${selectedCard} selected from regenerated deck`);
+        }
       }
       
       // Track the last card drawn (selected)
@@ -592,9 +660,14 @@ const handleSocketConnection = (io) => {
           advanceTurn(game);
         }
       }
-      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC' || selectedCard === 'ST') {
+      else if (selectedCard === 'D3' || selectedCard === 'Freeze' || selectedCard === 'RC' || selectedCard === 'ST' || selectedCard === 'Swap') {
         // For special cards that need targeting, add to hand but don't advance turn yet
-        player.specialCards.push(selectedCard);
+        if (!player.specialCards.includes(selectedCard)) {
+          player.specialCards.push(selectedCard);
+        }
+        if (selectedCard === 'Swap') {
+          handleSpecialCard(game, player, selectedCard, socket, io);
+        }
         // The client will request targets immediately
         // Turn will advance when the special card effect is applied
       }
@@ -897,6 +970,37 @@ const handleSpecialCard = (game, player, card, socket, io) => {
       io.to(game.id).emit('game-update', game);
     }
   }
+  else if (card === 'Swap') {
+    // Check if there are at least 2 players with swappable cards
+    const swappableCards = (p) => {
+      const regular = p.regularCards.length;
+      const special = p.specialCards.filter(c => 
+        c === 'SC' || c === '2x' || c.includes('+') || c.includes('-') || c.includes('÷')
+      ).length;
+      return regular + special;
+    };
+    
+    const playersWithCards = game.players.filter(p => 
+      p.status !== 'busted' && swappableCards(p) > 0
+    );
+
+    if (playersWithCards.length >= 2) {
+      if (!player.specialCards.includes(card)) {
+        player.specialCards.push(card);
+      }
+      // Emit game-update so clients see Swap in special cards before popup shows
+      io.to(game.id).emit('game-update', game);
+      socket.emit('select-swap-cards', game.id, game.players);
+    } else {
+      // Remove from specialCards if it was added during D3
+      player.specialCards = player.specialCards.filter(c => c !== card);
+      game.discardPile.push(card);
+      socket.emit('error', 'Not enough players with cards to swap. Turn skipped.');
+      advanceTurn(game);
+      checkGameStatus(game, io);
+      io.to(game.id).emit('game-update', game);
+    }
+  }
 };
 
 const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDeck = null) => {
@@ -970,15 +1074,13 @@ const checkFinalWinner = (game, io) => {
 };
 
 const startNewRound = (game, io) => {
-  console.log(`Starting new round. Previous lastCardDrawn: ${game.lastCardDrawn}`);
-  
   game.roundNumber++;
   
-  // Create new deck for the round
-  game.deck = createDeck();
+  // Don't reset deck - it persists across rounds and reshuffles when empty during gameplay
+  // Only reset discard pile
   game.discardPile = [];
   
-  // Reset player states, but keep total scores and lastCardDrawn
+  // Reset player states, but keep total scores, lastCardDrawn, and deck
   game.players.forEach(player => {
       player.regularCards = [];
       player.specialCards = [];
@@ -991,8 +1093,6 @@ const startNewRound = (game, io) => {
   // Set starting player based on round number (cycling through players)
   game.currentPlayer = (game.roundNumber - 1) % game.players.length;
   game.status = 'playing'; // Ensure game status is set to playing
-  
-  console.log(`Round ${game.roundNumber} started. LastCardDrawn preserved: ${game.lastCardDrawn}`);
   
   // Immediately emit game update to ensure clients get the new state
   io.to(game.id).emit('game-update', game);
