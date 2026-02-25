@@ -617,19 +617,20 @@ body::before {
 }
 
 .card.special.adder {
-    background: #27ae60 !important; /* Solid green for adder */
-    border-color: #27ae60;
+    background: #fbb03a !important;
+    border-color: #fbb03a;
+    color: white !important;
 }
 
 .card.special.multiplier {
-    background: #27ae60 !important; /* Solid green for multiplier */
-    border-color: #27ae60;
+    background: #fbb03a !important;
+    border-color: #fbb03a;
     color: white !important;
 }
 
 .card.special.swap-card {
-    background: #27ae60 !important; /* Solid green like modifiers */
-    border-color: #27ae60;
+    background: #42ae5d !important;
+    border-color: #42ae5d;
     color: white !important;
 }
 
@@ -1175,8 +1176,8 @@ body::before {
 }
 
 .last-card.special.swap-card { 
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    border-color: #229954;
+    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
+    border-color: #3a9a50;
     color: white !important;
 }
 
@@ -1186,25 +1187,26 @@ body::before {
 }
 
 .last-card.special.multiplier { 
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    border-color: #219a52;
+    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
+    border-color: #e9a232;
     color: white !important;
 }
 
 .last-card.special.adder { 
-    background: linear-gradient(135deg, #27ae60, #27ae60) !important;
-    border-color: #219a52;
+    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
+    border-color: #e9a232;
+    color: white !important;
 }
 
 .last-card.special.minus {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: linear-gradient(135deg, #f1624f, #d95746) !important;
+    border-color: #d9574a !important;
     color: white !important;
 }
 
 .last-card.special.divide {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: linear-gradient(135deg, #f1624f, #d9574a) !important;
+    border-color: #d9574a !important;
     color: white !important;
 }
 
@@ -1328,25 +1330,26 @@ body::before {
 }
 
 .remaining-card.special.swap-card { 
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    border-color: #229954;
+    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
+    border-color: #3a9a50;
     color: white !important;
 }
 
 .remaining-card.special.multiplier { 
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    border-color: #219a52;
+    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
+    border-color: #e9a232;
     color: white !important;
 }
 
 .remaining-card.special.adder { 
-    background: linear-gradient(135deg, #27ae60, #27ae60) !important;
-    border-color: #219a52;
+    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
+    border-color: #e9a232;
+    color: white !important;
 }
 
 .remaining-card.special.divide { 
-    background: linear-gradient(135deg, #1a1a1a, #0d0d0d) !important;
-    border-color: #34495e;
+    background: linear-gradient(135deg, #f1624f, #d9574a) !important;
+    border-color: #d9574a;
     color: white !important;
 }
 
@@ -1439,18 +1442,16 @@ body::before {
 
 /* Adder Cards (+ cards) */
 .discard-card.adder {
-    background: linear-gradient(45deg, #27ae60, #2ecc71);
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
+    background: #fbb03a !important;
+    border-color: #e9a232 !important;
     color: white !important;
 }
 
 /* Multiplier Cards (x cards) */
 .discard-card.multiplier {
-    background: linear-gradient(45deg, #f1c40f, #f39c12);
-    background: #f1c40f !important;
-    border-color: #d0a90d !important;
-    color: var(--text-dark) !important;
+    background: #fbb03a !important;
+    border-color: #e9a232 !important;
+    color: white !important;
 }
 
 /* Second Chance Card */
@@ -2378,32 +2379,33 @@ body::before {
 }
 
 .tutorial-popup .card.special.swap-card {
-    background: #27ae60 !important;
-    border-color: #229954 !important;
+    background: #42ae5d !important;
+    border-color: #3a9a50 !important;
     color: white !important;
     font-size: 1.8rem;
 }
 
 .tutorial-popup .card.special.adder {
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
+    background: #fbb03a !important;
+    border-color: #e9a232 !important;
+    color: white !important;
 }
 
 .tutorial-popup .card.special.minus {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: #f1624f !important;
+    border-color: #d9574a !important;
     color: white !important;
 }
 
 .tutorial-popup .card.special.multiplier {
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
+    background: #fbb03a !important;
+    border-color: #e9a232 !important;
     color: white !important;
 }
 
 .tutorial-popup .card.special.divide {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: #f1624f !important;
+    border-color: #d9574a !important;
     color: white !important;
 }
 
@@ -2721,8 +2723,8 @@ body::before {
 
 .card.special.swap-card,
 .discard-card.special.swap-card {
-    background: #27ae60 !important;
-    border-color: #27ae60 !important;
+    background: #42ae5d !important;
+    border-color: #42ae5d !important;
     color: white !important;
 }
 
@@ -2737,8 +2739,8 @@ body::before {
 }
 
 .remaining-card.special.swap-card {
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    border-color: #229954 !important;
+    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
+    border-color: #3a9a50 !important;
 }
 
 /* Remove cancel button styles */
@@ -2914,12 +2916,12 @@ body::before {
   color: white;
 }
 
-/* Add after the adder card styles */
+/* Minus cards (- cards) */
 .card.special.minus,
 .remaining-card.special.minus,
 .discard-card.special.minus {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: #f1624f !important;
+    border-color: #d9574a !important;
     color: white !important;
     text-shadow: none !important;
 }
@@ -2928,8 +2930,8 @@ body::before {
 .card.special.divide,
 .remaining-card.special.divide,
 .discard-card.special.divide {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
+    background: #f1624f !important;
+    border-color: #d9574a !important;
     color: white !important;
     text-shadow: none !important;
 }
@@ -2972,8 +2974,8 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: linear-gradient(135deg, #27ae60, #229954) !important;
-    box-shadow: 0 8px 32px rgba(39, 174, 96, 0.35) !important;
+    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
+    box-shadow: 0 8px 32px rgba(66, 174, 93, 0.35) !important;
     padding: 2.5rem !important;
     border: none;
     padding-bottom: 140px !important;
@@ -2989,8 +2991,8 @@ body::before {
 }
 
 .swap-card-popup .players-list {
-    background: rgba(39, 174, 96, 0.2) !important;
-    border-color: rgba(39, 174, 96, 0.35) !important;
+    background: rgba(66, 174, 93, 0.2) !important;
+    border-color: rgba(66, 174, 93, 0.35) !important;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -2998,8 +3000,8 @@ body::before {
 }
 
 .swap-card-popup .player-section {
-    background: rgba(39, 174, 96, 0.18) !important;
-    border-color: rgba(39, 174, 96, 0.35) !important;
+    background: rgba(66, 174, 93, 0.18) !important;
+    border-color: rgba(66, 174, 93, 0.35) !important;
     border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 1rem;
     border-radius: 12px;
@@ -3015,8 +3017,8 @@ body::before {
 }
 
 .swap-card-popup .cards-list {
-    background: rgba(39, 174, 96, 0.18) !important;
-    border-color: rgba(39, 174, 96, 0.35) !important;
+    background: rgba(66, 174, 93, 0.18) !important;
+    border-color: rgba(66, 174, 93, 0.35) !important;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -3061,7 +3063,7 @@ body::before {
     transform: translateX(-50%);
     padding: 12px 30px;
     background: linear-gradient(135deg, #fff, #f0f0f0);
-    color: #27ae60;
+    color: #42ae5d;
     border: none;
     border-radius: 25px;
     font-size: 1.1rem;

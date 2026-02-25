@@ -533,17 +533,18 @@ function renderCard({ cardType, displayValue, count }) {
         } else {
             cardStyle = `
                 background: ${
-                    cardType === 'adder' ? '#27ae60' : 
-                    cardType === 'minus' ? '#1a1a1a' :
-                    cardType === 'divide' ? '#1a1a1a' :
-                    cardType === 'multiplier' ? '#27ae60' :
+                    cardType === 'adder' ? '#fbb03a' : 
+                    cardType === 'minus' ? '#f1624f' :
+                    cardType === 'divide' ? '#f1624f' :
+                    cardType === 'multiplier' ? '#fbb03a' :
                     cardType === 'second-chance' ? '#e74c3c' :
                     cardType === 'freeze' ? '#3498db' :
                     cardType === 'draw-three' ? '#f1c40f' :
                     cardType === 'remove-card' ? '#9b59b6' :
-                    cardType === 'steal-card' ? '#e67e22' : 'inherit'
+                    cardType === 'steal-card' ? '#e67e22' :
+                    cardType === 'swap-card' ? '#42ae5d' : 'inherit'
                 } !important;
-                color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier') ? '#fff' : 'inherit'} !important;
+                color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier' || cardType === 'adder') ? '#fff' : 'inherit'} !important;
             `;
         }
     }
@@ -657,16 +658,16 @@ function updateDiscardPile(discardPile) {
 
       const cardStyle = cardType !== 'number' ? `
         background: ${
-          cardType === 'adder' ? '#27ae60' : 
-          cardType === 'multiplier' ? '#27ae60' :
+          cardType === 'adder' ? '#fbb03a' : 
+          cardType === 'multiplier' ? '#fbb03a' :
           cardType === 'second-chance' ? '#e74c3c' :
           cardType === 'freeze' ? '#3498db' :
           cardType === 'draw-three' ? '#f1c40f' :
           cardType === 'remove-card' ? '#9b59b6' :
           cardType === 'steal-card' ? '#e67e22' :
-          cardType === 'swap-card' ? '#27ae60' :
-          cardType === 'divide' ? '#1a1a1a' :
-          cardType === 'minus' ? '#1a1a1a' : 'inherit'
+          cardType === 'swap-card' ? '#42ae5d' :
+          cardType === 'divide' ? '#f1624f' :
+          cardType === 'minus' ? '#f1624f' : 'inherit'
         } !important;
       ` : '';
 
@@ -750,13 +751,13 @@ function playerTemplate(player, isCurrentTurn) {
                             if (card === 'Select') {
                                 cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
                             } else if (card === 'Swap') {
-                                cardStyle = 'background: #27ae60 !important; border-color: #27ae60 !important; color: white !important;';
+                                cardStyle = 'background: #42ae5d !important; border-color: #42ae5d !important; color: white !important;';
                             } else if (card.endsWith('+') || card === '2x') {
-                              cardStyle = 'background: #27ae60 !important; color: white !important;';
+                              cardStyle = 'background: #fbb03a !important; border-color: #fbb03a !important; color: white !important;';
                             } else if (card === 'ST') {
                               cardStyle = 'background: #e67e22 !important; color: white !important;';
                             } else if (card === '2÷' || card.endsWith('-')) {
-                                cardStyle = 'background: #1a1a1a !important; color: white !important;';
+                                cardStyle = 'background: #f1624f !important; border-color: #f1624f !important; color: white !important;';
                             }
                             
                             return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
@@ -1381,7 +1382,7 @@ function showRemoveCardPopup(gameId, players) {
                   const isRemoveCard = card === 'RC';
                   return `
                   <button class="card-button special ${getSpecialCardClass(card)}"
-                    style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                    style="background: ${getCardColor(card)}; color: white;"
                     data-player="${player.id}" 
                     data-index="${index}"
                     data-special="true"
@@ -1511,7 +1512,7 @@ function showSwapCardPopup(gameId, players) {
                   const actualIndex = player.specialCards.indexOf(card);
                   return `
                     <button class="card-button special ${getSpecialCardClass(card)} swap-selectable"
-                      style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                      style="background: ${getCardColor(card)}; color: white;"
                       data-player="${player.id}"
                       data-index="${actualIndex}"
                       data-special="true"
@@ -1693,7 +1694,7 @@ function showStealCardPopup(gameId, players) {
                 `).join('')}
                 ${player.specialCards.map((card, index) => `
                   <button class="card-button special ${getSpecialCardClass(card)}"
-                    style="background: ${getCardColor(card)}; color: ${card.endsWith('-') || card.includes('x') ? (card.includes('x') ? 'var(--text-dark)' : '#fff') : ''}"
+                    style="background: ${getCardColor(card)}; color: white;"
                     data-player="${player.id}"
                     data-index="${index}"
                     data-special="true"
@@ -1773,12 +1774,12 @@ function getCardColor(card) {
     if (card === 'D3') return '#f1c40f';
     if (card === 'RC') return '#9b59b6';
   if (card === 'ST') return '#e67e22';
-    if (card === 'Swap') return '#27ae60';
+    if (card === 'Swap') return '#42ae5d';
     if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
-    if (card.endsWith('+')) return '#27ae60'; // Green for all adders
-    if (card.endsWith('x')) return '#27ae60'; // Green for multiplier
-    if (card === '2÷') return '#1a1a1a'; // Black for divide
-    if (card.endsWith('-')) return '#1a1a1a'; // Black for all minus
+    if (card.endsWith('+')) return '#fbb03a';
+    if (card.endsWith('x')) return '#fbb03a';
+    if (card === '2÷') return '#f1624f';
+    if (card.endsWith('-')) return '#f1624f';
     return 'inherit';
 }
 
@@ -1998,12 +1999,12 @@ function getCardColorStyle(card) {
   if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
   if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
   if (card === 'ST') return 'background: #e67e22 !important; color: white !important;';
-  if (card === 'Swap') return 'background: #27ae60 !important; color: white !important;';
+  if (card === 'Swap') return 'background: #42ae5d !important; color: white !important;';
   if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
-  if (card.endsWith('+')) return 'background: #27ae60 !important; color: white !important;'; // Green for adders
-  if (card.endsWith('x')) return 'background: #27ae60 !important; color: white !important;'; // Green for multiplier
-  if (card === '2÷') return 'background: #1a1a1a !important; color: white !important;'; // Black for divide
-  if (card.endsWith('-')) return 'background: #1a1a1a !important; color: white !important;'; // Black for minus
+  if (card.endsWith('+')) return 'background: #fbb03a !important; color: white !important;';
+  if (card.endsWith('x')) return 'background: #fbb03a !important; color: white !important;';
+  if (card === '2÷') return 'background: #f1624f !important; color: white !important;';
+  if (card.endsWith('-')) return 'background: #f1624f !important; color: white !important;';
   return '';
 }
 
