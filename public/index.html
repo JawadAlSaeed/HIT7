@@ -71,7 +71,16 @@
             <div class="game-board">
                 <div class="deck-area">
                     <div class="discard-info">
-                        <div class="deck-count">CARDS LEFT: <span id="deckCount">93</span></div>
+                        <div class="deck-stats-container">
+                            <div class="deck-stat-item">
+                                <span class="stat-label">CARDS LEFT:</span>
+                                <span class="stat-value" id="deckCount">93</span>
+                            </div>
+                            <div class="deck-stat-item">
+                                <span class="stat-label">LAST CARD DRAWN:</span>
+                                <div id="lastCardDrawn" class="last-card-container"></div>
+                            </div>
+                        </div>
                         <div class="remaining-pile" id="discard"></div>  <!-- Changed id kept for compatibility -->
                     </div>
                 </div>

@@ -1074,22 +1074,35 @@ body::before {
     max-width: 800px;
 }
 
-/* Cards Left Counter */
-.deck-count {
-    font-size: 1.4rem;
+/* Deck Stats Container - Horizontal Layout */
+.deck-stats-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    padding: 1.5rem 2rem;
     background: rgba(22, 33, 62, 0.8);
-    padding: 1rem 2rem;
     border-radius: 12px;
-    min-width: 150px;
-    text-align: center;
-    order: -1;
     border: 1px solid rgba(233, 69, 96, 0.2);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    font-family: 'Cairo Play', sans-serif;
+    margin-bottom: 1.5rem;
 }
 
-.deck-count span {
+.deck-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-label {
+    font-size: 1.4rem;
+    font-family: 'Cairo Play', sans-serif;
+    white-space: nowrap;
+    color: white;
+}
+
+.stat-value {
     font-weight: bold;
     background: var(--card-gradient);
     -webkit-background-clip: text;
@@ -1097,7 +1110,101 @@ body::before {
     color: transparent;
     text-shadow: var(--glow);
     font-size: 1.6rem;
-    margin-left: 5px;
+    font-family: 'Cairo Play', sans-serif;
+}
+
+.last-card-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.last-card {
+    width: 50px;
+    height: 70px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    font-family: 'Roboto', sans-serif;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.last-card.regular-card {
+    background: white !important;
+    color: #1a1a2e !important;
+    border: 2px solid #16213e !important;
+}
+
+.last-card.special {
+    color: white !important;
+}
+
+/* Special Card Styles for Last Card Drawn */
+.last-card.special.second-chance { 
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    border-color: #c0392b;
+}
+
+.last-card.special.freeze { 
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    border-color: #2980b9;
+}
+
+.last-card.special.draw-three { 
+    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
+    border-color: #f39c12;
+    color: #2c3e50 !important;
+}
+
+.last-card.special.steal-card { 
+    background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    border-color: #d35400;
+    color: white !important;
+}
+
+.last-card.special.remove-card {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    border-color: #8e44ad !important;
+}
+
+.last-card.special.multiplier { 
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    border-color: #219a52;
+    color: white !important;
+}
+
+.last-card.special.adder { 
+    background: linear-gradient(135deg, #27ae60, #27ae60) !important;
+    border-color: #219a52;
+}
+
+.last-card.special.minus {
+    background: #1a1a1a !important;
+    border-color: #34495e !important;
+    color: white !important;
+}
+
+.last-card.special.divide {
+    background: #1a1a1a !important;
+    border-color: #34495e !important;
+    color: white !important;
+}
+
+.last-card.special.select-card {
+  background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
+  border-color: #e74c3c !important;
+  color: white !important;
+}
+
+.no-card {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.5rem;
 }
 
 /* Remaining Pile Cards Container */

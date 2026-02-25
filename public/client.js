@@ -374,6 +374,8 @@ function handleGameUpdate(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
     // Update the remaining pile display immediately
     updateRemainingPile(game.deck);
+    // Update the last card drawn
+    updateLastCardDrawn(game.lastCardDrawn);
     
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
@@ -421,6 +423,7 @@ function handleGameUpdate(game) {
 function updateGameDisplay(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
     updateRemainingPile(game.deck);
+    updateLastCardDrawn(game.lastCardDrawn);
     renderPlayers(game);
 }
 
@@ -547,6 +550,55 @@ function renderCard({ cardType, displayValue, count }) {
              style="${cardStyle}">
             ${displayValue}
             ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
+        </div>
+    `;
+}
+
+function updateLastCardDrawn(card) {
+    console.log('updateLastCardDrawn called with:', card);
+    
+    const container = document.getElementById('lastCardDrawn');
+    if (!container) return;
+    
+    if (card === null || card === undefined) {
+        container.innerHTML = '<span class="no-card">---</span>';
+        return;
+    }
+    
+    let cardType, displayValue;
+    const cardStr = card.toString();
+    
+    if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
+        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Select' || cardStr === '2÷' ||
+        cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
+        cardType = 
+            cardStr === 'SC' ? 'second-chance' :
+            cardStr === 'Freeze' ? 'freeze' :
+            cardStr === 'D3' ? 'draw-three' :
+            cardStr === 'RC' ? 'remove-card' :
+            cardStr === 'ST' ? 'steal-card' :
+            cardStr === 'Select' ? 'select-card' :
+            cardStr === '2÷' ? 'divide' :
+            cardStr.includes('+') ? 'adder' :
+            cardStr.includes('-') ? 'minus' :
+            'multiplier';
+        displayValue = 
+            cardStr === 'SC' ? '🛡️' :
+            cardStr === 'Freeze' ? '❄️' :
+            cardStr === 'D3' ? '🎯' :
+            cardStr === 'RC' ? '🗑️' :
+            cardStr === 'ST' ? '🥷' :
+            cardStr === 'Select' ? '🃏' :
+            cardStr === '2÷' ? '2÷' :
+            cardStr;
+    } else {
+        cardType = 'number';
+        displayValue = cardStr;
+    }
+    
+    container.innerHTML = `
+        <div class="last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}">
+            ${displayValue}
         </div>
     `;
 }
@@ -966,6 +1018,8 @@ function checkUrlParams() {
 }
 
 function handleNewRound(game) {
+    console.log('New round started. LastCardDrawn:', game.lastCardDrawn);
+    
     // Update game display first
     updateGameDisplay(game);
     

@@ -133,7 +133,8 @@ const handleSocketConnection = (io) => {
         discardPile: [],
         currentPlayer: 0,
         status: 'lobby',
-        roundNumber: 1
+        roundNumber: 1,
+        lastCardDrawn: null
       };
       
       games.set(gameId, newGame);
@@ -179,6 +180,9 @@ const handleSocketConnection = (io) => {
           
           // Pop the Select card from the current deck
           game.deck.pop();
+          
+          // Track the last card drawn
+          game.lastCardDrawn = 'Select';
 
           if (!player.specialCards.includes('Select')) {
             player.specialCards.push('Select');
@@ -207,6 +211,9 @@ const handleSocketConnection = (io) => {
       }
   
       const card = game.deck.pop();
+      
+      // Track the last card drawn
+      game.lastCardDrawn = card;
       
       // Send game update to all clients to refresh deck count immediately
       io.to(gameId).emit('game-update', game);
@@ -562,6 +569,9 @@ const handleSocketConnection = (io) => {
         console.log(`Card ${selectedCard} selected from regenerated deck`);
       }
       
+      // Track the last card drawn (selected)
+      game.lastCardDrawn = selectedCard;
+      console.log('Last card drawn (via Select) set to:', selectedCard);
       // Process the selected card
       if (typeof selectedCard === 'number') {
         handleNumberCard(game, player, selectedCard, io);
@@ -960,8 +970,15 @@ const checkFinalWinner = (game, io) => {
 };
 
 const startNewRound = (game, io) => {
+  console.log(`Starting new round. Previous lastCardDrawn: ${game.lastCardDrawn}`);
+  
   game.roundNumber++;
-  // Reset player states, but keep total scores
+  
+  // Create new deck for the round
+  game.deck = createDeck();
+  game.discardPile = [];
+  
+  // Reset player states, but keep total scores and lastCardDrawn
   game.players.forEach(player => {
       player.regularCards = [];
       player.specialCards = [];
@@ -974,6 +991,8 @@ const startNewRound = (game, io) => {
   // Set starting player based on round number (cycling through players)
   game.currentPlayer = (game.roundNumber - 1) % game.players.length;
   game.status = 'playing'; // Ensure game status is set to playing
+  
+  console.log(`Round ${game.roundNumber} started. LastCardDrawn preserved: ${game.lastCardDrawn}`);
   
   // Immediately emit game update to ensure clients get the new state
   io.to(game.id).emit('game-update', game);
