@@ -1,150 +1,138 @@
 # HIT7 Bug Fixes - Implementation Summary
 
-## Applied Fixes
+> This file records fixes that are actually present in `server.js` / `public/client.js`.
+> An earlier version of this document described freeze-duration tracking
+> (`frozenUntilTurn`, `turnNumber`) and a Select-card timeout. None of that code was
+> ever in the shipped server - the timeout was removed in commit `a86788c` - so those
+> entries have been dropped rather than left to mislead.
 
-### ✅ FIX #1: Triple Card Duplication (CRITICAL)
-**Status**: COMPLETED  
-**Changes**: Removed duplicate `select-card-choice` socket event handlers  
-**Files Modified**: [server.js](server.js#L466)  
-**Result**: Selecting a special card from Select Card popup now correctly adds 1 copy instead of 3
+## Stability
 
----
+### Players who disconnect are removed from their game
+`socket.on('disconnect')` had no handler at all, so a player who closed their tab
+stayed in the players array forever. If it was their turn the round could never
+advance, and because players were never removed the "delete empty games" interval
+never fired, leaking every game ever created.
 
-### ✅ FIX #2: Player Stuck in Select Card Mode (HIGH)
-**Status**: COMPLETED  
-**Changes**: Added 30-second auto-timeout for Select Card popup  
-**Files Modified**: [server.js](server.js#L165-L187), [server.js](server.js#L261-L278)  
-**Details**:
-- When a player draws the Select card, if they don't select within 30 seconds, the game auto-advances their turn
-- Prevents game from hanging if player abandons the popup
-- Timeout is set for both last-card-is-Select and regular Select card scenarios
+The handler now removes the player, re-derives `currentPlayer` (it is an **index**,
+so a splice silently shifts the turn to someone else), migrates the host if the host
+left, ends the round if the last active player is gone, and deletes the game once it
+is empty.
 
----
+### A round can only be scored once
+Several actions ended a round and then let their caller check again - for example
+`flip-card` drawing an unplayable RC would run `checkGameStatus` inside
+`handleSpecialCard` and again on the way out. Both calls scheduled the 5s round-end
+timer, so every player banked their round score twice and two new rounds started.
+`game.roundEnding` now guards the scheduling.
 
-### ✅ FIX #3: Frozen Players Can't Unfreeze (HIGH)
-**Status**: COMPLETED  
-**Changes**: Implemented freeze duration tracking with automatic unfreeze  
-**Files Modified**: [server.js](server.js#L331-L348), [server.js](server.js#L351-L361), [server.js](server.js#L685-718)  
-**Details**:
-- When a player is frozen, `frozenUntilTurn` is set to current turn + 1
-- Added `turnNumber` counter in game object (incremented in advanceTurn)
-- In advanceTurn, checks if any frozen players should unfreeze and restores their status to 'active'
-- Frozen players now skip exactly ONE turn, then unfreeze automatically
-- Turn counter is reset each round in startNewRound
+### `checkGameStatus` is always given `io`
+The call in `select-card-choice` passed only the game. Any round that happened to end
+on a Select play hit `io.to(...)` on `undefined` and crashed the process.
 
----
+### Round-end timer no longer fires into a replaced game
+Reset and rematch build a **new** game object and swap it into the map, but the
+pending timer still closed over the old one. It now checks that the game it captured
+is still the live one before scoring.
 
-### ✅ FIX #4: Deck Reshuffling Packet Inconsistency (MEDIUM)
-**Status**: COMPLETED  
-**Changes**: Made socket.emit parameters consistent  
-**Files Modified**: [server.js](server.js#L261)  
-**Details**:
-- Changed `socket.emit('select-card-from-pile', gameId, game.deck)` 
-- To: `socket.emit('select-card-from-pile', gameId, game.deck, null)`
-- Now always sends 3 parameters: gameId, deck, fullDeck (or null)
-- Matches special case where last card is Select (sends [empty], [newDeck])
-- Client already handles this pattern correctly
+## Rules and scoring
 
----
+### A duplicate `0` busts like any other duplicate
+`handleNumberCard` special-cased `0` and skipped the duplicate check, so a player
+holding two zeros never busted. `0` is a number card - it now takes the same path as
+1-12 (Second Chance still saves you).
 
-### ✅ FIX #5: Remove Card Without Bounds Checking (MEDIUM)
-**Status**: COMPLETED  
-**Changes**: Added index validation before removing cards  
-**Files Modified**: [server.js](server.js#L426-L463)  
-**Details**:
-```javascript
-// NEW: Validate card index bounds
-const cardArray = isSpecial ? target.specialCards : target.regularCards;
-if (cardIndex < 0 || cardIndex >= cardArray.length) {
-  socket.emit('error', 'Invalid card index.');
-  return;
-}
-```
-- Prevents out-of-bounds array access
-- Sends error message to client if invalid index provided
-- Prevents silent failures that could cause client-server desync
+### The 7-card bonus belongs to the round score
+`+15` was written straight into `totalScore` the moment a hand filled up, while every
+other point went through `roundScore` at round end. That let a player keep the bonus
+after a Steal took one of the seven cards away. It is now part of `updatePlayerScore`,
+derived from the hand, and applied after the multiplier/divide so it is still worth
+exactly 15.
 
----
+### A busted player scores 0
+`updatePlayerScore` recomputed a bust back to a non-zero round score straight after
+`handleNumberCard` had zeroed it. Totals were unaffected (busted players are skipped
+when banking) but the number on screen was wrong.
 
-### ✅ FIX #6: Freeze Card Duplication in use-freeze Event
-**Status**: COMPLETED  
-**Changes**: Added frozenUntilTurn tracking to use-freeze handler  
-**Files Modified**: [server.js](server.js#L351-L361)  
-**Details**:
-- Both 'freeze-player' and 'use-freeze' handlers now set frozenUntilTurn
-- Ensures consistent behavior regardless of which handler executes
+### Playing a card discards one copy, not all of them
+Every handler used `filter(c => c !== card)`, which removes *all* copies. Steal and
+Swap can leave you holding two Freezes, and playing one destroyed both. Replaced with
+`removeOneCard`, which splices a single copy.
 
----
+Related: drawing a second copy of a targeting card you already held used to be
+silently dropped, because the card was only added `if (!includes(card))`.
 
-### ✅ FIX #7: Game State Initialization for Freeze Tracking
-**Status**: COMPLETED  
-**Changes**: Added frozenUntilTurn property to createPlayer  
-**Files Modified**: [server.js](server.js#L672-682)  
-**Details**:
-- Added `frozenUntilTurn: null` to player initialization
-- Ensures all players have the property from creation
+### Card indices stay valid while a card is being played
+`remove-card` and `swap-cards` discarded the RC/Swap card *before* using the index the
+client had sent. Aiming Remove Card at your own hand, or swapping one of your own
+special cards, shifted every index after it and removed the wrong card. The chosen
+cards are now taken out first.
 
----
+### Draw Three cannot strand the turn
+`draw-three-select` moved `currentPlayer` to the target without checking the target
+could act. Targeting a busted or full-handed player parked the turn on someone who can
+never flip, hanging the round.
 
-### ✅ FIX #8: Rematch Game Reset for Turn Tracking
-**Status**: COMPLETED  
-**Changes**: Reset turnNumber when creating rematch  
-**Files Modified**: [server.js](server.js#L316)  
-**Details**:
-- Added `turnNumber: 0` to rematchGame initialization
-- Prevents old turn counter from affecting new game
+### Swap only moves scoring cards
+The client only ever offered number cards and point modifiers, but the server accepted
+anything - so a crafted client could hand someone a Freeze they had no way to play.
 
----
+## Anti-cheat
 
-### ✅ FIX #9: New Round Reset for Freeze Tracking
-**Status**: COMPLETED  
-**Changes**: Reset freeze tracking and turn counter in startNewRound  
-**Files Modified**: [server.js](server.js#L591-605)  
-**Details**:
-```javascript
-game.turnNumber = 0;  // Reset turn counter for freeze tracking
-player.frozenUntilTurn = null;  // Reset freeze tracking
-```
-- Ensures clean state at the start of each round
+Every `game-update` broadcast the whole game object, **including `deck` in draw
+order**. Opening devtools showed the next card. Broadcasts now go through
+`publicGame`, which sorts the deck copy: the remaining-pile display still works
+(it counts card types) but the order is gone. The Select popup is sorted too.
 
----
+Targeting cards (`freeze-player`, `draw-three-select`, `remove-card`, `steal-card`,
+`swap-cards`) and the `request-*-targets` events only checked that the sender was *a*
+player, never that it was their turn - so anyone holding an RC could fire it during
+someone else's turn and drag the turn over. They now require the sender to hold the
+turn and the card.
 
-## Testing Checklist
+`select-card-choice` never checked that the player actually held a Select card, and
+handed over any card name it was sent even when the deck did not contain it. It now
+requires the card, validates the value, and rejects cards that are not in the deck.
 
-- [x] Server starts without syntax errors
-- [ ] Create game and join game (verify no duplication errors)
-- [ ] Draw Select Card and let timeout expire (should auto-advance)
-- [ ] Use Freeze card on player (should skip 1 turn, then unfreeze)
-- [ ] Use Remove Card with out-of-bounds index (should error gracefully)
-- [ ] Full game round with multiple special cards
-- [ ] Rematch after completing a round
-- [ ] Multiple Freeze effects in sequence
+## Input validation
 
-## Known Remaining Issues
+- Names are trimmed, collapsed and capped at 20 characters; the 3-character minimum
+  now applies to **join** as well as create.
+- Player names are HTML-escaped on render. Every panel is built with `innerHTML`, so
+  a name like `<img src=x onerror=...>` previously ran on every client in the room.
+- Games are capped at 6 players (the README's stated maximum) and can only be joined
+  from the lobby. Joining mid-round used to insert a player stuck at `waiting` forever.
+- Card indices must be integers.
 
-See [BUG_AUDIT.md](BUG_AUDIT.md) for detailed list of remaining issues.
+## Client
 
-### LOW PRIORITY (Not Fixed):
-- BUG #6: Score bonus handled inconsistently (0 card behavior)
-- BUG #7: D3 with SC interaction unclear
-- BUG #11: Client-side game state reconstruction fragile
-- BUG #12: Draw Three logic with special cards needs documentation
+- `showNotification` was called on every swap but never defined anywhere, so the swap
+  announcement threw `ReferenceError` instead of displaying. Implemented as a toast
+  (`.game-notification` in `style.css`) that sets the message as text, not markup.
+- `getSpecialCardDisplay` now handles number cards, which the swap message passes in.
 
-These are lower priority as they don't block gameplay but should be addressed in future updates.
+## Dead code removed
 
----
+- `startServer` - never called; the live server is created at the bottom of the file.
+  Its EADDRINUSE retry was replaced with an error handler on the real server.
+- `use-freeze` - superseded by `freeze-player` (what the client actually emits), and
+  it skipped `advanceTurn`, so it would have hung the turn if it were reachable.
+- `checkFinalWinner` - never called.
+- `checkGameStatus` used a hardcoded `200` next to the unused `WINNING_SCORE`.
 
-## Deployment Notes
+## Testing
 
-1. **Backward Compatibility**: The frozenUntilTurn property is new but initialized to null, so existing game state should still work
-2. **Turn Counter**: New turnNumber property starts at 0 each game (no migration needed)
-3. **Timeout**: Select Card timeout runs server-side only; client can still select without timeout
+Driven with bot clients against a real server: full games to 200 points, asserting on
+every update that no hand exceeds 7 cards, no hand holds duplicates, busted players
+score 0, the broadcast deck is never in draw order, and totals grow by exactly one
+round score per round. Plus targeted checks for name/cap/lobby validation, out-of-turn
+actions, disconnect turn handover and host migration.
 
----
+## Known gaps
 
-## Performance Impact
-
-- **Minimal**: Single turn counter increment per turn advance
-- **No new database queries**: All changes are in-memory
-- **No network overhead**: No additional packet transfers
-
+- **No reconnect.** A refresh drops you from the game for good. Before this change a
+  refresh hung the game instead, so this is an improvement, but a proper fix needs a
+  session token so a returning socket can reclaim its seat.
+- **Held targeting cards have no UI.** They are played the instant they are drawn. If
+  a Steal leaves you holding a second Freeze, it sits in your hand until the round
+  ends. The `request-*-targets` events look like they were meant to support this.
