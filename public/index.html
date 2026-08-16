@@ -64,6 +64,7 @@
                         <span class="share-link" id="shareLink"></span>
                     </div>
                     <button id="resetButton" class="game-button red">Reset</button>
+                    <button id="historyButton" class="game-button green" title="History" aria-label="History">📜<span class="button-label">History</span></button>
                     <button id="headerTutorialBtn" class="game-button purple">How to Play</button>
                 </div>
             </div>
@@ -114,7 +115,7 @@
                         '.game-code-display, .game-container, .game-header, ' +
                         '.player, .menu-container, .deck-count, ' +
                         '.remaining-pile .regular-cards, .remaining-pile .special-cards, ' +
-                        '.tutorial-popup, .tab-button, .card-example, .controls'
+                        '.tutorial-popup, .history-popup, .tab-button, .card-example, .controls'
                     ).forEach(el => el.classList.add('blur-bg'));
                 }
             }

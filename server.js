@@ -58,6 +58,7 @@ const MAX_PLAYERS = 6;
 const MIN_NAME_LENGTH = 3;
 const MAX_NAME_LENGTH = 20;
 const SEVEN_CARD_BONUS = 15;
+const MAX_HISTORY_ENTRIES = 200;
 
 // Every non-number card the deck can contain, used to validate anything a client
 // claims to have picked out of the deck.
@@ -157,6 +158,28 @@ const isSwappableSpecial = card =>
 const countSwappableCards = player =>
   player.regularCards.length + player.specialCards.filter(isSwappableSpecial).length;
 
+// The action log lives on the game object, so it rides along on every game-update
+// broadcast. Clients never have to reconstruct it from events they missed while a
+// popup was covering the board, and a late joiner sees the same log as everyone else.
+// Only the raw facts are stored - the client owns the wording and the card colours.
+const logHistory = (game, entry) => {
+  if (!Array.isArray(game.history)) game.history = [];
+  game.historySeq = (game.historySeq || 0) + 1;
+  game.history.push({
+    id: game.historySeq,
+    round: game.roundNumber,
+    player: null,
+    cards: [],
+    target: null,
+    target2: null,
+    ...entry
+  });
+  // A long game would otherwise grow the log without bound and it is broadcast in full.
+  if (game.history.length > MAX_HISTORY_ENTRIES) {
+    game.history.splice(0, game.history.length - MAX_HISTORY_ENTRIES);
+  }
+};
+
 // Game logic
 const handleSocketConnection = (io) => {
   io.on('connection', socket => {
@@ -193,9 +216,11 @@ const handleSocketConnection = (io) => {
         status: 'lobby',
         roundNumber: 1,
         lastCardDrawn: null,
-        roundEnding: false
+        roundEnding: false,
+        history: [],
+        historySeq: 0
       };
-      
+
       games.set(gameId, newGame);
       socket.join(gameId);
       socket.emit('game-created', { gameId, gameUrl });
@@ -261,6 +286,7 @@ const handleSocketConnection = (io) => {
           
           // Track the last card drawn
           game.lastCardDrawn = 'Select';
+          logHistory(game, { player: player.name, action: 'draw', cards: ['Select'] });
 
           player.specialCards.push('Select');
 
@@ -280,14 +306,16 @@ const handleSocketConnection = (io) => {
         console.log('Reshuffling deck...');
         game.deck = createDeck();
         game.discardPile = [];
+        logHistory(game, { action: 'reshuffle' });
         console.log(`Deck reshuffled. New size: ${game.deck.length}`);
       }
-  
+
       const card = game.deck.pop();
-      
+
       // Track the last card drawn
       game.lastCardDrawn = card;
-      
+      logHistory(game, { player: player.name, action: 'draw', cards: [card] });
+
       // Send game update to all clients to refresh deck count immediately
       io.to(gameId).emit('game-update', publicGame(game));
 
@@ -378,6 +406,7 @@ const handleSocketConnection = (io) => {
       if (player.id !== socket.id || player.status !== 'active' || player.drawThreeRemaining > 0) return;
 
       player.status = 'stood';
+      logHistory(game, { player: player.name, action: 'stand' });
       io.to(gameId).emit('play-sound', 'standSound'); // Broadcast stand sound
       advanceTurn(game);
       checkGameStatus(game, io);
@@ -397,7 +426,9 @@ const handleSocketConnection = (io) => {
           status: 'playing',
           roundNumber: 1,
           lastCardDrawn: null,
-          roundEnding: false
+          roundEnding: false,
+          history: [],
+          historySeq: 0
         };
 
         // Reset all players
@@ -442,6 +473,7 @@ const handleSocketConnection = (io) => {
       target.status = 'stood';
       // Add Freeze to discard only when used
       game.discardPile.push('Freeze');
+      logHistory(game, { player: player.name, action: 'freeze', target: target.name });
 
       advanceTurn(game);
       checkGameStatus(game, io);
@@ -473,6 +505,7 @@ const handleSocketConnection = (io) => {
 
       // Set draw three remaining on target
       target.drawThreeRemaining = 3;
+      logHistory(game, { player: player.name, action: 'draw-three', target: target.name });
 
       // Set current player to target
       game.currentPlayer = game.players.findIndex(p => p.id === target.id);
@@ -495,7 +528,9 @@ const handleSocketConnection = (io) => {
           status: 'playing',
           roundNumber: 1,
           lastCardDrawn: null,
-          roundEnding: false
+          roundEnding: false,
+          history: [],
+          historySeq: 0
       };
 
       // Reset all players
@@ -559,6 +594,12 @@ const handleSocketConnection = (io) => {
       // Remove RC from player's special cards
       removeOneCard(player.specialCards, 'RC');
       game.discardPile.push('RC');
+      logHistory(game, {
+        player: player.name,
+        action: 'remove',
+        cards: [removedCard],
+        target: target.name
+      });
 
       // Recalculate target's score after card removal
       updatePlayerScore(target);
@@ -600,6 +641,15 @@ const handleSocketConnection = (io) => {
       // Consume Steal Card
       removeOneCard(player.specialCards, 'ST');
       game.discardPile.push('ST');
+
+      // Logged before the card is applied, so a bust from the stolen number reads
+      // as the next entry rather than jumping ahead of the steal that caused it.
+      logHistory(game, {
+        player: player.name,
+        action: 'steal',
+        cards: [stolenCard],
+        target: target.name
+      });
 
       if (isSpecial) {
         player.specialCards.push(stolenCard);
@@ -694,6 +744,16 @@ const handleSocketConnection = (io) => {
         player2.specialCards.push(card1Value);
       }
 
+      // Logged before the duplicate check below, so a bust caused by the swap reads
+      // as a consequence of it.
+      logHistory(game, {
+        player: player.name,
+        action: 'swap',
+        cards: [card1Value, card2Value],
+        target: player1.name,
+        target2: player2.name
+      });
+
       const findDuplicateValue = (regularCards) => {
         const seen = new Set();
         for (const value of regularCards) {
@@ -713,6 +773,11 @@ const handleSocketConnection = (io) => {
         if (scIndex > -1) {
           targetPlayer.specialCards.splice(scIndex, 1);
           game.discardPile.push('SC');
+          logHistory(game, {
+            player: targetPlayer.name,
+            action: 'second-chance',
+            cards: [duplicateValue]
+          });
           io.to(game.id).emit('play-sound', 'secondChanceSound');
 
           if (typeof swappedValue === 'number') {
@@ -727,6 +792,11 @@ const handleSocketConnection = (io) => {
         targetPlayer.status = 'busted';
         targetPlayer.bustedCard = duplicateValue;
         targetPlayer.roundScore = 0;
+        logHistory(game, {
+          player: targetPlayer.name,
+          action: 'bust',
+          cards: [duplicateValue]
+        });
         io.to(game.id).emit('play-sound', 'bustCardSound');
       };
 
@@ -792,6 +862,7 @@ const handleSocketConnection = (io) => {
 
       // Track the last card drawn (selected)
       game.lastCardDrawn = selectedCard;
+      logHistory(game, { player: player.name, action: 'select', cards: [selectedCard] });
       console.log('Last card drawn (via Select) set to:', selectedCard);
       // Process the selected card
       if (typeof selectedCard === 'number') {
@@ -974,6 +1045,7 @@ const handleSocketConnection = (io) => {
         if (index === -1) return;
 
         const leavingPlayerHadTurn = isCurrentTurn(game, socket.id);
+        const leavingPlayerName = game.players[index].name;
         const currentPlayerId = game.players[game.currentPlayer]
           ? game.players[game.currentPlayer].id
           : null;
@@ -984,6 +1056,8 @@ const handleSocketConnection = (io) => {
           games.delete(gameId);
           return;
         }
+
+        logHistory(game, { player: leavingPlayerName, action: 'left' });
 
         // The host controls start/reset, so the game would be stuck without one.
         if (game.hostId === socket.id) {
@@ -1054,11 +1128,13 @@ const handleNumberCard = (game, player, card, io) => {
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
       game.discardPile.push('SC');
+      logHistory(game, { player: player.name, action: 'second-chance', cards: [card] });
       io.to(game.id).emit('play-sound', 'secondChanceSound');
     } else {
       player.status = 'busted';
       player.bustedCard = card;
       player.roundScore = 0;
+      logHistory(game, { player: player.name, action: 'bust', cards: [card] });
       io.to(game.id).emit('play-sound', 'bustCardSound');
     }
     return;
@@ -1070,6 +1146,7 @@ const handleNumberCard = (game, player, card, io) => {
   if (player.regularCards.length === MAX_REGULAR_CARDS) {
     player.status = 'stood';
     updatePlayerScore(player);
+    logHistory(game, { player: player.name, action: 'seven-bonus' });
   }
 };
 
@@ -1133,6 +1210,7 @@ const handleSpecialCard = (game, player, card, socket, io) => {
   const discardUnplayable = message => {
     removeOneCard(player.specialCards, card);
     game.discardPile.push(card);
+    logHistory(game, { player: player.name, action: 'discard', cards: [card] });
     if (message) socket.emit('error', message);
     advanceTurn(game);
     checkGameStatus(game, io);
@@ -1230,6 +1308,7 @@ const checkGameStatus = (game, io) => {
 
   if (activePlayers.length === 0) {
     game.roundEnding = true;
+    logHistory(game, { action: 'round-end' });
 
     io.to(game.id).emit('round-summary', {
       players: game.players,
@@ -1273,6 +1352,7 @@ const checkGameStatus = (game, io) => {
 
 const endGame = (game, winner, io) => {
   game.status = 'finished';
+  logHistory(game, { player: winner.name, action: 'game-over' });
   io.to(game.id).emit('game-over', {
     players: game.players.map(p => ({
       ...p,
@@ -1284,7 +1364,8 @@ const endGame = (game, winner, io) => {
 
 const startNewRound = (game, io) => {
   game.roundNumber++;
-  
+  logHistory(game, { action: 'round-start' });
+
   // Don't reset deck - it persists across rounds and reshuffles when empty during gameplay
   // Only reset discard pile
   game.discardPile = [];

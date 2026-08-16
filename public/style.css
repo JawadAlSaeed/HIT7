@@ -2144,6 +2144,15 @@ body::before {
     font-size: 0.9rem;
 }
 
+/* Asides and warnings inside a tutorial section */
+.tutorial-popup .tutorial-section p.tutorial-note {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-left: 3px solid var(--highlight);
+    padding-left: 0.7rem;
+    margin: 0.7rem 0 0.4rem 0;
+}
+
 .tutorial-popup .tutorial-section li {
     margin: 0.4rem 0;
     line-height: 1.3;
@@ -4102,3 +4111,206 @@ h3 span.emoji {
         transform: translateX(-50%) translateY(0);
     }
 }
+
+/* ------------------------------------------------------------------ */
+/* Game history log                                                    */
+/* ------------------------------------------------------------------ */
+
+.history-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.history-popup .popup-content {
+    background: var(--secondary);
+    width: 100%;
+    max-width: 560px;
+    height: min(80vh, 700px);
+    display: flex;
+    flex-direction: column;
+    border: 2px solid var(--highlight);
+    border-radius: 16px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.history-popup .close-button {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: var(--highlight);
+    color: var(--text-light);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.5);
+    z-index: 2;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.history-popup .close-button:hover {
+    transform: scale(1.1) rotate(90deg);
+    background: #d63d56;
+}
+
+.history-popup .history-title {
+    text-align: center;
+    font-size: 1.5rem;
+    margin: 1.1rem 3rem 0.8rem 3rem;
+    font-family: 'Cairo Play', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: var(--card-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    flex-shrink: 0;
+}
+
+.history-popup .history-content {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 1rem 1.2rem 1rem;
+}
+
+.history-empty {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 2rem 1rem;
+    font-size: 0.95rem;
+}
+
+.history-round-divider {
+    position: sticky;
+    top: 0;
+    background: var(--secondary);
+    color: var(--highlight);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 0.6rem 0 0.4rem 0;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+    margin-bottom: 0.4rem;
+    z-index: 1;
+}
+
+.history-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    margin: 0.25rem 0;
+    border-radius: 8px;
+    background: rgba(15, 52, 96, 0.35);
+    border-left: 3px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.history-entry .history-icon {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    width: 1.4rem;
+    text-align: center;
+}
+
+/* Normal inline flow, not flex - the line is a sentence with card chips sitting
+   inside it, so it has to wrap like prose. */
+.history-entry .history-text {
+    color: rgba(255, 255, 255, 0.85);
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.history-player {
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.history-good {
+    color: #4caf50;
+    font-weight: 700;
+}
+
+.history-bad {
+    color: var(--highlight);
+    font-weight: 700;
+}
+
+/* Colour-code the entries that change the state of the round */
+.history-entry.action-bust { border-left-color: var(--highlight); }
+.history-entry.action-second-chance { border-left-color: #e74c3c; }
+.history-entry.action-stand { border-left-color: #ff9800; }
+.history-entry.action-seven-bonus { border-left-color: #f1c40f; }
+.history-entry.action-freeze { border-left-color: #3498db; }
+.history-entry.action-draw-three { border-left-color: #f1c40f; }
+.history-entry.action-remove { border-left-color: #9b59b6; }
+.history-entry.action-steal { border-left-color: #e67e22; }
+.history-entry.action-swap { border-left-color: #42ae5d; }
+.history-entry.action-game-over { border-left-color: #4caf50; }
+
+.history-entry.action-round-start,
+.history-entry.action-round-end,
+.history-entry.action-reshuffle,
+.history-entry.action-left {
+    background: rgba(255, 255, 255, 0.05);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Card chips inside a log line, matching the colours used on the board */
+.history-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.7rem;
+    height: 1.7rem;
+    padding: 0 0.35rem;
+    margin: 0 0.15rem;
+    border-radius: 5px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--primary);
+    color: var(--text-dark);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    vertical-align: middle;
+}
+
+.history-card.second-chance { background: #e74c3c; color: #fff; }
+.history-card.freeze { background: #3498db; color: #fff; }
+.history-card.draw-three { background: #f1c40f; color: #2c3e50; }
+.history-card.remove-card { background: #9b59b6; color: #fff; }
+.history-card.steal-card { background: #e67e22; color: #fff; }
+.history-card.swap-card { background: #42ae5d; color: #fff; }
+.history-card.select-card {
+    background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    color: #fff;
+}
+.history-card.adder,
+.history-card.multiplier { background: #fbb03a; color: #fff; }
+.history-card.minus,
+.history-card.divide { background: #f1624f; color: #fff; }
