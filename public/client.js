@@ -7,6 +7,17 @@ let activeDrawThreePopup = null;
 let soundEnabled = true;
 let currentGameUrl = ""; // New: stores the game URL
 
+// Player names are typed by other people and every panel here is built with
+// innerHTML, so anything that came from another player goes through this first.
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Remove initialization code
 const initializeButtons = () => {
     console.log('Initializing buttons...');
@@ -105,7 +116,7 @@ socket.on('select-freeze-target', (gameId, targets) => {
       <div class="freeze-targets">
         ${targets.map(p => `
           <button class="freeze-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+            ${escapeHtml(p.name)} ${p.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
       </div>
@@ -384,7 +395,7 @@ function handleGameUpdate(game) {
             if (playersList) {
                 playersList.innerHTML = game.players.map(player => `
                     <div class="player-item">
-                        ${player.name}
+                        ${escapeHtml(player.name)}
                         ${player.id === game.hostId ? 
                             '<span class="host-badge">HOST</span>' : ''}
                     </div>
@@ -714,7 +725,7 @@ function playerTemplate(player, isCurrentTurn) {
     return `
         <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
             <div class="player-header">
-                <h3>${player.name.toUpperCase()} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
+                <h3>${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
                 <div class="player-status">
                     ${getStatusIcon(player.status)}
                     ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
@@ -806,6 +817,9 @@ function getSpecialCardClass(card) {
 
 // Update special card display function to include all special cards
 function getSpecialCardDisplay(card) {
+    // Regular cards are numbers and have no symbol to look up
+    if (typeof card === 'number') return String(card);
+
     // Special cards with emojis
     if (card === 'SC') return '🛡️';
     if (card === 'Freeze') return '❄️';
@@ -921,7 +935,7 @@ function showWaitingScreen(gameData) {
         <div class="players-list">
             ${gameData.players.map(player => `
                 <div class="player-item">
-                    ${player.name}
+                    ${escapeHtml(player.name)}
                     ${player.id === gameData.hostId ? 
                         '<span class="host-badge">HOST</span>' : ''}
                 </div>
@@ -1095,7 +1109,7 @@ function showWinnerPopup(winner, isHost) {
         return `
             <div class="leaderboard-row ${winnerClass} ${isCurrentPlayer ? 'current-player' : ''}">
                 <div class="rank">${medal}</div>
-                <div class="player-name">${player.name} ${isCurrentPlayer ? '(YOU)' : ''}</div>
+                <div class="player-name">${escapeHtml(player.name)} ${isCurrentPlayer ? '(YOU)' : ''}</div>
                 <div class="player-score">${player.totalScore}</div>
             </div>
         `;
@@ -1107,7 +1121,7 @@ function showWinnerPopup(winner, isHost) {
         <div class="popup-content">
             <div class="trophy-banner">🏆</div>
             <h2>WINNER!</h2>
-            <div class="winner-name">${winner.name}</div>
+            <div class="winner-name">${escapeHtml(winner.name)}</div>
             <div class="winner-score">${winner.totalScore} Points</div>
             
             <div class="leaderboard">
@@ -1218,7 +1232,7 @@ function handleRoundSummary({ players, allBusted }) {
         return `
             <div class="player-summary-row">
                 <div class="name">
-                    ${player.name}
+                    ${escapeHtml(player.name)}
                     ${hasBonus ? '🌟+15' : ''}
                     ${player.bustedCard ? `(Busted on ${player.bustedCard})` : ''}
                 </div>
@@ -1280,7 +1294,7 @@ function showFreezePopup(gameId, targets) {
       <div class="freeze-targets">
         ${targets.map(t => `
           <button class="freeze-target ${t.id === socket.id ? 'self-target' : ''}" data-id="${t.id}">
-            ${t.name} ${t.id === socket.id ? '(You)' : ''}
+            ${escapeHtml(t.name)} ${t.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
       </div>
@@ -1365,7 +1379,7 @@ function showRemoveCardPopup(gameId, players) {
           const isDisabled = player.status === 'busted';
           return `
             <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
-              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''} 
+              <h4>${escapeHtml(player.name)} ${player.id === socket.id ? '(You)' : ''} 
                   ${isDisabled ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
               </h4>
               <div class="cards-list">
@@ -1491,7 +1505,7 @@ function showSwapCardPopup(gameId, players) {
           
           return `
             <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}" data-player-id="${player.id}">
-              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}
+              <h4>${escapeHtml(player.name)} ${player.id === socket.id ? '(You)' : ''}
                   ${showStatusBadge ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
               </h4>
               <div class="cards-list">
@@ -1679,7 +1693,7 @@ function showStealCardPopup(gameId, players) {
           const showStatusBadge = player.status !== 'active';
           return `
             <div class="player-section ${isDisabled ? 'disabled' : ''}" data-status="${player.status}">
-              <h4>${player.name} ${player.id === socket.id ? '(You)' : ''}
+              <h4>${escapeHtml(player.name)} ${player.id === socket.id ? '(You)' : ''}
                   ${showStatusBadge ? `<span class="status-badge ${player.status}">${getStatusText(player.status)}</span>` : ''}
               </h4>
               <div class="cards-list">
@@ -1796,9 +1810,23 @@ socket.on('select-swap-cards', (gameId, players) => {
 });
 
 socket.on('swap-notification', (data) => {
-  const message = `${data.swapper} swapped ${data.player1}'s ${data.card1} with ${data.player2}'s ${data.card2}`;
+  const message = `${data.swapper} swapped ${data.player1}'s ${getSpecialCardDisplay(data.card1)} with ${data.player2}'s ${getSpecialCardDisplay(data.card2)}`;
   showNotification(message, 'info');
 });
+
+// Toast used for events a player needs to see but that should not interrupt them.
+// The message carries player names, so it is set as text rather than markup.
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `game-notification ${type}`;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.classList.add('fade-out');
+    setTimeout(() => notification.remove(), 500);
+  }, 4000);
+}
 
 // Add this function to show the Select Card popup
 function showSelectCardPopup(gameId, deck, fullDeck = null) {
@@ -2196,7 +2224,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
       <div class="draw-three-targets">
         ${targets.map(p => `
           <button class="draw-three-target ${p.id === socket.id ? 'self-target' : ''}" data-id="${p.id}">
-            ${p.name} ${p.id === socket.id ? '(You)' : ''}
+            ${escapeHtml(p.name)} ${p.id === socket.id ? '(You)' : ''}
           </button>
         `).join('')}
       </div>
