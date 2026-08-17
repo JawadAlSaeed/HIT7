@@ -33,21 +33,49 @@
             <div class="game-logo">
                 <img src="/images/hit7-logo.png" alt="HIT 7 Logo" class="logo-image">
             </div>
-            
+
+            <!-- Shown when this browser has a seat waiting in a game it left. -->
+            <div class="rejoin-banner" id="rejoinBanner" hidden>
+                <span class="rejoin-text"></span>
+                <button type="button" id="rejoinButton" class="lobby-button green">
+                    ↩️ Rejoin
+                </button>
+                <button type="button" id="dismissRejoin" class="rejoin-dismiss" aria-label="Dismiss">×</button>
+            </div>
+
             <div class="menu-container">
-                <div class="menu-buttons">
+                <form class="lobby-form" id="lobbyForm" autocomplete="off">
+                    <div class="field">
+                        <label for="playerName">YOUR NAME</label>
+                        <input type="text" id="playerName" name="playerName"
+                               maxlength="20" minlength="3" placeholder="3-20 characters"
+                               autocomplete="nickname" spellcheck="false">
+                    </div>
+
                     <button type="button" id="createGame" class="lobby-button">
                         🎮 Create New Game
                     </button>
-                    <button id="tutorialButton" class="lobby-button tutorial-button">
+
+                    <div class="lobby-divider"><span>or join a friend</span></div>
+
+                    <div class="field">
+                        <label for="gameId">GAME CODE</label>
+                        <input type="text" id="gameId" name="gameId"
+                               maxlength="5" placeholder="ABC12"
+                               inputmode="text" autocapitalize="characters"
+                               autocomplete="off" spellcheck="false" class="code-input">
+                    </div>
+
+                    <button type="button" id="joinGame" class="lobby-button blue">
+                        🔗 Join Game
+                    </button>
+
+                    <p class="lobby-error" id="lobbyError" role="alert" hidden></p>
+
+                    <button type="button" id="tutorialButton" class="lobby-button tutorial-button">
                         📖 How To Play
                     </button>
-                </div>
-            </div>
-
-            <div class="game-code-display" id="hostCodeDisplay" style="display: none;">
-                <span class="label">Share this link with your friends:</span>
-                <div id="hostCode"></div>
+                </form>
             </div>
         </div>
 

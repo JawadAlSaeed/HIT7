@@ -8,6 +8,7 @@ let soundEnabled = true;
 let currentGameUrl = ""; // New: stores the game URL
 let gameHistory = []; // Latest action log, kept in sync from every game update
 let latestGame = null; // Last game state received, for popups that outlive one update
+let pendingJoinCode = null; // Code awaiting a game-info answer from the server
 
 // ---------------------------------------------------------------------------
 // Session, so a refresh or a dropped connection does not cost you your seat
@@ -23,6 +24,12 @@ let latestGame = null; // Last game state received, for popups that outlive one 
 // tab outright loses the seat.
 const SESSION_KEY = 'hit7-session';
 
+// These two are the opposite: deliberately in localStorage, because they outlive the tab
+// on purpose. Neither is a credential - the name is a convenience and the game id only
+// prefills the join form, so sharing them across tabs costs nothing.
+const LAST_NAME_KEY = 'hit7-last-name';
+const LAST_GAME_KEY = 'hit7-last-game';
+
 function saveSession(gameId, token) {
     if (!gameId || !token) return;
     try {
@@ -31,6 +38,12 @@ function saveSession(gameId, token) {
         // Private browsing can refuse storage. Reconnecting stops working, nothing else.
         console.warn('Could not save session:', e);
     }
+    // Survives the tab closing, which the token does not, so the landing page can still
+    // offer a way back in.
+    try {
+        const name = localStorage.getItem(LAST_NAME_KEY) || null;
+        localStorage.setItem(LAST_GAME_KEY, JSON.stringify({ gameId, name }));
+    } catch (e) { /* the banner is a nicety, not a requirement */ }
 }
 
 function loadSession() {
@@ -104,11 +117,29 @@ const initializeButtons = () => {
     
     if (joinGameBtn) joinGameBtn.onclick = function(e) {
         e.preventDefault();
-        playSound('buttonClick');
-        console.log('Join Game clicked');
         joinGame();
     };
-    
+
+    const nameInput = document.getElementById('playerName');
+    const codeInput = document.getElementById('gameId');
+
+    // Codes are stored and compared uppercase, so the field only ever holds uppercase -
+    // otherwise "abc12" looks accepted and then fails.
+    if (codeInput) codeInput.addEventListener('input', () => {
+        const upper = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (codeInput.value !== upper) codeInput.value = upper;
+        clearLobbyError();
+    });
+
+    if (nameInput) nameInput.addEventListener('input', clearLobbyError);
+
+    // Enter submits whichever half of the form they are in: a code means join, no code
+    // means create.
+    document.getElementById('lobbyForm')?.addEventListener('submit', e => {
+        e.preventDefault();
+        if (codeInput?.value) joinGame(); else createGame();
+    });
+
     if (tutorialBtn) tutorialBtn.onclick = function(e) {
         e.preventDefault();
         playSound('buttonClick');
@@ -170,6 +201,7 @@ socket.on('round-summary', handleRoundSummary);
 socket.on('rejoined', handleRejoined);
 socket.on('rejoin-failed', handleRejoinFailed);
 socket.on('round-restarted', handleRoundRestarted);
+socket.on('game-info', handleGameInfo);
 
 // Fires on the first connection and again after every reconnect, so it is the one place
 // that can put a returning player back in their seat - whether they reloaded the page or
@@ -328,40 +360,203 @@ socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
 });
 
 // Game actions
+// ---------------------------------------------------------------------------
+// Landing page
+// ---------------------------------------------------------------------------
+
+const MIN_NAME_LENGTH = 3;
+
+// Errors show under the form rather than in an alert(), which on a phone covers the very
+// field the player has to fix.
+function showLobbyError(message, focusId) {
+    const el = document.getElementById('lobbyError');
+    if (el) {
+        el.textContent = message;
+        el.hidden = false;
+    }
+    if (focusId) document.getElementById(focusId)?.focus();
+}
+
+function clearLobbyError() {
+    const el = document.getElementById('lobbyError');
+    if (el) {
+        el.textContent = '';
+        el.hidden = true;
+    }
+}
+
+function readPlayerName() {
+    const input = document.getElementById('playerName');
+    const name = (input?.value || '').trim().replace(/\s+/g, ' ');
+    if (name.length < MIN_NAME_LENGTH) {
+        showLobbyError(`Your name needs at least ${MIN_NAME_LENGTH} characters.`, 'playerName');
+        return null;
+    }
+    // Remembered so a returning player does not retype it, and so the rejoin banner can
+    // say who they were.
+    try { localStorage.setItem(LAST_NAME_KEY, name); } catch (e) { /* not important */ }
+    return name;
+}
+
+function readGameCode() {
+    const input = document.getElementById('gameId');
+    const code = (input?.value || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{5}$/.test(code)) {
+        showLobbyError('A game code is 5 letters and numbers, like ABC12.', 'gameId');
+        return null;
+    }
+    return code;
+}
+
 function createGame() {
     playSound('buttonClick');
-    console.log('createGame function called'); // Debug log
-    const name = prompt('Enter your name:')?.trim();
-    if (!name) {
-        return alert('Please enter a name!');
-    }
-    if (name.length < 3) {
-        return alert('Name must be at least 3 characters!');
-    }
-    
+    clearLobbyError();
+
+    const name = readPlayerName();
+    if (!name) return;
+
     // Clear any existing game state
     currentGameId = null;
     document.getElementById('playersContainer').innerHTML = '';
-    
-    console.log('Emitting create-game event with name:', name); // Debug log
+
     socket.emit('create-game', name);
 }
 
+// A code can mean three different things depending on what the game is doing, so the
+// server is asked before anything is attempted.
 function joinGame() {
     playSound('buttonClick');
-    const gameIdInput = document.getElementById('gameId');
-    const code = gameIdInput.value.trim().toUpperCase();
-    
-    if (!/^[A-Z0-9]{5}$/.test(code)) {
-        alert('Game code must be 5 characters!');
-        gameIdInput.focus();
+    clearLobbyError();
+
+    const code = readGameCode();
+    if (!code) return;
+
+    pendingJoinCode = code;
+    socket.emit('request-game-info', code);
+}
+
+function handleGameInfo(info) {
+    // Ignore an answer for a code the player has since changed.
+    if (!pendingJoinCode || info.gameId !== pendingJoinCode) return;
+    const code = pendingJoinCode;
+
+    if (!info.found) {
+        return showLobbyError(`No game called ${code}. Check the code and try again.`, 'gameId');
+    }
+
+    if (info.status === 'finished') {
+        return showLobbyError('That game has already finished.', 'gameId');
+    }
+
+    if (info.canJoin) {
+        const name = readPlayerName();
+        if (!name) return;
+        pendingJoinCode = null;
+        socket.emit('join-game', code, name);
         return;
     }
-    
-    const name = prompt('Enter your name:')?.trim();
-    if (!name) return alert('Please enter a name!');
-    
-    socket.emit('join-game', code, name);
+
+    if (info.status === 'lobby') {
+        return showLobbyError(
+            `That game is full (${info.playerCount}/${info.maxPlayers} players).`, 'gameId');
+    }
+
+    // In progress. The only way in is a seat somebody left behind.
+    if (info.reclaimable.length) {
+        pendingJoinCode = null;
+        showSeatPicker(code, info.reclaimable);
+        return;
+    }
+
+    showLobbyError(
+        'That game is already under way and nobody has dropped out, so there is no seat free.',
+        'gameId');
+}
+
+// Offers the seats nobody is sitting in. If this browser still remembers being one of
+// them, that one is marked so the common case is unambiguous.
+function showSeatPicker(code, seats) {
+    document.querySelectorAll('.seat-picker-popup').forEach(p => p.remove());
+
+    const lastName = (() => {
+        try { return localStorage.getItem(LAST_NAME_KEY); } catch (e) { return null; }
+    })();
+
+    const popup = document.createElement('div');
+    popup.className = 'seat-picker-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <button class="close-button" aria-label="Cancel">×</button>
+            <h2>↩️ REJOIN GAME ${escapeHtml(code)}</h2>
+            <p class="seat-picker-lead">This game is under way. These players dropped out —
+                pick the one that is you and you will get their cards and score back.</p>
+            <div class="seat-list">
+                ${seats.map(seat => `
+                    <button class="seat-option ${seat.name === lastName ? 'likely' : ''}"
+                            data-id="${escapeHtml(seat.id)}">
+                        <span class="seat-name">${escapeHtml(seat.name)}</span>
+                        ${seat.name === lastName ? '<span class="seat-hint">that’s you</span>' : ''}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    const close = () => {
+        popup.remove();
+        document.removeEventListener('keydown', onKey);
+    };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+
+    popup.querySelector('.close-button').addEventListener('click', () => {
+        playSound('buttonClick');
+        close();
+    });
+    popup.addEventListener('click', e => { if (e.target === popup) close(); });
+    document.addEventListener('keydown', onKey);
+
+    popup.querySelectorAll('.seat-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            playSound('buttonClick');
+            popup.querySelectorAll('.seat-option').forEach(b => { b.disabled = true; });
+            socket.emit('reclaim-seat', code, btn.dataset.id);
+            close();
+        });
+    });
+
+    document.body.appendChild(popup);
+}
+
+// A seat this browser held in a game it is no longer showing. The token may well be dead
+// (a closed tab takes sessionStorage with it), so this is only a shortcut into the same
+// code-and-seat flow, not a claim of identity.
+function showRejoinBanner() {
+    const banner = document.getElementById('rejoinBanner');
+    if (!banner) return;
+
+    let last = null;
+    try {
+        const raw = localStorage.getItem(LAST_GAME_KEY);
+        last = raw ? JSON.parse(raw) : null;
+    } catch (e) { /* nothing remembered */ }
+
+    if (!last || !last.gameId) return;
+
+    const who = last.name ? ` as ${last.name}` : '';
+    banner.querySelector('.rejoin-text').textContent =
+        `You were in game ${last.gameId}${who}.`;
+    banner.hidden = false;
+
+    document.getElementById('rejoinButton').onclick = () => {
+        playSound('buttonClick');
+        const codeInput = document.getElementById('gameId');
+        if (codeInput) codeInput.value = last.gameId;
+        joinGame();
+    };
+    document.getElementById('dismissRejoin').onclick = () => {
+        banner.hidden = true;
+        try { localStorage.removeItem(LAST_GAME_KEY); } catch (e) { /* fine */ }
+    };
 }
 
 function startGame() { 
@@ -1274,8 +1469,14 @@ function handleGameJoined({ gameId, token }) {
 function handleRejoined({ game, token }) {
     currentGameId = game.id;
     currentGameUrl = game.url || currentGameUrl;
+    pendingJoinCode = null;
     saveSession(game.id, token);
     hideConnectionLostOverlay();
+    clearLobbyError();
+
+    document.querySelectorAll('.seat-picker-popup').forEach(p => p.remove());
+    const banner = document.getElementById('rejoinBanner');
+    if (banner) banner.hidden = true;
 
     document.querySelector('.lobby-screen').style.display = 'none';
 
@@ -1426,27 +1627,41 @@ function updateStartButton(playerCount) {
     }
 }
 
-// Update checkUrlParams to handle both paths and search params
+// A shared link now fills the form in and waits, rather than firing a browser prompt at
+// someone the moment the page opens. Same number of taps, and it works on the phones
+// where prompt() is suppressed.
 function checkUrlParams() {
-    // First check for join in the path
+    const nameInput = document.getElementById('playerName');
+    const codeInput = document.getElementById('gameId');
+
+    // Saves retyping it every game.
+    try {
+        const lastName = localStorage.getItem(LAST_NAME_KEY);
+        if (lastName && nameInput) nameInput.value = lastName;
+    } catch (e) { /* nothing remembered */ }
+
     const pathMatch = window.location.pathname.match(/\/join\/([A-Z0-9]{5})/i);
     if (pathMatch) {
         const gameId = pathMatch[1].toUpperCase();
-        const name = prompt('Enter your name to join the game:')?.trim();
-        if (name) {
-            socket.emit('join-game', gameId, name);
-            // Clean up URL after emitting join
-            window.history.replaceState({}, document.title, '/');
-            return; // Exit early
+        if (codeInput) codeInput.value = gameId;
+        window.history.replaceState({}, document.title, '/');
+
+        // Everything is ready except the one thing only they can supply.
+        if (nameInput && !nameInput.value) {
+            nameInput.focus();
+        } else {
+            joinGame();
         }
+        return;
     }
-    
-    // Check for error params
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('error') === 'game-not-found') {
-        alert('Game not found!');
+        showLobbyError('That game link is no longer valid — ask for the code instead.', 'gameId');
         window.history.replaceState({}, document.title, '/');
     }
+
+    showRejoinBanner();
 }
 
 function handleNewRound(game) {
@@ -1570,6 +1785,14 @@ function handleGameReset() {
 }
 
 function handleError(message) {
+    // On the landing page an alert() covers the field the player has to fix, and errors
+    // there are all about the form anyway.
+    const lobby = document.querySelector('.lobby-screen');
+    const onLandingPage = lobby && lobby.style.display !== 'none';
+    if (onLandingPage) {
+        showLobbyError(message);
+        return;
+    }
     alert(message);
 }
 
