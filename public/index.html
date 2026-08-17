@@ -34,15 +34,6 @@
                 <img src="/images/hit7-logo.png" alt="HIT 7 Logo" class="logo-image">
             </div>
 
-            <!-- Shown when this browser has a seat waiting in a game it left. -->
-            <div class="rejoin-banner" id="rejoinBanner" hidden>
-                <span class="rejoin-text"></span>
-                <button type="button" id="rejoinButton" class="lobby-button green">
-                    ↩️ Rejoin
-                </button>
-                <button type="button" id="dismissRejoin" class="rejoin-dismiss" aria-label="Dismiss">×</button>
-            </div>
-
             <div class="menu-container">
                 <form class="lobby-form" id="lobbyForm" autocomplete="off">
                     <div class="field">
@@ -64,6 +55,8 @@
                                maxlength="5" placeholder="ABC12"
                                inputmode="text" autocapitalize="characters"
                                autocomplete="off" spellcheck="false" class="code-input">
+                        <span class="field-hint">Coming back to a game you left? Enter the
+                            same code and the same name.</span>
                     </div>
 
                     <button type="button" id="joinGame" class="lobby-button blue">

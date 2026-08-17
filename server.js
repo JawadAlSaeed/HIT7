@@ -184,6 +184,16 @@ const findByToken = (game, token) =>
     ? game.players.find(p => p.token === token)
     : undefined;
 
+// Forgiving on purpose: somebody retyping their name from memory should not be locked out
+// of their own seat by capitalisation or a stray space.
+const namesMatch = (a, b) =>
+  String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+// The seat a returning player is asking for. Only ever one nobody is sitting in - a
+// connected player's seat can never be taken from them.
+const findDisconnectedSeatByName = (game, name) =>
+  game.players.find(p => !p.connected && namesMatch(p.name, name));
+
 // A round cannot be played on with someone missing: their hand, their banked score and
 // possibly the current turn are all still on the table. Everyone waits instead.
 const isPaused = game =>
@@ -323,10 +333,25 @@ const handleSocketConnection = (io) => {
         return socket.emit('error', `Name must be at least ${MIN_NAME_LENGTH} characters!`);
       }
 
-      // Joining is lobby-only: a player added mid-round would sit at 'waiting' forever,
-      // since only startNewRound flips players back to 'active'.
+      if (game.status === 'finished') {
+        return socket.emit('error', 'That game has already finished.');
+      }
+
+      // A name and a code are all it takes to come back to a seat you left, so the same
+      // form covers joining and rejoining. A player added to a round in progress would
+      // otherwise sit at 'waiting' forever, since only startNewRound makes players active.
       if (game.status !== 'lobby') {
-        return socket.emit('error', 'That game has already started!');
+        const seat = findDisconnectedSeatByName(game, name);
+        if (seat) {
+          // Whoever held the old token may still have it on another device, so it stops
+          // working the moment the seat is taken back here.
+          return attachToSeat(game, seat, socket, io, { rotateToken: true });
+        }
+
+        const waiting = game.players.filter(p => !p.connected).map(p => p.name);
+        return socket.emit('error', waiting.length
+          ? `No seat here for "${name}". Waiting on: ${waiting.join(', ')}. Type that name exactly to take the seat back.`
+          : 'That game is already under way and nobody has dropped out, so there is no seat free.');
       }
 
       if (game.players.length >= MAX_PLAYERS) {
@@ -335,6 +360,13 @@ const handleSocketConnection = (io) => {
 
       if (game.players.some(p => p.id === socket.id)) {
         return socket.emit('error', 'You are already in this game!');
+      }
+
+      // Names are how a returning player proves which seat is theirs, so two players
+      // sharing one would make that ambiguous - and two identical names on the board are
+      // confusing regardless.
+      if (game.players.some(p => namesMatch(p.name, name))) {
+        return socket.emit('error', `Somebody in this game is already called "${name}".`);
       }
 
       const player = createPlayer(socket.id, name);
@@ -354,51 +386,6 @@ const handleSocketConnection = (io) => {
       if (!player) return socket.emit('rejoin-failed', 'You are no longer in that game.');
 
       attachToSeat(game, player, socket, io);
-    });
-
-    // What a landing-page game code can lead to. The client needs this to tell apart
-    // "join this lobby", "take back a seat you lost" and "there is nothing for you here".
-    socket.on('request-game-info', gameId => {
-      const id = typeof gameId === 'string' ? gameId.trim().toUpperCase() : '';
-      const game = games.get(id);
-
-      if (!game) return socket.emit('game-info', { gameId: id, found: false });
-
-      socket.emit('game-info', {
-        gameId: id,
-        found: true,
-        status: game.status,
-        playerCount: game.players.length,
-        maxPlayers: MAX_PLAYERS,
-        canJoin: game.status === 'lobby' && game.players.length < MAX_PLAYERS,
-        // Only seats nobody is sitting in. A connected player's seat is never on offer.
-        reclaimable: game.status === 'playing'
-          ? game.players.filter(p => !p.connected).map(p => ({ id: p.id, name: p.name }))
-          : []
-      });
-    });
-
-    // Taking back a seat without a token: the route for a closed tab, a dead battery, or
-    // a different device. Holding the game code is the credential, which is the same bar
-    // as joining in the first place - so the seat must genuinely be empty.
-    socket.on('reclaim-seat', (gameId, seatId) => {
-      const game = games.get(gameId);
-      if (!game) return socket.emit('error', 'That game no longer exists.');
-
-      if (game.status !== 'playing') {
-        return socket.emit('error', 'That game is not in progress.');
-      }
-
-      const player = game.players.find(p => p.id === seatId);
-      if (!player) return socket.emit('error', 'That seat is no longer in the game.');
-
-      if (player.connected) {
-        return socket.emit('error', `${player.name} is already back in the game.`);
-      }
-
-      // Whoever held the old token may still have it on a device that is not this one,
-      // so it stops working the moment someone reclaims the seat here.
-      attachToSeat(game, player, socket, io, { rotateToken: true });
     });
 
     socket.on('start-game', gameId => {

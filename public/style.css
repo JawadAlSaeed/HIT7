@@ -4583,151 +4583,15 @@ h3 span.emoji {
     text-align: left;
 }
 
-.rejoin-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 0.9rem 1rem;
-    background: rgba(66, 174, 93, 0.12);
-    border: 1px solid rgba(66, 174, 93, 0.45);
-    border-radius: 14px;
-    position: relative;
+/* The browser hides [hidden] elements with `display: none`, but that rule is a bare
+   attribute selector - the same specificity as a class, so any `display` set on the same
+   element here would win just by being defined later and it would never hide. */
+.lobby-error[hidden] {
+    display: none !important;
 }
 
-.rejoin-text {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.9rem;
-}
-
-.rejoin-banner .lobby-button {
-    width: auto;
-    height: auto;
-    padding: 0.6rem 1.1rem;
-    font-size: 0.9rem;
-}
-
-.rejoin-dismiss {
-    position: absolute;
-    top: 0.25rem;
-    right: 0.4rem;
-    background: none;
-    border: none;
+.field-hint {
     color: rgba(255, 255, 255, 0.45);
-    font-size: 1.25rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0.2rem 0.35rem;
-}
-
-.rejoin-dismiss:hover {
-    color: var(--text-light);
-}
-
-/* Picking which abandoned seat is yours */
-.seat-picker-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.88);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 20000;
-    padding: 1rem;
-}
-
-.seat-picker-popup .popup-content {
-    background: var(--secondary);
-    border: 2px solid var(--highlight);
-    border-radius: 16px;
-    padding: 2rem 1.5rem 1.5rem;
-    width: 100%;
-    max-width: 440px;
-    text-align: center;
-    position: relative;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-}
-
-.seat-picker-popup h2 {
-    color: var(--highlight);
-    margin: 0 0 0.75rem;
-    font-size: 1.25rem;
-    letter-spacing: 0.5px;
-}
-
-.seat-picker-lead {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin: 0 0 1.25rem;
-}
-
-.seat-picker-popup .close-button {
-    position: absolute;
-    top: 0.6rem;
-    right: 0.6rem;
-    background: var(--highlight);
-    color: var(--text-light);
-    width: 34px;
-    height: 34px;
-    border: none;
-    border-radius: 50%;
-    font-size: 1.3rem;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.seat-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.seat-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.9rem 1.1rem;
-    background: rgba(15, 52, 96, 0.7);
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    color: var(--text-light);
-    font-family: inherit;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: border-color 0.2s ease, transform 0.15s ease;
-}
-
-.seat-option:hover:not(:disabled) {
-    border-color: var(--highlight);
-    transform: translateY(-1px);
-}
-
-.seat-option:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-
-/* The seat this browser last sat in, so the usual case needs no thinking about. */
-.seat-option.likely {
-    border-color: rgba(66, 174, 93, 0.7);
-    background: rgba(66, 174, 93, 0.16);
-}
-
-.seat-name {
-    font-weight: 700;
-}
-
-.seat-hint {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #8fe0a4;
+    font-size: 0.75rem;
+    line-height: 1.4;
 }

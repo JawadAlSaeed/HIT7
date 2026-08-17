@@ -8,9 +8,6 @@ let soundEnabled = true;
 let currentGameUrl = ""; // New: stores the game URL
 let gameHistory = []; // Latest action log, kept in sync from every game update
 let latestGame = null; // Last game state received, for popups that outlive one update
-let pendingJoinCode = null; // Code awaiting a game-info answer from the server
-// gameId -> resolver, for background seat checks that must not touch the form
-const seatChecks = new Map();
 
 // ---------------------------------------------------------------------------
 // Session, so a refresh or a dropped connection does not cost you your seat
@@ -30,8 +27,6 @@ const SESSION_KEY = 'hit7-session';
 // on purpose. Neither is a credential - the name is a convenience and the game id only
 // prefills the join form, so sharing them across tabs costs nothing.
 const LAST_NAME_KEY = 'hit7-last-name';
-const RECENT_SEATS_KEY = 'hit7-recent-seats';
-const RECENT_SEATS_LIMIT = 5;
 
 function saveSession(gameId, token) {
     if (!gameId || !token) return;
@@ -41,11 +36,6 @@ function saveSession(gameId, token) {
         // Private browsing can refuse storage. Reconnecting stops working, nothing else.
         console.warn('Could not save session:', e);
     }
-    // Survives the tab closing, which the token does not, so the landing page can still
-    // find a way back in. Checked against the server before it is ever offered.
-    try {
-        rememberSeat(gameId, localStorage.getItem(LAST_NAME_KEY));
-    } catch (e) { /* the banner is a nicety, not a requirement */ }
 }
 
 function loadSession() {
@@ -203,7 +193,6 @@ socket.on('round-summary', handleRoundSummary);
 socket.on('rejoined', handleRejoined);
 socket.on('rejoin-failed', handleRejoinFailed);
 socket.on('round-restarted', handleRoundRestarted);
-socket.on('game-info', handleGameInfo);
 
 // Fires on the first connection and again after every reconnect, so it is the one place
 // that can put a returning player back in their seat - whether they reloaded the page or
@@ -424,235 +413,20 @@ function createGame() {
     socket.emit('create-game', name);
 }
 
-// A code can mean three different things depending on what the game is doing, so the
-// server is asked before anything is attempted.
+// One form, one button. The server decides whether this code means "join this lobby" or
+// "give me back the seat I left", because the player has already told it their name -
+// which is the only thing that distinguishes those two cases.
 function joinGame() {
     playSound('buttonClick');
     clearLobbyError();
 
+    const name = readPlayerName();
+    if (!name) return;
+
     const code = readGameCode();
     if (!code) return;
 
-    pendingJoinCode = code;
-    socket.emit('request-game-info', code);
-}
-
-function handleGameInfo(info) {
-    // A code the player typed takes priority over a background check for the same game,
-    // so their click is never swallowed by the banner's housekeeping.
-    if (pendingJoinCode !== info.gameId) {
-        const check = seatChecks.get(info.gameId);
-        if (check) {
-            seatChecks.delete(info.gameId);
-            check(info);
-        }
-        return;
-    }
-
-    const code = pendingJoinCode;
-
-    if (!info.found) {
-        return showLobbyError(`No game called ${code}. Check the code and try again.`, 'gameId');
-    }
-
-    if (info.status === 'finished') {
-        return showLobbyError('That game has already finished.', 'gameId');
-    }
-
-    if (info.canJoin) {
-        const name = readPlayerName();
-        if (!name) return;
-        pendingJoinCode = null;
-        socket.emit('join-game', code, name);
-        return;
-    }
-
-    if (info.status === 'lobby') {
-        return showLobbyError(
-            `That game is full (${info.playerCount}/${info.maxPlayers} players).`, 'gameId');
-    }
-
-    // In progress. The only way in is a seat somebody left behind.
-    if (info.reclaimable.length) {
-        pendingJoinCode = null;
-        showSeatPicker(code, info.reclaimable);
-        return;
-    }
-
-    showLobbyError(
-        'That game is already under way and nobody has dropped out, so there is no seat free.',
-        'gameId');
-}
-
-// Offers the seats nobody is sitting in. If this browser still remembers being one of
-// them, that one is marked so the common case is unambiguous.
-function showSeatPicker(code, seats) {
-    document.querySelectorAll('.seat-picker-popup').forEach(p => p.remove());
-
-    const lastName = (() => {
-        try { return localStorage.getItem(LAST_NAME_KEY); } catch (e) { return null; }
-    })();
-
-    const popup = document.createElement('div');
-    popup.className = 'seat-picker-popup';
-    popup.innerHTML = `
-        <div class="popup-content">
-            <button class="close-button" aria-label="Cancel">×</button>
-            <h2>↩️ REJOIN GAME ${escapeHtml(code)}</h2>
-            <p class="seat-picker-lead">This game is under way. These players dropped out —
-                pick the one that is you and you will get their cards and score back.</p>
-            <div class="seat-list">
-                ${seats.map(seat => `
-                    <button class="seat-option ${seat.name === lastName ? 'likely' : ''}"
-                            data-id="${escapeHtml(seat.id)}">
-                        <span class="seat-name">${escapeHtml(seat.name)}</span>
-                        ${seat.name === lastName ? '<span class="seat-hint">that’s you</span>' : ''}
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    const close = () => {
-        popup.remove();
-        document.removeEventListener('keydown', onKey);
-    };
-    const onKey = e => { if (e.key === 'Escape') close(); };
-
-    popup.querySelector('.close-button').addEventListener('click', () => {
-        playSound('buttonClick');
-        close();
-    });
-    popup.addEventListener('click', e => { if (e.target === popup) close(); });
-    document.addEventListener('keydown', onKey);
-
-    popup.querySelectorAll('.seat-option').forEach(btn => {
-        btn.addEventListener('click', () => {
-            playSound('buttonClick');
-            popup.querySelectorAll('.seat-option').forEach(b => { b.disabled = true; });
-            socket.emit('reclaim-seat', code, btn.dataset.id);
-            close();
-        });
-    });
-
-    document.body.appendChild(popup);
-}
-
-// Seats this browser has sat in. Remembering them is what makes a closed tab
-// recoverable, but a remembered seat is not the same as an available one: the game may be
-// long finished, or somebody may have taken the seat back already. So nothing is offered
-// until the server confirms the seat is still there and still empty - otherwise the
-// landing page would offer to rejoin yesterday's game every morning.
-function readRecentSeats() {
-    try {
-        const raw = localStorage.getItem(RECENT_SEATS_KEY);
-        const list = raw ? JSON.parse(raw) : [];
-        return Array.isArray(list) ? list.filter(s => s && s.gameId && s.name) : [];
-    } catch (e) {
-        return [];
-    }
-}
-
-function rememberSeat(gameId, name) {
-    if (!gameId || !name) return;
-    // Keyed by game AND name: two people playing in two tabs of one browser share
-    // localStorage, and collapsing them by game alone would lose one of the seats.
-    const kept = readRecentSeats().filter(s => !(s.gameId === gameId && s.name === name));
-    const list = [{ gameId, name }, ...kept].slice(0, RECENT_SEATS_LIMIT);
-    try {
-        localStorage.setItem(RECENT_SEATS_KEY, JSON.stringify(list));
-    } catch (e) { /* the banner is a nicety, not a requirement */ }
-}
-
-function forgetSeat(gameId, name) {
-    const list = readRecentSeats()
-        .filter(s => !(s.gameId === gameId && (!name || s.name === name)));
-    try {
-        localStorage.setItem(RECENT_SEATS_KEY, JSON.stringify(list));
-    } catch (e) { /* fine */ }
-}
-
-// Asks the server what a code leads to, without touching the form. Used to check a
-// remembered seat is real before offering it.
-function checkGameQuietly(gameId) {
-    return new Promise(resolve => {
-        seatChecks.set(gameId, resolve);
-        socket.emit('request-game-info', gameId);
-        // A game that never answers is simply not offered.
-        setTimeout(() => {
-            if (seatChecks.get(gameId) === resolve) {
-                seatChecks.delete(gameId);
-                resolve(null);
-            }
-        }, 4000);
-    });
-}
-
-async function showRejoinBanner() {
-    const banner = document.getElementById('rejoinBanner');
-    if (!banner) return;
-
-    const remembered = readRecentSeats();
-    if (!remembered.length) return;
-
-    // One request per distinct game, not per seat.
-    const gameIds = [...new Set(remembered.map(s => s.gameId))];
-    const infos = new Map();
-    for (const gameId of gameIds) {
-        infos.set(gameId, await checkGameQuietly(gameId));
-    }
-
-    const available = [];
-    for (const seat of remembered) {
-        const info = infos.get(seat.gameId);
-        if (!info || !info.found || info.status !== 'playing') {
-            // Gone or finished - stop remembering it so this does not run again.
-            forgetSeat(seat.gameId, seat.name);
-            continue;
-        }
-        // Only if that particular seat is still sitting empty.
-        if (info.reclaimable.some(r => r.name === seat.name)) available.push(seat);
-    }
-
-    // The player may have joined a game while these checks were in flight.
-    const lobby = document.querySelector('.lobby-screen');
-    if (!available.length || !lobby || lobby.style.display === 'none') return;
-
-    renderRejoinBanner(banner, available);
-}
-
-function renderRejoinBanner(banner, seats) {
-    const textEl = banner.querySelector('.rejoin-text');
-    const button = document.getElementById('rejoinButton');
-
-    if (seats.length === 1) {
-        const seat = seats[0];
-        textEl.textContent = `Your seat in game ${seat.gameId} is still waiting, ${seat.name}.`;
-        button.textContent = '↩️ Rejoin';
-        button.onclick = () => {
-            playSound('buttonClick');
-            const codeInput = document.getElementById('gameId');
-            if (codeInput) codeInput.value = seat.gameId;
-            joinGame();
-        };
-    } else {
-        // Two tabs of one browser can leave two seats behind, so let them pick.
-        textEl.textContent = `${seats.length} seats you were in are still waiting.`;
-        button.textContent = '↩️ Choose a seat';
-        button.onclick = () => {
-            playSound('buttonClick');
-            const codeInput = document.getElementById('gameId');
-            if (codeInput) codeInput.value = seats[0].gameId;
-            joinGame();
-        };
-    }
-
-    banner.hidden = false;
-
-    document.getElementById('dismissRejoin').onclick = () => {
-        banner.hidden = true;
-        seats.forEach(s => forgetSeat(s.gameId, s.name));
-    };
+    socket.emit('join-game', code, name);
 }
 
 function startGame() { 
@@ -1565,7 +1339,6 @@ function handleGameJoined({ gameId, token }) {
 function handleRejoined({ game, token }) {
     currentGameId = game.id;
     currentGameUrl = game.url || currentGameUrl;
-    pendingJoinCode = null;
     saveSession(game.id, token);
     hideConnectionLostOverlay();
     clearLobbyError();
@@ -1757,7 +1530,6 @@ function checkUrlParams() {
         window.history.replaceState({}, document.title, '/');
     }
 
-    showRejoinBanner();
 }
 
 function handleNewRound(game) {
@@ -1872,8 +1644,6 @@ function showWinnerPopup(winner, isHost) {
 function handleGameOver({ players, winner }) {
     playSound('winSound');
     toggleActionButtons(false);
-    // Nothing left to rejoin, so it stops being offered. A rematch re-remembers it.
-    if (currentGameId) forgetSeat(currentGameId);
     showWinnerPopup(winner, isHost); // Pass isHost flag
 }
 
