@@ -7,6 +7,50 @@ let activeDrawThreePopup = null;
 let soundEnabled = true;
 let currentGameUrl = ""; // New: stores the game URL
 let gameHistory = []; // Latest action log, kept in sync from every game update
+let latestGame = null; // Last game state received, for popups that outlive one update
+
+// ---------------------------------------------------------------------------
+// Session, so a refresh or a dropped connection does not cost you your seat
+// ---------------------------------------------------------------------------
+
+// A socket id lasts exactly as long as one page, so it cannot identify a player who
+// reloads. The server issues a token instead and this is where it is kept.
+//
+// sessionStorage, deliberately not localStorage: localStorage is shared by every tab on
+// the origin, so a second tab would read the first tab's token and rejoin as them -
+// two people playing on one computer would fight over one seat. sessionStorage is
+// per-tab, which covers reloads and dropped connections. The cost is that closing the
+// tab outright loses the seat.
+const SESSION_KEY = 'hit7-session';
+
+function saveSession(gameId, token) {
+    if (!gameId || !token) return;
+    try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, token }));
+    } catch (e) {
+        // Private browsing can refuse storage. Reconnecting stops working, nothing else.
+        console.warn('Could not save session:', e);
+    }
+}
+
+function loadSession() {
+    try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        return (session && session.gameId && session.token) ? session : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function clearSession() {
+    try {
+        sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+        /* nothing to clean up */
+    }
+}
 
 // Every panel that draws a card - the remaining pile, the last card drawn, the
 // history log - needs the same class and face for a given card, so they all read it
@@ -123,6 +167,24 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
+socket.on('rejoined', handleRejoined);
+socket.on('rejoin-failed', handleRejoinFailed);
+socket.on('round-restarted', handleRoundRestarted);
+
+// Fires on the first connection and again after every reconnect, so it is the one place
+// that can put a returning player back in their seat - whether they reloaded the page or
+// just went through a tunnel.
+socket.on('connect', () => {
+    hideConnectionLostOverlay();
+    const session = loadSession();
+    if (session) socket.emit('rejoin-game', session.gameId, session.token);
+});
+
+// socket.io retries on its own; this only tells the player why the game stopped
+// responding, so they do not start mashing buttons.
+socket.on('disconnect', () => {
+    if (loadSession()) showConnectionLostOverlay();
+});
 socket.on('cancel-freeze', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
@@ -326,15 +388,16 @@ function resetGame() {
 }
 
 // Game state handlers
-function handleGameCreated({ gameId, gameUrl }) {
+function handleGameCreated({ gameId, gameUrl, token }) {
     console.log('Game created with URL:', gameUrl);
     currentGameId = gameId;
     currentGameUrl = gameUrl; // Store URL for later copying
     isHost = true;
-    
+    saveSession(gameId, token);
+
     // Hide lobby screen
     document.querySelector('.lobby-screen').style.display = 'none';
-    
+
     // Show waiting screen instead of game area
     showWaitingScreen({
         players: [{ name: 'You (Host)', id: socket.id }],
@@ -403,14 +466,15 @@ function showCopyConfirmationInButton() {
 
 // Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
+    latestGame = game;
     const waitingScreen = document.getElementById('waitingScreen');
     const resetButton = document.getElementById('resetButton');
-    
+
     // Show/hide reset button based on host status
     if (resetButton) {
         resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
     }
-    
+
     // Update deck count immediately
     document.getElementById('deckCount').textContent = game.deck.length;
     // Update the remaining pile display immediately
@@ -419,6 +483,7 @@ function handleGameUpdate(game) {
     updateLastCardDrawn(game.lastCardDrawn);
     // Keep the action log current whether or not the popup is open
     updateHistory(game.history);
+    updateDisconnectNotice(game);
 
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
@@ -452,8 +517,11 @@ function handleGameUpdate(game) {
         // Update game display as before
         isHost = socket.id === game.hostId;
         const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-        const canAct = isCurrentPlayer && game.status === 'playing';
-        
+        // The server refuses every action while someone is missing, so the buttons have
+        // to say so rather than looking live and doing nothing.
+        const paused = game.players.some(p => !p.connected);
+        const canAct = isCurrentPlayer && game.status === 'playing' && !paused;
+
         updateGameDisplay(game);
         toggleActionButtons(canAct);
         
@@ -464,6 +532,9 @@ function handleGameUpdate(game) {
 
 // Display updates
 function updateGameDisplay(game) {
+    // Kept so the disconnect popup's own timer has something to redraw from between
+    // game updates.
+    latestGame = game;
     document.getElementById('deckCount').textContent = game.deck.length;
     updateRemainingPile(game.deck);
     updateLastCardDrawn(game.lastCardDrawn);
@@ -614,8 +685,12 @@ const HISTORY_ICONS = {
     'reshuffle': '🔀',
     'round-start': '▶️',
     'round-end': '🏁',
+    'round-restart': '🔄',
     'game-over': '🏆',
-    'left': '🚪'
+    'left': '🚪',
+    'disconnected': '🔌',
+    'reconnected': '🔗',
+    'kicked': '🥾'
 };
 
 function renderHistoryCard(card) {
@@ -654,8 +729,12 @@ function formatHistoryEntry(entry) {
         case 'reshuffle':     return `The deck ran out and was reshuffled`;
         case 'round-start':   return `Round ${entry.round} started`;
         case 'round-end':     return `Round ${entry.round} ended`;
+        case 'round-restart': return `Round ${entry.round} <span class="history-bad">restarted</span> from the beginning`;
         case 'game-over':     return `${player} <span class="history-good">won the game!</span>`;
         case 'left':          return `${player} left the game`;
+        case 'disconnected':  return `${player} <span class="history-bad">lost connection</span> — round paused`;
+        case 'reconnected':   return `${player} <span class="history-good">is back</span>`;
+        case 'kicked':        return `${player} was removed by the host`;
         default:              return `${player} ${escapeHtml(entry.action || '')}`;
     }
 }
@@ -738,6 +817,153 @@ function showHistory() {
 
     document.addEventListener('keydown', handleEscape);
     document.body.appendChild(popup);
+}
+
+// ---------------------------------------------------------------------------
+// Disconnects: holding the round open until everyone is back
+// ---------------------------------------------------------------------------
+
+// disconnectedAt comes off the server clock, which is not this browser's clock, so how
+// long somebody has been gone is measured from when this page first saw it instead.
+const disconnectSeenAt = new Map();
+let disconnectTicker = null;
+
+function formatElapsed(ms) {
+    const seconds = Math.max(0, Math.round(ms / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m ${seconds % 60}s`;
+}
+
+function renderDisconnectRows(popup, game) {
+    const missing = game.players.filter(p => !p.connected);
+    const listEl = popup.querySelector('.disconnect-list');
+    if (!listEl) return;
+
+    // The host may be a stand-in while the original host is the one who dropped.
+    const amHost = socket.id === game.hostId;
+
+    listEl.innerHTML = missing.map(player => {
+        const since = disconnectSeenAt.get(player.id);
+        const elapsed = since ? formatElapsed(Date.now() - since) : '';
+        return `
+            <div class="disconnect-row">
+                <span class="disconnect-name">${escapeHtml(player.name)}</span>
+                <span class="disconnect-elapsed">${elapsed ? `away ${elapsed}` : 'away'}</span>
+                ${amHost ? `
+                    <button class="game-button red kick-button" data-id="${escapeHtml(player.id)}">
+                        Remove &amp; restart round
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+
+    const hintEl = popup.querySelector('.disconnect-hint');
+    if (hintEl) {
+        hintEl.textContent = amHost
+            ? 'Removing a player replays this round from the start. Scores from earlier rounds are kept.'
+            : 'The host can remove them and restart the round.';
+    }
+
+    listEl.querySelectorAll('.kick-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = missing.find(p => p.id === btn.dataset.id)?.name || 'this player';
+            // Kicking throws away the round everyone is part-way through, so it is worth
+            // one confirmation.
+            if (!confirm(`Remove ${name} and restart round ${game.roundNumber}?`)) return;
+            playSound('buttonClick');
+            btn.disabled = true;
+            socket.emit('kick-player', currentGameId, btn.dataset.id);
+        });
+    });
+}
+
+function updateDisconnectNotice(game) {
+    const missing = game.players.filter(p => !p.connected);
+
+    // Stamp arrivals and forget anyone who came back or was removed.
+    const missingIds = new Set(missing.map(p => p.id));
+    missing.forEach(p => {
+        if (!disconnectSeenAt.has(p.id)) disconnectSeenAt.set(p.id, Date.now());
+    });
+    [...disconnectSeenAt.keys()].forEach(id => {
+        if (!missingIds.has(id)) disconnectSeenAt.delete(id);
+    });
+
+    const existing = document.querySelector('.disconnect-popup');
+
+    // Only a round in progress has anything to hold open. In the lobby a missing player
+    // is simply gone.
+    if (!missing.length || game.status !== 'playing') {
+        if (existing) existing.remove();
+        if (disconnectTicker) {
+            clearInterval(disconnectTicker);
+            disconnectTicker = null;
+        }
+        return;
+    }
+
+    let popup = existing;
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.className = 'disconnect-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <div class="loading-spinner"></div>
+                <h2>⏳ WAITING FOR PLAYERS</h2>
+                <p class="disconnect-lead">Someone lost their connection. The round is
+                    paused so nobody loses their cards.</p>
+                <div class="disconnect-list"></div>
+                <p class="disconnect-hint"></p>
+            </div>
+        `;
+        document.body.appendChild(popup);
+
+        // Redrawn on a timer as well as on updates, because the elapsed time keeps
+        // moving while the game state sits still.
+        disconnectTicker = setInterval(() => {
+            const live = document.querySelector('.disconnect-popup');
+            if (live && latestGame) renderDisconnectRows(live, latestGame);
+        }, 1000);
+    }
+
+    renderDisconnectRows(popup, game);
+}
+
+// This player's own connection, which is a different problem: there is no game state
+// arriving to drive a popup, so it is put up and taken down by the socket events.
+function showConnectionLostOverlay() {
+    if (document.querySelector('.connection-lost-popup')) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'connection-lost-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="loading-spinner"></div>
+            <h2>🔌 RECONNECTING</h2>
+            <p>You lost your connection. Your cards and score are being held —
+                this will pick up where you left off.</p>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function hideConnectionLostOverlay() {
+    document.querySelectorAll('.connection-lost-popup').forEach(p => p.remove());
+}
+
+function showRoundRestartedNotice(roundNumber) {
+    document.querySelectorAll('.restart-notice').forEach(n => n.remove());
+
+    const notice = document.createElement('div');
+    notice.className = 'restart-notice';
+    notice.innerHTML = `
+        <strong>Round ${roundNumber} restarted</strong>
+        <span>A player was removed. Hands are cleared; earlier scores are kept.</span>
+    `;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 5000);
 }
 
 function updateDiscardPile(discardPile) {
@@ -844,11 +1070,16 @@ function playerTemplate(player, isCurrentTurn) {
     const emptySpecialSlots = Array(7 - player.specialCards.length).fill(0)
         .map(() => '<div class="empty-slot special"></div>').join('');
 
+    // connected is absent on the stripped-down player objects some popups pass in, so
+    // only an explicit false counts as away.
+    const isAway = player.connected === false;
+
     return `
-        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
+        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status} ${isAway ? 'disconnected' : ''}" data-player-id="${player.id}">
             <div class="player-header">
                 <h3>${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
                 <div class="player-status">
+                    ${isAway ? '<div class="away-indicator">🔌 DISCONNECTED</div>' : ''}
                     ${getStatusIcon(player.status)}
                     ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
                     ${player.specialCards.includes('SC') ? `
@@ -1032,9 +1263,61 @@ function getCurrentGameState() {
 }
 
 // Game event handlers
-function handleGameJoined(gameId) {
+function handleGameJoined({ gameId, token }) {
     currentGameId = gameId;
+    saveSession(gameId, token);
     document.querySelector('.lobby-screen').style.display = 'none';
+}
+
+// Accepted back into a game in progress: everything about the seat is server state, so
+// this is just a matter of catching the page up to it.
+function handleRejoined({ game, token }) {
+    currentGameId = game.id;
+    currentGameUrl = game.url || currentGameUrl;
+    saveSession(game.id, token);
+    hideConnectionLostOverlay();
+
+    document.querySelector('.lobby-screen').style.display = 'none';
+
+    const waitingScreen = document.getElementById('waitingScreen');
+    if (waitingScreen && game.status !== 'lobby') waitingScreen.remove();
+
+    handleGameUpdate(game);
+}
+
+// The token is no good - the game finished, was reset, or the host kicked this player.
+// Nothing to return to, so drop it and show the lobby like a first visit.
+function handleRejoinFailed(message) {
+    clearSession();
+    hideConnectionLostOverlay();
+
+    // Only worth interrupting someone who is actually sitting at a game screen. On a
+    // fresh page load with a stale token there is nothing to explain.
+    const inGame = document.getElementById('gameArea')?.style.display === 'flex';
+    if (inGame) {
+        alert(message || 'You are no longer in that game.');
+        window.location.href = '/';
+        return;
+    }
+
+    currentGameId = null;
+    latestGame = null;
+    const lobby = document.querySelector('.lobby-screen');
+    if (lobby) lobby.style.display = '';
+}
+
+function handleRoundRestarted(game) {
+    // Anything still on screen belongs to the round that was just thrown away.
+    document.querySelectorAll(
+        '.round-summary-popup, .freeze-popup, .draw-three-popup, .remove-card-popup, ' +
+        '.steal-card-popup, .swap-card-popup, .select-card-popup, .info-popup'
+    ).forEach(p => p.remove());
+    activeFreezePopup = null;
+    activeDrawThreePopup = null;
+    document.body.style.overflow = 'auto';
+
+    showRoundRestartedNotice(game.roundNumber);
+    handleGameUpdate(game);
 }
 
 function showWaitingScreen(gameData) {

@@ -4314,3 +4314,154 @@ h3 span.emoji {
 .history-card.multiplier { background: #fbb03a; color: #fff; }
 .history-card.minus,
 .history-card.divide { background: #f1624f; color: #fff; }
+
+/* ---------------------------------------------------------------------------
+   Disconnects: the round is held open until everyone is back
+   --------------------------------------------------------------------------- */
+
+/* Above every other popup on purpose. A targeting popup someone already had open stays
+   in the DOM while the game is paused, and this has to cover it - the server rejects
+   whatever they would click until play resumes. */
+.disconnect-popup,
+.connection-lost-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    padding: 1rem;
+}
+
+.disconnect-popup .popup-content,
+.connection-lost-popup .popup-content {
+    background: var(--secondary);
+    border: 2px solid var(--highlight);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.disconnect-popup h2,
+.connection-lost-popup h2 {
+    color: var(--highlight);
+    margin: 0.75rem 0 0.5rem;
+    font-size: 1.4rem;
+    letter-spacing: 0.5px;
+}
+
+.disconnect-popup .loading-spinner,
+.connection-lost-popup .loading-spinner {
+    width: 34px;
+    height: 34px;
+    border-width: 4px;
+    margin: 0;
+}
+
+.disconnect-lead,
+.connection-lost-popup p {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+}
+
+.disconnect-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.disconnect-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    background: rgba(15, 52, 96, 0.55);
+    border: 1px solid rgba(233, 69, 96, 0.35);
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.disconnect-name {
+    font-weight: 700;
+    color: var(--text-light);
+    font-size: 1.05rem;
+}
+
+.disconnect-elapsed {
+    /* Fixed width so the row does not jitter as the seconds tick over. */
+    min-width: 5.5rem;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+}
+
+.disconnect-row .kick-button {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.disconnect-hint {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Marks the empty seat on the board itself, so it is obvious who everyone is waiting on
+   once the popup is behind a round summary or the history log. */
+.player.disconnected {
+    opacity: 0.55;
+    border-color: rgba(233, 69, 96, 0.5) !important;
+}
+
+.away-indicator {
+    background: var(--highlight);
+    color: var(--text-light);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.restart-notice {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--secondary);
+    border: 2px solid var(--highlight);
+    border-radius: 12px;
+    padding: 0.85rem 1.25rem;
+    z-index: 20001;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    text-align: center;
+    max-width: min(92vw, 420px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    animation: notificationIn 0.3s ease;
+}
+
+.restart-notice strong {
+    color: var(--highlight);
+    font-size: 0.95rem;
+}
+
+.restart-notice span {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
