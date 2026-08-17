@@ -6,6 +6,74 @@ let activeFreezePopup = null;
 let activeDrawThreePopup = null;
 let soundEnabled = true;
 let currentGameUrl = ""; // New: stores the game URL
+let gameHistory = []; // Latest action log, kept in sync from every game update
+let latestGame = null; // Last game state received, for popups that outlive one update
+
+// ---------------------------------------------------------------------------
+// Session, so a refresh or a dropped connection does not cost you your seat
+// ---------------------------------------------------------------------------
+
+// A socket id lasts exactly as long as one page, so it cannot identify a player who
+// reloads. The server issues a token instead and this is where it is kept.
+//
+// sessionStorage, deliberately not localStorage: localStorage is shared by every tab on
+// the origin, so a second tab would read the first tab's token and rejoin as them -
+// two people playing on one computer would fight over one seat. sessionStorage is
+// per-tab, which covers reloads and dropped connections. The cost is that closing the
+// tab outright loses the seat.
+const SESSION_KEY = 'hit7-session';
+
+function saveSession(gameId, token) {
+    if (!gameId || !token) return;
+    try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, token }));
+    } catch (e) {
+        // Private browsing can refuse storage. Reconnecting stops working, nothing else.
+        console.warn('Could not save session:', e);
+    }
+}
+
+function loadSession() {
+    try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        return (session && session.gameId && session.token) ? session : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function clearSession() {
+    try {
+        sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+        /* nothing to clean up */
+    }
+}
+
+// Every panel that draws a card - the remaining pile, the last card drawn, the
+// history log - needs the same class and face for a given card, so they all read it
+// from here instead of repeating the lookup.
+const SPECIAL_CARD_VISUALS = {
+    'SC':     { cardType: 'second-chance', displayValue: '🛡️' },
+    'Freeze': { cardType: 'freeze',        displayValue: '❄️' },
+    'D3':     { cardType: 'draw-three',    displayValue: '🎯' },
+    'RC':     { cardType: 'remove-card',   displayValue: '🗑️' },
+    'ST':     { cardType: 'steal-card',    displayValue: '🥷' },
+    'Swap':   { cardType: 'swap-card',     displayValue: '⇄️' },
+    'Select': { cardType: 'select-card',   displayValue: '🃏' },
+    '2÷':     { cardType: 'divide',        displayValue: '2÷' },
+    '2x':     { cardType: 'multiplier',    displayValue: '2x' }
+};
+
+function getCardVisual(card) {
+    const cardStr = String(card);
+    if (SPECIAL_CARD_VISUALS[cardStr]) return { ...SPECIAL_CARD_VISUALS[cardStr] };
+    if (cardStr.endsWith('+')) return { cardType: 'adder', displayValue: cardStr };
+    if (cardStr.endsWith('-')) return { cardType: 'minus', displayValue: cardStr };
+    return { cardType: 'number', displayValue: cardStr };
+}
 
 // Player names are typed by other people and every panel here is built with
 // innerHTML, so anything that came from another player goes through this first.
@@ -72,6 +140,12 @@ const initializeButtons = () => {
         playSound('buttonClick');
         showTutorial();
     };
+
+    const historyBtn = document.getElementById('historyButton');
+    if (historyBtn) historyBtn.onclick = function() {
+        playSound('buttonClick');
+        showHistory();
+    };
     
     console.log('Button initialization complete');
 };
@@ -93,6 +167,24 @@ socket.on('all-busted', handleAllBusted);
 socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
+socket.on('rejoined', handleRejoined);
+socket.on('rejoin-failed', handleRejoinFailed);
+socket.on('round-restarted', handleRoundRestarted);
+
+// Fires on the first connection and again after every reconnect, so it is the one place
+// that can put a returning player back in their seat - whether they reloaded the page or
+// just went through a tunnel.
+socket.on('connect', () => {
+    hideConnectionLostOverlay();
+    const session = loadSession();
+    if (session) socket.emit('rejoin-game', session.gameId, session.token);
+});
+
+// socket.io retries on its own; this only tells the player why the game stopped
+// responding, so they do not start mashing buttons.
+socket.on('disconnect', () => {
+    if (loadSession()) showConnectionLostOverlay();
+});
 socket.on('cancel-freeze', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
@@ -296,15 +388,16 @@ function resetGame() {
 }
 
 // Game state handlers
-function handleGameCreated({ gameId, gameUrl }) {
+function handleGameCreated({ gameId, gameUrl, token }) {
     console.log('Game created with URL:', gameUrl);
     currentGameId = gameId;
     currentGameUrl = gameUrl; // Store URL for later copying
     isHost = true;
-    
+    saveSession(gameId, token);
+
     // Hide lobby screen
     document.querySelector('.lobby-screen').style.display = 'none';
-    
+
     // Show waiting screen instead of game area
     showWaitingScreen({
         players: [{ name: 'You (Host)', id: socket.id }],
@@ -373,21 +466,25 @@ function showCopyConfirmationInButton() {
 
 // Remove bust sound from handleGameUpdate since server will handle it
 function handleGameUpdate(game) {
+    latestGame = game;
     const waitingScreen = document.getElementById('waitingScreen');
     const resetButton = document.getElementById('resetButton');
-    
+
     // Show/hide reset button based on host status
     if (resetButton) {
         resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
     }
-    
+
     // Update deck count immediately
     document.getElementById('deckCount').textContent = game.deck.length;
     // Update the remaining pile display immediately
     updateRemainingPile(game.deck);
     // Update the last card drawn
     updateLastCardDrawn(game.lastCardDrawn);
-    
+    // Keep the action log current whether or not the popup is open
+    updateHistory(game.history);
+    updateDisconnectNotice(game);
+
     if (game.status === 'lobby') {
         // Update waiting screen if it exists
         if (waitingScreen) {
@@ -420,8 +517,11 @@ function handleGameUpdate(game) {
         // Update game display as before
         isHost = socket.id === game.hostId;
         const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-        const canAct = isCurrentPlayer && game.status === 'playing';
-        
+        // The server refuses every action while someone is missing, so the buttons have
+        // to say so rather than looking live and doing nothing.
+        const paused = game.players.some(p => !p.connected);
+        const canAct = isCurrentPlayer && game.status === 'playing' && !paused;
+
         updateGameDisplay(game);
         toggleActionButtons(canAct);
         
@@ -432,9 +532,13 @@ function handleGameUpdate(game) {
 
 // Display updates
 function updateGameDisplay(game) {
+    // Kept so the disconnect popup's own timer has something to redraw from between
+    // game updates.
+    latestGame = game;
     document.getElementById('deckCount').textContent = game.deck.length;
     updateRemainingPile(game.deck);
     updateLastCardDrawn(game.lastCardDrawn);
+    updateHistory(game.history);
     renderPlayers(game);
 }
 
@@ -475,38 +579,12 @@ function updateRemainingPile(deck) {
     };
 
     Object.entries(cardCounts).forEach(([cardStr, count]) => {
-        let cardType, displayValue;
-        
-        if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-          cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Swap' || cardStr === 'Select' || cardStr === '2÷' ||
-            cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
-            cardType = 
-                cardStr === 'SC' ? 'second-chance' :
-                cardStr === 'Freeze' ? 'freeze' :
-                cardStr === 'D3' ? 'draw-three' :
-                cardStr === 'RC' ? 'remove-card' :
-            cardStr === 'ST' ? 'steal-card' :
-                cardStr === 'Swap' ? 'swap-card' :
-                cardStr === 'Select' ? 'select-card' :
-                cardStr === '2÷' ? 'divide' :
-                cardStr.includes('+') ? 'adder' :
-                cardStr.includes('-') ? 'minus' :
-                'multiplier';
-            displayValue = 
-                cardStr === 'SC' ? '🛡️' :
-                cardStr === 'Freeze' ? '❄️' :
-                cardStr === 'D3' ? '🎯' :
-                cardStr === 'RC' ? '🗑️' :
-            cardStr === 'ST' ? '🥷' :
-                cardStr === 'Swap' ? '⇄️' :
-                cardStr === 'Select' ? '🃏' :
-                cardStr === '2÷' ? '2÷' :
-                cardStr;
-            specialCards.push({ cardStr, count, cardType, displayValue });
+        const { cardType, displayValue } = getCardVisual(cardStr);
+        const entry = { cardStr, count, cardType, displayValue };
+        if (cardType === 'number') {
+            regularCards.push(entry);
         } else {
-            cardType = 'number';
-            displayValue = cardStr;
-            regularCards.push({ cardStr, count, cardType, displayValue });
+            specialCards.push(entry);
         }
     });
 
@@ -578,44 +656,314 @@ function updateLastCardDrawn(card) {
         return;
     }
     
-    let cardType, displayValue;
-    const cardStr = card.toString();
-    
-    if (cardStr === 'SC' || cardStr === 'Freeze' || cardStr === 'D3' || 
-        cardStr === 'RC' || cardStr === 'ST' || cardStr === 'Swap' || cardStr === 'Select' || cardStr === '2÷' ||
-        cardStr.includes('+') || cardStr.includes('x') || cardStr.includes('-')) {
-        cardType = 
-            cardStr === 'SC' ? 'second-chance' :
-            cardStr === 'Freeze' ? 'freeze' :
-            cardStr === 'D3' ? 'draw-three' :
-            cardStr === 'RC' ? 'remove-card' :
-            cardStr === 'ST' ? 'steal-card' :
-            cardStr === 'Swap' ? 'swap-card' :
-            cardStr === 'Select' ? 'select-card' :
-            cardStr === '2÷' ? 'divide' :
-            cardStr.includes('+') ? 'adder' :
-            cardStr.includes('-') ? 'minus' :
-            'multiplier';
-        displayValue = 
-            cardStr === 'SC' ? '🛡️' :
-            cardStr === 'Freeze' ? '❄️' :
-            cardStr === 'D3' ? '🎯' :
-            cardStr === 'RC' ? '🗑️' :
-            cardStr === 'ST' ? '🥷' :
-            cardStr === 'Swap' ? '⇄️' :
-            cardStr === 'Select' ? '🃏' :
-            cardStr === '2÷' ? '2÷' :
-            cardStr;
-    } else {
-        cardType = 'number';
-        displayValue = cardStr;
-    }
-    
+    const { cardType, displayValue } = getCardVisual(card);
+
     container.innerHTML = `
         <div class="last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}">
             ${displayValue}
         </div>
     `;
+}
+
+// ---------------------------------------------------------------------------
+// Action history log
+// ---------------------------------------------------------------------------
+
+const HISTORY_ICONS = {
+    'draw': '🎴',
+    'select': '🃏',
+    'bust': '💥',
+    'second-chance': '🛡️',
+    'stand': '✋',
+    'seven-bonus': '🌟',
+    'freeze': '❄️',
+    'draw-three': '🎯',
+    'remove': '🗑️',
+    'steal': '🥷',
+    'swap': '⇄️',
+    'discard': '♻️',
+    'reshuffle': '🔀',
+    'round-start': '▶️',
+    'round-end': '🏁',
+    'round-restart': '🔄',
+    'game-over': '🏆',
+    'left': '🚪',
+    'disconnected': '🔌',
+    'reconnected': '🔗',
+    'kicked': '🥾'
+};
+
+function renderHistoryCard(card) {
+    const { cardType, displayValue } = getCardVisual(card);
+    return `<span class="history-card ${cardType}">${escapeHtml(displayValue)}</span>`;
+}
+
+// The server logs only what happened; the wording lives here so the log reads the
+// same way the rest of the UI talks about cards.
+function formatHistoryEntry(entry) {
+    const name = value => `<span class="history-player">${escapeHtml(value || '')}</span>`;
+    const player = name(entry.player);
+    const target = name(entry.target);
+    const target2 = name(entry.target2);
+    const cards = (entry.cards || []).map(renderHistoryCard);
+
+    switch (entry.action) {
+        case 'draw':          return `${player} drew ${cards[0] || ''}`;
+        case 'select':        return `${player} picked ${cards[0] || ''} out of the deck`;
+        case 'bust':          return `${player} <span class="history-bad">BUSTED</span> on ${cards[0] || ''}`;
+        case 'second-chance': return `${player} burned 🛡️ to survive ${cards[0] || ''}`;
+        case 'stand':         return `${player} stood`;
+        case 'seven-bonus':   return `${player} filled all 7 cards <span class="history-good">+15</span>`;
+        case 'freeze':        return `${player} froze ${target}`;
+        case 'draw-three':    return `${player} made ${target} draw three`;
+        case 'remove':        return `${player} removed ${cards[0] || ''} from ${target}`;
+        case 'steal':         return `${player} stole ${cards[0] || ''} from ${target}`;
+        case 'swap': {
+            // The swapper is usually one of the two sides, and "Alice swapped Alice's
+            // card" reads badly.
+            const owner1 = entry.target === entry.player ? 'their own' : `${target}'s`;
+            const owner2 = entry.target2 === entry.player ? 'their own' : `${target2}'s`;
+            return `${player} swapped ${owner1} ${cards[0] || ''} with ${owner2} ${cards[1] || ''}`;
+        }
+        case 'discard':       return `${player} discarded ${cards[0] || ''} — no valid target`;
+        case 'reshuffle':     return `The deck ran out and was reshuffled`;
+        case 'round-start':   return `Round ${entry.round} started`;
+        case 'round-end':     return `Round ${entry.round} ended`;
+        case 'round-restart': return `Round ${entry.round} <span class="history-bad">restarted</span> from the beginning`;
+        case 'game-over':     return `${player} <span class="history-good">won the game!</span>`;
+        case 'left':          return `${player} left the game`;
+        case 'disconnected':  return `${player} <span class="history-bad">lost connection</span> — round paused`;
+        case 'reconnected':   return `${player} <span class="history-good">is back</span>`;
+        case 'kicked':        return `${player} was removed by the host`;
+        default:              return `${player} ${escapeHtml(entry.action || '')}`;
+    }
+}
+
+function renderHistoryList(listEl) {
+    if (!listEl) return;
+
+    if (!gameHistory.length) {
+        listEl.innerHTML = '<p class="history-empty">Nothing has happened yet — flip a card!</p>';
+        return;
+    }
+
+    // Newest first, so the last thing that happened is the first thing you read.
+    let lastRound = null;
+    listEl.innerHTML = [...gameHistory].reverse().map(entry => {
+        const divider = entry.round !== lastRound
+            ? `<div class="history-round-divider">Round ${entry.round}</div>`
+            : '';
+        lastRound = entry.round;
+        return `
+            ${divider}
+            <div class="history-entry action-${entry.action}">
+                <span class="history-icon">${HISTORY_ICONS[entry.action] || '•'}</span>
+                <span class="history-text">${formatHistoryEntry(entry)}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateHistory(history) {
+    gameHistory = Array.isArray(history) ? history : [];
+
+    const openPopup = document.querySelector('.history-popup');
+    if (!openPopup) return;
+
+    // Re-rendering in place resets the scroll box, which would yank the log out from
+    // under anyone reading back through an earlier round.
+    const scroller = openPopup.querySelector('.history-content');
+    const previousScroll = scroller ? scroller.scrollTop : 0;
+    renderHistoryList(openPopup.querySelector('.history-list'));
+    if (scroller) scroller.scrollTop = previousScroll;
+}
+
+function showHistory() {
+    const existingPopup = document.querySelector('.history-popup');
+    if (existingPopup) existingPopup.remove();
+
+    const popup = document.createElement('div');
+    popup.className = 'history-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <button class="close-button">×</button>
+            <h2 class="history-title">GAME HISTORY</h2>
+            <div class="history-content">
+                <div class="history-list"></div>
+            </div>
+        </div>
+    `;
+
+    renderHistoryList(popup.querySelector('.history-list'));
+
+    const closePopup = () => {
+        popup.remove();
+        document.removeEventListener('keydown', handleEscape);
+    };
+
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') closePopup();
+    };
+
+    popup.querySelector('.close-button').addEventListener('click', () => {
+        playSound('buttonClick');
+        closePopup();
+    });
+
+    // Tapping the backdrop closes too - the log is read-only, so there is nothing to lose.
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) closePopup();
+    });
+
+    document.addEventListener('keydown', handleEscape);
+    document.body.appendChild(popup);
+}
+
+// ---------------------------------------------------------------------------
+// Disconnects: holding the round open until everyone is back
+// ---------------------------------------------------------------------------
+
+// disconnectedAt comes off the server clock, which is not this browser's clock, so how
+// long somebody has been gone is measured from when this page first saw it instead.
+const disconnectSeenAt = new Map();
+let disconnectTicker = null;
+
+function formatElapsed(ms) {
+    const seconds = Math.max(0, Math.round(ms / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m ${seconds % 60}s`;
+}
+
+function renderDisconnectRows(popup, game) {
+    const missing = game.players.filter(p => !p.connected);
+    const listEl = popup.querySelector('.disconnect-list');
+    if (!listEl) return;
+
+    // The host may be a stand-in while the original host is the one who dropped.
+    const amHost = socket.id === game.hostId;
+
+    listEl.innerHTML = missing.map(player => {
+        const since = disconnectSeenAt.get(player.id);
+        const elapsed = since ? formatElapsed(Date.now() - since) : '';
+        return `
+            <div class="disconnect-row">
+                <span class="disconnect-name">${escapeHtml(player.name)}</span>
+                <span class="disconnect-elapsed">${elapsed ? `away ${elapsed}` : 'away'}</span>
+                ${amHost ? `
+                    <button class="game-button red kick-button" data-id="${escapeHtml(player.id)}">
+                        Remove &amp; restart round
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+
+    const hintEl = popup.querySelector('.disconnect-hint');
+    if (hintEl) {
+        hintEl.textContent = amHost
+            ? 'Removing a player replays this round from the start. Scores from earlier rounds are kept.'
+            : 'The host can remove them and restart the round.';
+    }
+
+    listEl.querySelectorAll('.kick-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = missing.find(p => p.id === btn.dataset.id)?.name || 'this player';
+            // Kicking throws away the round everyone is part-way through, so it is worth
+            // one confirmation.
+            if (!confirm(`Remove ${name} and restart round ${game.roundNumber}?`)) return;
+            playSound('buttonClick');
+            btn.disabled = true;
+            socket.emit('kick-player', currentGameId, btn.dataset.id);
+        });
+    });
+}
+
+function updateDisconnectNotice(game) {
+    const missing = game.players.filter(p => !p.connected);
+
+    // Stamp arrivals and forget anyone who came back or was removed.
+    const missingIds = new Set(missing.map(p => p.id));
+    missing.forEach(p => {
+        if (!disconnectSeenAt.has(p.id)) disconnectSeenAt.set(p.id, Date.now());
+    });
+    [...disconnectSeenAt.keys()].forEach(id => {
+        if (!missingIds.has(id)) disconnectSeenAt.delete(id);
+    });
+
+    const existing = document.querySelector('.disconnect-popup');
+
+    // Only a round in progress has anything to hold open. In the lobby a missing player
+    // is simply gone.
+    if (!missing.length || game.status !== 'playing') {
+        if (existing) existing.remove();
+        if (disconnectTicker) {
+            clearInterval(disconnectTicker);
+            disconnectTicker = null;
+        }
+        return;
+    }
+
+    let popup = existing;
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.className = 'disconnect-popup';
+        popup.innerHTML = `
+            <div class="popup-content">
+                <div class="loading-spinner"></div>
+                <h2>⏳ WAITING FOR PLAYERS</h2>
+                <p class="disconnect-lead">Someone lost their connection. The round is
+                    paused so nobody loses their cards.</p>
+                <div class="disconnect-list"></div>
+                <p class="disconnect-hint"></p>
+            </div>
+        `;
+        document.body.appendChild(popup);
+
+        // Redrawn on a timer as well as on updates, because the elapsed time keeps
+        // moving while the game state sits still.
+        disconnectTicker = setInterval(() => {
+            const live = document.querySelector('.disconnect-popup');
+            if (live && latestGame) renderDisconnectRows(live, latestGame);
+        }, 1000);
+    }
+
+    renderDisconnectRows(popup, game);
+}
+
+// This player's own connection, which is a different problem: there is no game state
+// arriving to drive a popup, so it is put up and taken down by the socket events.
+function showConnectionLostOverlay() {
+    if (document.querySelector('.connection-lost-popup')) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'connection-lost-popup';
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="loading-spinner"></div>
+            <h2>🔌 RECONNECTING</h2>
+            <p>You lost your connection. Your cards and score are being held —
+                this will pick up where you left off.</p>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function hideConnectionLostOverlay() {
+    document.querySelectorAll('.connection-lost-popup').forEach(p => p.remove());
+}
+
+function showRoundRestartedNotice(roundNumber) {
+    document.querySelectorAll('.restart-notice').forEach(n => n.remove());
+
+    const notice = document.createElement('div');
+    notice.className = 'restart-notice';
+    notice.innerHTML = `
+        <strong>Round ${roundNumber} restarted</strong>
+        <span>A player was removed. Hands are cleared; earlier scores are kept.</span>
+    `;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 5000);
 }
 
 function updateDiscardPile(discardPile) {
@@ -722,11 +1070,16 @@ function playerTemplate(player, isCurrentTurn) {
     const emptySpecialSlots = Array(7 - player.specialCards.length).fill(0)
         .map(() => '<div class="empty-slot special"></div>').join('');
 
+    // connected is absent on the stripped-down player objects some popups pass in, so
+    // only an explicit false counts as away.
+    const isAway = player.connected === false;
+
     return `
-        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status}" data-player-id="${player.id}">
+        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status} ${isAway ? 'disconnected' : ''}" data-player-id="${player.id}">
             <div class="player-header">
                 <h3>${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
                 <div class="player-status">
+                    ${isAway ? '<div class="away-indicator">🔌 DISCONNECTED</div>' : ''}
                     ${getStatusIcon(player.status)}
                     ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
                     ${player.specialCards.includes('SC') ? `
@@ -910,9 +1263,61 @@ function getCurrentGameState() {
 }
 
 // Game event handlers
-function handleGameJoined(gameId) {
+function handleGameJoined({ gameId, token }) {
     currentGameId = gameId;
+    saveSession(gameId, token);
     document.querySelector('.lobby-screen').style.display = 'none';
+}
+
+// Accepted back into a game in progress: everything about the seat is server state, so
+// this is just a matter of catching the page up to it.
+function handleRejoined({ game, token }) {
+    currentGameId = game.id;
+    currentGameUrl = game.url || currentGameUrl;
+    saveSession(game.id, token);
+    hideConnectionLostOverlay();
+
+    document.querySelector('.lobby-screen').style.display = 'none';
+
+    const waitingScreen = document.getElementById('waitingScreen');
+    if (waitingScreen && game.status !== 'lobby') waitingScreen.remove();
+
+    handleGameUpdate(game);
+}
+
+// The token is no good - the game finished, was reset, or the host kicked this player.
+// Nothing to return to, so drop it and show the lobby like a first visit.
+function handleRejoinFailed(message) {
+    clearSession();
+    hideConnectionLostOverlay();
+
+    // Only worth interrupting someone who is actually sitting at a game screen. On a
+    // fresh page load with a stale token there is nothing to explain.
+    const inGame = document.getElementById('gameArea')?.style.display === 'flex';
+    if (inGame) {
+        alert(message || 'You are no longer in that game.');
+        window.location.href = '/';
+        return;
+    }
+
+    currentGameId = null;
+    latestGame = null;
+    const lobby = document.querySelector('.lobby-screen');
+    if (lobby) lobby.style.display = '';
+}
+
+function handleRoundRestarted(game) {
+    // Anything still on screen belongs to the round that was just thrown away.
+    document.querySelectorAll(
+        '.round-summary-popup, .freeze-popup, .draw-three-popup, .remove-card-popup, ' +
+        '.steal-card-popup, .swap-card-popup, .select-card-popup, .info-popup'
+    ).forEach(p => p.remove());
+    activeFreezePopup = null;
+    activeDrawThreePopup = null;
+    document.body.style.overflow = 'auto';
+
+    showRoundRestartedNotice(game.roundNumber);
+    handleGameUpdate(game);
 }
 
 function showWaitingScreen(gameData) {
@@ -2050,89 +2455,145 @@ function showTutorial() {
             <div class="tutorial-content">
                 <section class="tutorial-section">
                     <h3>🎮 OBJECTIVE</h3>
-                    <p>Be the first to reach 200 points!</p>
+                    <p>The game is played over as many rounds as it takes. Bank points each
+                       round, and the first player to <strong>200 total points</strong> wins.</p>
                 </section>
 
                 <section class="tutorial-section">
-                    <h3>📋 GAME FLOW</h3>
+                    <h3>🔄 YOUR TURN</h3>
+                    <p>On your turn you do exactly one of two things:</p>
                     <ul>
-                        <li>Draw cards to collect points</li>
-                        <li>Max 7 regular cards per hand</li>
-                        <li>Duplicate number = BUST</li>
-                        <li>Stand to bank your points</li>
-                        <li>7 cards filled = +15 bonus!</li>
+                        <li><strong>HIT</strong> — flip the top card of the deck. It goes
+                            straight into your hand and takes effect immediately.</li>
+                        <li><strong>STAND</strong> — end your round and keep everything you
+                            have. Your points are banked when the round finishes.</li>
                     </ul>
+                    <p class="tutorial-note">The turn then passes to the next player who is
+                       still in the round.</p>
                 </section>
 
                 <section class="tutorial-section">
-                    <h3>🃏 REGULAR CARDS</h3>
-                    <p><strong>Zero:</strong> Worth 0, can't bust you (1 copy)</p>
-                    <p><strong>1-12:</strong> Worth face value (e.g., 7 copies of "7")</p>
-                    <p><strong>Rule:</strong> Drawing a duplicate = Lose all round points!</p>
+                    <h3>🃏 NUMBER CARDS</h3>
+                    <p><strong>0–12:</strong> worth their face value. The deck holds one
+                       <strong>0</strong>, one <strong>1</strong>, two <strong>2</strong>s,
+                       and so on up to twelve <strong>12</strong>s — 79 cards in total.</p>
+                    <p><strong>You may hold at most 7 of them.</strong> Action cards and score
+                       modifiers do not count towards that limit.</p>
+                    <p>Fill all 7 and your round ends right there with a
+                       <strong>+15 bonus</strong>.</p>
                 </section>
 
                 <section class="tutorial-section">
-                    <h3>⭐ SPECIAL CARDS</h3>
+                    <h3>💥 BUSTING</h3>
+                    <p>Take a number you already hold and you <strong>BUST</strong>: your whole
+                       round score is gone and you are out until the next round. Points you
+                       banked in earlier rounds are safe.</p>
+                    <p class="tutorial-note">⚠️ <strong>0 is a number like any other</strong> —
+                       a second 0 busts you just the same.</p>
+                    <p>Holding a 🛡️ <strong>Second Chance</strong> when it happens? The 🛡️ is
+                       burned instead, the duplicate is discarded, and you play on.</p>
+                    <p class="tutorial-note">Stealing and swapping can hand you a duplicate too,
+                       so they can bust you the same way a flip can.</p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>⭐ ACTION CARDS</h3>
+                    <p>These are played the moment you draw them, and are then discarded.</p>
                     <table class="card-table">
                         <tr>
-                            <td><strong>🃏 Select</strong></td>
-                            <td>Pick any card from deck</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🛡️ 2nd Chance</strong></td>
-                            <td>Undo one bust</td>
+                            <td><strong>🛡️ Second Chance</strong></td>
+                            <td>Kept in hand. Automatically cancels your next bust (3 in deck)</td>
                         </tr>
                         <tr>
                             <td><strong>❄️ Freeze</strong></td>
-                            <td>Skip opponent's turn</td>
+                            <td>Force any player still in the round — including yourself — to
+                                stand. They keep the points they already have (3)</td>
                         </tr>
                         <tr>
-                            <td><strong>🎯 Draw 3</strong></td>
-                            <td>Force 3 draws</td>
+                            <td><strong>🎯 Draw Three</strong></td>
+                            <td>Pick a player with room left. They must flip three cards in a
+                                row, busts and all (3)</td>
                         </tr>
                         <tr>
-                            <td><strong>🗑️ Remove</strong></td>
-                            <td>Delete opponent card</td>
+                            <td><strong>🗑️ Remove Card</strong></td>
+                            <td>Delete one card from any player still in the round, yourself
+                                included. A 🗑️ cannot be removed (3)</td>
                         </tr>
                         <tr>
-                          <td><strong>🥷 Steal</strong></td>
-                          <td>Steal a card from another player</td>
+                            <td><strong>🥷 Steal Card</strong></td>
+                            <td>Take any one card from another player and add it to your hand (2)</td>
                         </tr>
                         <tr>
-                            <td><strong>2+ / 4+ / 6+ / 8+ / 10+</strong></td>
-                            <td>Add points</td>
+                            <td><strong>⇄️ Swap Card</strong></td>
+                            <td>Trade one card between two different players. Only scoring cards
+                                move — numbers, 🛡️ and modifiers (2)</td>
                         </tr>
                         <tr>
-                            <td><strong>2- / 4- / 6- / 8- / 10-</strong></td>
-                            <td>Lose points</td>
+                            <td><strong>🃏 Select Card</strong></td>
+                            <td>Look through the whole deck and take whatever you want (1)</td>
+                        </tr>
+                    </table>
+                    <p class="tutorial-note">If a card has no legal target it is discarded and
+                       your turn ends.</p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>🔢 SCORE MODIFIERS</h3>
+                    <p>These stay in your hand and change your round score. They never bust you.</p>
+                    <table class="card-table">
+                        <tr>
+                            <td><strong>2+ 4+ 6+ 8+ 10+</strong></td>
+                            <td>Add that many points</td>
                         </tr>
                         <tr>
-                            <td><strong>2×</strong></td>
-                            <td>Double score</td>
+                            <td><strong>2- 4- 6- 8- 10-</strong></td>
+                            <td>Subtract that many points</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2x</strong></td>
+                            <td>Double your round score</td>
                         </tr>
                         <tr>
                             <td><strong>2÷</strong></td>
-                            <td>Halve score (rounded)</td>
+                            <td>Halve your round score, rounded</td>
                         </tr>
                     </table>
                 </section>
 
                 <section class="tutorial-section">
-                    <h3>🧮 SCORING EXAMPLE</h3>
-                    <p><strong>Your hand:</strong> [3, 5, 7] + 2+ + 2×</p>
-                    <p>3 + 5 + 7 = 15</p>
-                    <p>15 + 2 = 17</p>
-                    <p>17 × 2 = <strong>34 points!</strong></p>
+                    <h3>🧮 SCORING</h3>
+                    <p>Your round score is worked out in this order:</p>
+                    <ul>
+                        <li>Add up your number cards</li>
+                        <li>Apply every <strong>+</strong> and <strong>−</strong> card</li>
+                        <li>Then <strong>2x</strong>, then <strong>2÷</strong></li>
+                        <li>Finally <strong>+15</strong> if you hold all 7 numbers</li>
+                    </ul>
+                    <p class="tutorial-note">A round score can never drop below 0.</p>
+                    <p><strong>Example:</strong> [3, 5, 7] with 2+ and 2x</p>
+                    <p>3 + 5 + 7 = 15 → 15 + 2 = 17 → 17 × 2 = <strong>34 points</strong></p>
                 </section>
 
                 <section class="tutorial-section">
-                    <h3>💡 PRO TIPS</h3>
+                    <h3>🏁 ENDING A ROUND</h3>
+                    <p>The round ends as soon as nobody is left drawing — everyone has stood,
+                       been frozen, filled 7 cards, or busted.</p>
+                    <p>Everyone who did not bust banks their round score. Hands are cleared,
+                       totals are kept, and the next round begins.</p>
+                    <p>The deck carries over between rounds and is reshuffled from scratch when
+                       it runs out. Check <strong>CARDS LEFT</strong> to see exactly what is
+                       still in it.</p>
+                </section>
+
+                <section class="tutorial-section">
+                    <h3>💡 TIPS</h3>
                     <ul>
-                        <li>Save 2nd Chance for high scores</li>
-                        <li>Go for 7 cards = +15 bonus</li>
-                        <li>Grab multipliers early</li>
-                        <li>Use Freeze on leaders</li>
-                        <li>Balance risk vs. reward</li>
+                        <li>Low numbers are the safe ones — there is only one 1, but twelve 12s</li>
+                        <li>Watch the remaining pile before you hit; it tells you the real odds</li>
+                        <li>Hold 🛡️ while you push for the +15, not while you are on 10 points</li>
+                        <li>❄️ is best aimed at whoever is closest to 200</li>
+                        <li>2÷ hurts most on a big hand — pass it on with ⇄️ if you can</li>
+                        <li>📜 History shows every card played so far</li>
                     </ul>
                 </section>
             </div>
