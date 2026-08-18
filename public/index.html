@@ -121,33 +121,5 @@
 
         <script src="/socket.io/socket.io.js"></script>
         <script src="client.js"></script>
-        <!-- Add this script before closing body tag -->
-        <script>
-        // Improved Safari backdrop-filter detection and fallback
-        (function() {
-            function checkBackdropFilterSupport() {
-                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                const hasBackdropFilter = CSS.supports('(-webkit-backdrop-filter: blur(1px))') || 
-                                        CSS.supports('(backdrop-filter: blur(1px))');
-                
-                // Apply fallback if backdrop-filter is not supported or if using Safari
-                if (!hasBackdropFilter || isSafari) {
-                    document.querySelectorAll(
-                        '.game-code-display, .game-container, .game-header, ' +
-                        '.player, .menu-container, .deck-count, ' +
-                        '.remaining-pile .regular-cards, .remaining-pile .special-cards, ' +
-                        '.tutorial-popup, .history-popup, .tab-button, .card-example, .controls'
-                    ).forEach(el => el.classList.add('blur-bg'));
-                }
-            }
-
-            // Run check when DOM is loaded
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', checkBackdropFilterSupport);
-            } else {
-                checkBackdropFilterSupport();
-            }
-        })();
-        </script>
     </body>
 </html>
