@@ -23,6 +23,11 @@ let latestGame = null; // Last game state received, for popups that outlive one 
 // tab outright loses the seat.
 const SESSION_KEY = 'hit7-session';
 
+// These two are the opposite: deliberately in localStorage, because they outlive the tab
+// on purpose. Neither is a credential - the name is a convenience and the game id only
+// prefills the join form, so sharing them across tabs costs nothing.
+const LAST_NAME_KEY = 'hit7-last-name';
+
 function saveSession(gameId, token) {
     if (!gameId || !token) return;
     try {
@@ -104,11 +109,29 @@ const initializeButtons = () => {
     
     if (joinGameBtn) joinGameBtn.onclick = function(e) {
         e.preventDefault();
-        playSound('buttonClick');
-        console.log('Join Game clicked');
         joinGame();
     };
-    
+
+    const nameInput = document.getElementById('playerName');
+    const codeInput = document.getElementById('gameId');
+
+    // Codes are stored and compared uppercase, so the field only ever holds uppercase -
+    // otherwise "abc12" looks accepted and then fails.
+    if (codeInput) codeInput.addEventListener('input', () => {
+        const upper = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (codeInput.value !== upper) codeInput.value = upper;
+        clearLobbyError();
+    });
+
+    if (nameInput) nameInput.addEventListener('input', clearLobbyError);
+
+    // Enter submits whichever half of the form they are in: a code means join, no code
+    // means create.
+    document.getElementById('lobbyForm')?.addEventListener('submit', e => {
+        e.preventDefault();
+        if (codeInput?.value) joinGame(); else createGame();
+    });
+
     if (tutorialBtn) tutorialBtn.onclick = function(e) {
         e.preventDefault();
         playSound('buttonClick');
@@ -328,39 +351,81 @@ socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
 });
 
 // Game actions
+// ---------------------------------------------------------------------------
+// Landing page
+// ---------------------------------------------------------------------------
+
+const MIN_NAME_LENGTH = 3;
+
+// Errors show under the form rather than in an alert(), which on a phone covers the very
+// field the player has to fix.
+function showLobbyError(message, focusId) {
+    const el = document.getElementById('lobbyError');
+    if (el) {
+        el.textContent = message;
+        el.hidden = false;
+    }
+    if (focusId) document.getElementById(focusId)?.focus();
+}
+
+function clearLobbyError() {
+    const el = document.getElementById('lobbyError');
+    if (el) {
+        el.textContent = '';
+        el.hidden = true;
+    }
+}
+
+function readPlayerName() {
+    const input = document.getElementById('playerName');
+    const name = (input?.value || '').trim().replace(/\s+/g, ' ');
+    if (name.length < MIN_NAME_LENGTH) {
+        showLobbyError(`Your name needs at least ${MIN_NAME_LENGTH} characters.`, 'playerName');
+        return null;
+    }
+    // Remembered so a returning player does not retype it, and so the rejoin banner can
+    // say who they were.
+    try { localStorage.setItem(LAST_NAME_KEY, name); } catch (e) { /* not important */ }
+    return name;
+}
+
+function readGameCode() {
+    const input = document.getElementById('gameId');
+    const code = (input?.value || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{5}$/.test(code)) {
+        showLobbyError('A game code is 5 letters and numbers, like ABC12.', 'gameId');
+        return null;
+    }
+    return code;
+}
+
 function createGame() {
     playSound('buttonClick');
-    console.log('createGame function called'); // Debug log
-    const name = prompt('Enter your name:')?.trim();
-    if (!name) {
-        return alert('Please enter a name!');
-    }
-    if (name.length < 3) {
-        return alert('Name must be at least 3 characters!');
-    }
-    
+    clearLobbyError();
+
+    const name = readPlayerName();
+    if (!name) return;
+
     // Clear any existing game state
     currentGameId = null;
     document.getElementById('playersContainer').innerHTML = '';
-    
-    console.log('Emitting create-game event with name:', name); // Debug log
+
     socket.emit('create-game', name);
 }
 
+// One form, one button. The server decides whether this code means "join this lobby" or
+// "give me back the seat I left", because the player has already told it their name -
+// which is the only thing that distinguishes those two cases.
 function joinGame() {
     playSound('buttonClick');
-    const gameIdInput = document.getElementById('gameId');
-    const code = gameIdInput.value.trim().toUpperCase();
-    
-    if (!/^[A-Z0-9]{5}$/.test(code)) {
-        alert('Game code must be 5 characters!');
-        gameIdInput.focus();
-        return;
-    }
-    
-    const name = prompt('Enter your name:')?.trim();
-    if (!name) return alert('Please enter a name!');
-    
+    clearLobbyError();
+
+    const name = readPlayerName();
+    if (!name) return;
+
+    const code = readGameCode();
+    if (!code) return;
+
     socket.emit('join-game', code, name);
 }
 
@@ -1276,6 +1341,11 @@ function handleRejoined({ game, token }) {
     currentGameUrl = game.url || currentGameUrl;
     saveSession(game.id, token);
     hideConnectionLostOverlay();
+    clearLobbyError();
+
+    document.querySelectorAll('.seat-picker-popup').forEach(p => p.remove());
+    const banner = document.getElementById('rejoinBanner');
+    if (banner) banner.hidden = true;
 
     document.querySelector('.lobby-screen').style.display = 'none';
 
@@ -1426,27 +1496,40 @@ function updateStartButton(playerCount) {
     }
 }
 
-// Update checkUrlParams to handle both paths and search params
+// A shared link now fills the form in and waits, rather than firing a browser prompt at
+// someone the moment the page opens. Same number of taps, and it works on the phones
+// where prompt() is suppressed.
 function checkUrlParams() {
-    // First check for join in the path
+    const nameInput = document.getElementById('playerName');
+    const codeInput = document.getElementById('gameId');
+
+    // Saves retyping it every game.
+    try {
+        const lastName = localStorage.getItem(LAST_NAME_KEY);
+        if (lastName && nameInput) nameInput.value = lastName;
+    } catch (e) { /* nothing remembered */ }
+
     const pathMatch = window.location.pathname.match(/\/join\/([A-Z0-9]{5})/i);
     if (pathMatch) {
         const gameId = pathMatch[1].toUpperCase();
-        const name = prompt('Enter your name to join the game:')?.trim();
-        if (name) {
-            socket.emit('join-game', gameId, name);
-            // Clean up URL after emitting join
-            window.history.replaceState({}, document.title, '/');
-            return; // Exit early
+        if (codeInput) codeInput.value = gameId;
+        window.history.replaceState({}, document.title, '/');
+
+        // Everything is ready except the one thing only they can supply.
+        if (nameInput && !nameInput.value) {
+            nameInput.focus();
+        } else {
+            joinGame();
         }
+        return;
     }
-    
-    // Check for error params
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('error') === 'game-not-found') {
-        alert('Game not found!');
+        showLobbyError('That game link is no longer valid — ask for the code instead.', 'gameId');
         window.history.replaceState({}, document.title, '/');
     }
+
 }
 
 function handleNewRound(game) {
@@ -1570,6 +1653,14 @@ function handleGameReset() {
 }
 
 function handleError(message) {
+    // On the landing page an alert() covers the field the player has to fix, and errors
+    // there are all about the form anyway.
+    const lobby = document.querySelector('.lobby-screen');
+    const onLandingPage = lobby && lobby.style.display !== 'none';
+    if (onLandingPage) {
+        showLobbyError(message);
+        return;
+    }
     alert(message);
 }
 

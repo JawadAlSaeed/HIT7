@@ -4465,3 +4465,133 @@ h3 span.emoji {
     font-size: 0.8rem;
     line-height: 1.4;
 }
+
+/* ---------------------------------------------------------------------------
+   Landing page form: name + game code, and the ways back into a game
+   --------------------------------------------------------------------------- */
+
+.lobby-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    width: 100%;
+}
+
+.lobby-form .field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    text-align: left;
+}
+
+.lobby-form label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.lobby-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.9rem 1rem;
+    border: 2px solid rgba(233, 69, 96, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-light);
+    /* 16px minimum: anything smaller and iOS Safari zooms the page on focus. */
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.lobby-form input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.lobby-form input:focus {
+    outline: none;
+    border-color: var(--highlight);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+/* Codes are five characters and read as a unit, so they get the spacing to match. */
+.lobby-form .code-input {
+    text-transform: uppercase;
+    letter-spacing: 0.35em;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.35rem;
+    padding: 0.8rem 0.5rem;
+}
+
+.lobby-form .code-input::placeholder {
+    letter-spacing: 0.35em;
+    font-weight: 400;
+}
+
+.lobby-button.blue {
+    background: #3498db;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.lobby-button.blue:hover {
+    background: #2c82c9;
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.lobby-button.green {
+    background: #42ae5d;
+    box-shadow: 0 4px 15px rgba(66, 174, 93, 0.3);
+}
+
+.lobby-button.green:hover {
+    background: #389c51;
+    box-shadow: 0 6px 20px rgba(66, 174, 93, 0.4);
+}
+
+.lobby-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.25rem 0;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.lobby-divider::before,
+.lobby-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.lobby-error {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    background: rgba(233, 69, 96, 0.15);
+    border: 1px solid rgba(233, 69, 96, 0.45);
+    color: #ffd7de;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+/* The browser hides [hidden] elements with `display: none`, but that rule is a bare
+   attribute selector - the same specificity as a class, so any `display` set on the same
+   element here would win just by being defined later and it would never hide. */
+.lobby-error[hidden] {
+    display: none !important;
+}
+
+.field-hint {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}

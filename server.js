@@ -184,6 +184,16 @@ const findByToken = (game, token) =>
     ? game.players.find(p => p.token === token)
     : undefined;
 
+// Forgiving on purpose: somebody retyping their name from memory should not be locked out
+// of their own seat by capitalisation or a stray space.
+const namesMatch = (a, b) =>
+  String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+// The seat a returning player is asking for. Only ever one nobody is sitting in - a
+// connected player's seat can never be taken from them.
+const findDisconnectedSeatByName = (game, name) =>
+  game.players.find(p => !p.connected && namesMatch(p.name, name));
+
 // A round cannot be played on with someone missing: their hand, their banked score and
 // possibly the current turn are all still on the table. Everyone waits instead.
 const isPaused = game =>
@@ -323,10 +333,25 @@ const handleSocketConnection = (io) => {
         return socket.emit('error', `Name must be at least ${MIN_NAME_LENGTH} characters!`);
       }
 
-      // Joining is lobby-only: a player added mid-round would sit at 'waiting' forever,
-      // since only startNewRound flips players back to 'active'.
+      if (game.status === 'finished') {
+        return socket.emit('error', 'That game has already finished.');
+      }
+
+      // A name and a code are all it takes to come back to a seat you left, so the same
+      // form covers joining and rejoining. A player added to a round in progress would
+      // otherwise sit at 'waiting' forever, since only startNewRound makes players active.
       if (game.status !== 'lobby') {
-        return socket.emit('error', 'That game has already started!');
+        const seat = findDisconnectedSeatByName(game, name);
+        if (seat) {
+          // Whoever held the old token may still have it on another device, so it stops
+          // working the moment the seat is taken back here.
+          return attachToSeat(game, seat, socket, io, { rotateToken: true });
+        }
+
+        const waiting = game.players.filter(p => !p.connected).map(p => p.name);
+        return socket.emit('error', waiting.length
+          ? `No seat here for "${name}". Waiting on: ${waiting.join(', ')}. Type that name exactly to take the seat back.`
+          : 'That game is already under way and nobody has dropped out, so there is no seat free.');
       }
 
       if (game.players.length >= MAX_PLAYERS) {
@@ -337,6 +362,13 @@ const handleSocketConnection = (io) => {
         return socket.emit('error', 'You are already in this game!');
       }
 
+      // Names are how a returning player proves which seat is theirs, so two players
+      // sharing one would make that ambiguous - and two identical names on the board are
+      // confusing regardless.
+      if (game.players.some(p => namesMatch(p.name, name))) {
+        return socket.emit('error', `Somebody in this game is already called "${name}".`);
+      }
+
       const player = createPlayer(socket.id, name);
       game.players.push(player);
       socket.join(gameId);
@@ -344,8 +376,8 @@ const handleSocketConnection = (io) => {
       socket.emit('game-joined', { gameId, token: player.token });
     });
 
-    // Sent by a client that still holds a token for this game - a refresh, a closed tab,
-    // or a connection that dropped and came back.
+    // Sent by a client that still holds a token for this game - a refresh, or a
+    // connection that dropped and came back.
     socket.on('rejoin-game', (gameId, token) => {
       const game = games.get(gameId);
       if (!game) return socket.emit('rejoin-failed', 'That game no longer exists.');
@@ -353,29 +385,7 @@ const handleSocketConnection = (io) => {
       const player = findByToken(game, token);
       if (!player) return socket.emit('rejoin-failed', 'You are no longer in that game.');
 
-      // Two live sockets on one seat would both be able to act. The newest wins, and
-      // whatever the old one was is dropped.
-      const previousId = player.id;
-      player.id = socket.id;
-      player.connected = true;
-      player.disconnectedAt = null;
-      socket.join(gameId);
-
-      cancelAbandonTimer(gameId);
-
-      if (previousId !== socket.id) {
-        logHistory(game, { player: player.name, action: 'reconnected' });
-      }
-
-      syncHost(game);
-      socket.emit('rejoined', { game: publicGame(game), token: player.token });
-      broadcastGame(io, game);
-
-      // The popup this player was looking at died with their old page, and the round
-      // cannot continue until they pick, so it has to be put back.
-      if (player.pendingTarget && isCurrentTurn(game, socket.id) && !isPaused(game)) {
-        resendPendingTarget(game, player, socket, io);
-      }
+      attachToSeat(game, player, socket, io);
     });
 
     socket.on('start-game', gameId => {
@@ -1529,6 +1539,43 @@ const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDec
     fullDeck ? sortDeckForDisplay(fullDeck) : fullDeck
   );
   game.discardPile.push('Select');
+};
+
+// Binds a live socket to a seat that already exists. Both ways back into a game - the
+// stored token and reclaiming from the landing page - come through here, so a reconnect
+// behaves identically however it was triggered.
+const attachToSeat = (game, player, socket, io, { rotateToken = false } = {}) => {
+  if (rotateToken) {
+    const wasOriginalHost = game.hostToken === player.token;
+    player.token = uuidv4();
+    // hostToken names the original host by token, so rotating one has to carry the other
+    // or the host would silently lose their powers for the rest of the game.
+    if (wasOriginalHost) game.hostToken = player.token;
+  }
+
+  // Two live sockets on one seat would both be able to act. The newest wins: on a dropped
+  // connection the server may not have noticed the old socket is gone yet.
+  const previousId = player.id;
+  player.id = socket.id;
+  player.connected = true;
+  player.disconnectedAt = null;
+  socket.join(game.id);
+
+  cancelAbandonTimer(game.id);
+
+  if (previousId !== socket.id) {
+    logHistory(game, { player: player.name, action: 'reconnected' });
+  }
+
+  syncHost(game);
+  socket.emit('rejoined', { game: publicGame(game), token: player.token });
+  broadcastGame(io, game);
+
+  // The popup this player was looking at died with their old page, and the round cannot
+  // continue until they pick, so it has to be put back.
+  if (player.pendingTarget && isCurrentTurn(game, socket.id) && !isPaused(game)) {
+    resendPendingTarget(game, player, socket, io);
+  }
 };
 
 // Puts back the popup a reconnecting player was looking at. The choices are recomputed
