@@ -673,39 +673,12 @@ function updateRemainingPile(deck) {
     `;
 }
 
-// Update the renderCard function to use the new gradient
+// Colour comes from the [data-card-type] rules in style.css - see the "Card appearance"
+// block at the bottom of that file. Nothing here needs to know what a card looks like.
 function renderCard({ cardType, displayValue, count }) {
-    let cardStyle = '';
-    
-    if (cardType !== 'number') {
-        if (cardType === 'select-card') {
-            // Special gradient for select card - more subtle with fewer colors
-            cardStyle = `
-                background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
-                border-color: #e74c3c !important;
-            `;
-        } else {
-            cardStyle = `
-                background: ${
-                    cardType === 'adder' ? '#fbb03a' : 
-                    cardType === 'minus' ? '#f1624f' :
-                    cardType === 'divide' ? '#f1624f' :
-                    cardType === 'multiplier' ? '#fbb03a' :
-                    cardType === 'second-chance' ? '#e74c3c' :
-                    cardType === 'freeze' ? '#3498db' :
-                    cardType === 'draw-three' ? '#f1c40f' :
-                    cardType === 'remove-card' ? '#9b59b6' :
-                    cardType === 'steal-card' ? '#e67e22' :
-                    cardType === 'swap-card' ? '#42ae5d' : 'inherit'
-                } !important;
-                color: ${(cardType === 'minus' || cardType === 'divide' || cardType === 'multiplier' || cardType === 'adder') ? '#fff' : 'inherit'} !important;
-            `;
-        }
-    }
-
     return `
         <div class="remaining-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
-             style="${cardStyle}">
+             data-card-type="${cardType}">
             ${displayValue}
             ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
         </div>
@@ -724,7 +697,8 @@ function updateLastCardDrawn(card) {
     const { cardType, displayValue } = getCardVisual(card);
 
     container.innerHTML = `
-        <div class="last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}">
+        <div class="last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
+             data-card-type="${cardType}">
             ${displayValue}
         </div>
     `;
@@ -760,7 +734,7 @@ const HISTORY_ICONS = {
 
 function renderHistoryCard(card) {
     const { cardType, displayValue } = getCardVisual(card);
-    return `<span class="history-card ${cardType}">${escapeHtml(displayValue)}</span>`;
+    return `<span class="history-card ${cardType}" data-card-type="${cardType}">${escapeHtml(displayValue)}</span>`;
 }
 
 // The server logs only what happened; the wording lives here so the log reads the
@@ -1071,7 +1045,7 @@ function playerTemplate(player, isCurrentTurn) {
                 <div class="cards-container">
                     <div class="cards-label">REGULAR CARDS</div>
                     <div class="card-grid regular">
-                        ${player.regularCards.map(card => `<div class="card">${card}</div>`).join('')}
+                        ${player.regularCards.map(card => `<div class="card" data-card-type="number">${card}</div>`).join('')}
                         ${emptyRegularSlots}
                     </div>
                 </div>
@@ -1082,22 +1056,8 @@ function playerTemplate(player, isCurrentTurn) {
                         ${player.specialCards.map(card => {
                             const cardClass = getSpecialCardClass(card);
                             const cardDisplay = getSpecialCardDisplay(card);
-                            
-                            // Add inline style for special cards
-                            let cardStyle = '';
-                            if (card === 'Select') {
-                                cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
-                            } else if (card === 'Swap') {
-                                cardStyle = 'background: #42ae5d !important; border-color: #42ae5d !important; color: white !important;';
-                            } else if (card.endsWith('+') || card === '2x') {
-                              cardStyle = 'background: #fbb03a !important; border-color: #fbb03a !important; color: white !important;';
-                            } else if (card === 'ST') {
-                              cardStyle = 'background: #e67e22 !important; color: white !important;';
-                            } else if (card === '2÷' || card.endsWith('-')) {
-                                cardStyle = 'background: #f1624f !important; border-color: #f1624f !important; color: white !important;';
-                            }
-                            
-                            return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
+
+                            return `<div class="card special ${cardClass}" data-card-type="${cardClass}">
                                 ${cardDisplay}
                             </div>`;
                         }).join('')}
@@ -1689,7 +1649,7 @@ function showRemoveCardPopup(gameId, players) {
                   const isRemoveCard = card === 'RC';
                   return `
                   <button class="card-button special ${getSpecialCardClass(card)}"
-                    style="background: ${getCardColor(card)}; color: white;"
+                    data-card-type="${getSpecialCardClass(card)}"
                     data-player="${player.id}" 
                     data-index="${index}"
                     data-special="true"
@@ -1819,7 +1779,7 @@ function showSwapCardPopup(gameId, players) {
                   const actualIndex = player.specialCards.indexOf(card);
                   return `
                     <button class="card-button special ${getSpecialCardClass(card)} swap-selectable"
-                      style="background: ${getCardColor(card)}; color: white;"
+                      data-card-type="${getSpecialCardClass(card)}"
                       data-player="${player.id}"
                       data-index="${actualIndex}"
                       data-special="true"
@@ -2001,7 +1961,7 @@ function showStealCardPopup(gameId, players) {
                 `).join('')}
                 ${player.specialCards.map((card, index) => `
                   <button class="card-button special ${getSpecialCardClass(card)}"
-                    style="background: ${getCardColor(card)}; color: white;"
+                    data-card-type="${getSpecialCardClass(card)}"
                     data-player="${player.id}"
                     data-index="${index}"
                     data-special="true"
@@ -2075,20 +2035,6 @@ function showStealCardPopup(gameId, players) {
 }
 
 // Add helper function to get card background color
-function getCardColor(card) {
-    if (card === 'SC') return '#e74c3c';
-    if (card === 'Freeze') return '#3498db';
-    if (card === 'D3') return '#f1c40f';
-    if (card === 'RC') return '#9b59b6';
-  if (card === 'ST') return '#e67e22';
-    if (card === 'Swap') return '#42ae5d';
-    if (card === 'Select') return 'linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%)';
-    if (card.endsWith('+')) return '#fbb03a';
-    if (card.endsWith('x')) return '#fbb03a';
-    if (card === '2÷') return '#f1624f';
-    if (card.endsWith('-')) return '#f1624f';
-    return 'inherit';
-}
 
 socket.on('select-remove-card-target', (gameId, players) => {
   showRemoveCardPopup(gameId, players);
@@ -2206,12 +2152,13 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
           ${specialCards.map(({ card, count }) => {
             const cardClass = getSpecialCardClass(card);
             const cardDisplay = getSpecialCardDisplay(card);
-            const cardStyle = getCardColorStyle(card);
-            
+
+            // data-card carries the raw server value and is read back by the click
+            // handler below; data-card-type is the styling hook.
             return `
-              <button class="card-button special ${cardClass}" 
-                     data-card="${card}" 
-                     style="${cardStyle}">
+              <button class="card-button special ${cardClass}"
+                     data-card="${card}"
+                     data-card-type="${cardClass}">
                 ${cardDisplay}
                 ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
               </button>
@@ -2311,22 +2258,6 @@ function handleSelectedCard(gameId, selectedCard) {
     socket.emit('request-swap-targets', gameId);
   }
   // For other cards, no immediate action needed
-}
-
-// Add helper function for card color styling
-function getCardColorStyle(card) {
-  if (card === 'SC') return 'background: #e74c3c !important;';
-  if (card === 'Freeze') return 'background: #3498db !important;';
-  if (card === 'D3') return 'background: #f1c40f !important; color: #2c3e50 !important;';
-  if (card === 'RC') return 'background: #9b59b6 !important; color: white !important;';
-  if (card === 'ST') return 'background: #e67e22 !important; color: white !important;';
-  if (card === 'Swap') return 'background: #42ae5d !important; color: white !important;';
-  if (card === 'Select') return 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;';
-  if (card.endsWith('+')) return 'background: #fbb03a !important; color: white !important;';
-  if (card.endsWith('x')) return 'background: #fbb03a !important; color: white !important;';
-  if (card === '2÷') return 'background: #f1624f !important; color: white !important;';
-  if (card.endsWith('-')) return 'background: #f1624f !important; color: white !important;';
-  return '';
 }
 
 function showTutorial() {
