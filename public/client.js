@@ -1031,98 +1031,6 @@ function showRoundRestartedNotice(roundNumber) {
     setTimeout(() => notice.remove(), 5000);
 }
 
-function updateDiscardPile(discardPile) {
-  const discardCounts = discardPile.reduce((acc, card) => {
-    const key = card.toString();
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  document.getElementById('discard').innerHTML = Object.entries(discardCounts)
-    .map(([cardStr, count]) => {
-      let cardType, displayValue;
-      
-      if (cardStr === 'SC') {
-        cardType = 'second-chance';
-        displayValue = '🛡️';
-      } else if (cardStr === 'Freeze') {
-        cardType = 'freeze';
-        displayValue = '❄️';
-      } else if (cardStr === 'D3') {
-        cardType = 'draw-three';
-        displayValue = '🎯';
-      } else if (cardStr === 'RC') {
-        cardType = 'remove-card';
-        displayValue = '🗑️';
-      } else if (cardStr === 'ST') {
-        cardType = 'steal-card';
-        displayValue = '🥷';
-      } else if (cardStr === 'Swap') {
-        cardType = 'swap-card';
-        displayValue = '⇄️';
-      } else if (cardStr === 'Select') {
-        cardType = 'select-card';
-        displayValue = '🃏';
-      } else if (cardStr.includes('+')) {
-        cardType = 'adder';
-        displayValue = cardStr;
-      } else if (cardStr === '2÷') {
-        cardType = 'divide';
-        displayValue = '2÷';
-      } else if (cardStr.includes('x')) {
-        cardType = 'multiplier';
-        displayValue = cardStr.replace('x', '×');
-      } else if (cardStr.includes('-')) {
-        cardType = 'minus';
-        displayValue = cardStr;
-      } else {
-        cardType = 'number';
-        displayValue = cardStr;
-      }
-
-      const cardStyle = cardType !== 'number' ? `
-        background: ${
-          cardType === 'adder' ? '#fbb03a' : 
-          cardType === 'multiplier' ? '#fbb03a' :
-          cardType === 'second-chance' ? '#e74c3c' :
-          cardType === 'freeze' ? '#3498db' :
-          cardType === 'draw-three' ? '#f1c40f' :
-          cardType === 'remove-card' ? '#9b59b6' :
-          cardType === 'steal-card' ? '#e67e22' :
-          cardType === 'swap-card' ? '#42ae5d' :
-          cardType === 'divide' ? '#f1624f' :
-          cardType === 'minus' ? '#f1624f' : 'inherit'
-        } !important;
-      ` : '';
-
-      return {
-        html: `
-          <div class="discard-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}"
-               style="${cardStyle}">
-            ${displayValue}
-            ${count > 1 ? `<span class="discard-count">x${count}</span>` : ''}
-          </div>
-        `,
-        order: {
-          'second-chance': 1,
-          'freeze': 2,
-          'draw-three': 3,
-          'remove-card': 4,
-          'steal-card': 5,
-          'swap-card': 6,
-          'adder': 7,
-          'multiplier': 8,
-          'divide': 9,
-          'minus': 10,
-          'number': 11
-        }[cardType] || 999
-      };
-    })
-    .sort((a, b) => a.order - b.order)
-    .map(item => item.html)
-    .join('');
-}
-
 function renderPlayers(game) {
     document.getElementById('playersContainer').innerHTML = game.players
         .map((player, index) => playerTemplate(player, index === game.currentPlayer))
@@ -1301,32 +1209,6 @@ function toggleActionButtons(active) {
     }
 }
 
-// Add this helper function to get current game state
-function getCurrentGameState() {
-    const container = document.getElementById('playersContainer');
-    const players = [...container.querySelectorAll('.player')].map(playerEl => {
-        const isCurrentTurn = playerEl.classList.contains('current-turn');
-        const drawThreeRemaining = parseInt(playerEl.querySelector('.draw-three-indicator')?.textContent.match(/\d+/) || 0);
-        const status = playerEl.classList.contains('busted') ? 'busted' : 
-                      playerEl.classList.contains('stood') ? 'stood' : 
-                      playerEl.classList.contains('frozen') ? 'frozen' : 'active';
-        return {
-            id: playerEl.dataset.playerId,
-            drawThreeRemaining,
-            status
-        };
-    });
-    
-    const currentPlayerIndex = players.findIndex(p => 
-        p.id === socket.id && document.querySelector(`.player[data-player-id="${p.id}"]`)?.classList.contains('current-turn')
-    );
-
-    return {
-        players,
-        currentPlayer: currentPlayerIndex
-    };
-}
-
 // Game event handlers
 function handleGameJoined({ gameId, token }) {
     currentGameId = gameId;
@@ -1418,7 +1300,7 @@ function showWaitingScreen(gameData) {
         </div>
         ${isHost ? `
             <div class="button-group">
-                <button onclick="startGame()" id="startGameBtn" class="game-button green" 
+                <button id="startGameBtn" class="game-button green" 
                     ${gameData.players.length < 2 ? 'disabled' : ''}>
                     ${gameData.players.length < 2 ? 
                         'Waiting for Players <div class="loading-spinner"></div>' : 
@@ -1771,91 +1653,6 @@ function handleRoundSummary({ players, allBusted }) {
         }
         count--;
     }, 1000);
-}
-
-function showFreezePopup(gameId, targets) {
-  // Cleanup any existing popup
-  if (activeFreezePopup) {
-    activeFreezePopup.remove();
-    activeFreezePopup = null;
-  }
-
-  // Create new popup
-  activeFreezePopup = document.createElement('div');
-  activeFreezePopup.id = 'freezePopup';
-  activeFreezePopup.className = 'freeze-popup';
-  activeFreezePopup.innerHTML = `
-    <div class="popup-content">
-      <h3><span class="emoji">❄️</span> Select a player to freeze:</h3>
-      <div class="freeze-targets">
-        ${targets.map(t => `
-          <button class="freeze-target ${t.id === socket.id ? 'self-target' : ''}" data-id="${t.id}">
-            ${escapeHtml(t.name)} ${t.id === socket.id ? '(You)' : ''}
-          </button>
-        `).join('')}
-      </div>
-      <button class="view-game-button" id="viewGameButton">
-        <span class="icon">👁️</span> Hold to view game
-      </button>
-    </div>
-  `;
-
-  activeFreezePopup.querySelectorAll('.freeze-target').forEach(btn => {
-    btn.addEventListener('click', () => {
-      socket.emit('freeze-player', currentGameId, btn.dataset.id);
-      activeFreezePopup.remove();
-      activeFreezePopup = null;
-    });
-  });
-
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = activeFreezePopup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    activeFreezePopup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    activeFreezePopup.classList.add('popup-hiding');
-  });
-  
-  const handleUp = () => {
-    if (activeFreezePopup && activeFreezePopup.parentElement) {
-      activeFreezePopup.classList.remove('popup-hiding');
-    }
-  };
-  
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
-  
-  document.body.appendChild(activeFreezePopup);
-
-  // Clean up event listeners when popup is removed
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if ([...mutation.removedNodes].includes(activeFreezePopup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
-        observer.disconnect();
-      }
-    });
-  });
-  
-  observer.observe(document.body, { childList: true });
-
-  // Add auto-removal listeners
-  const cleanup = () => {
-    if (activeFreezePopup) {
-      activeFreezePopup.remove();
-      activeFreezePopup = null;
-    }
-    socket.off('game-update', cleanup);
-    socket.off('cancel-freeze', cleanup);
-  };
-
-  socket.once('game-update', cleanup);
-  socket.once('cancel-freeze', cleanup);
 }
 
 // Update showRemoveCardPopup function to properly display special cards
@@ -2717,44 +2514,6 @@ function playSound(soundId) {
         sound.volume = 0.5; // Set volume to 50%
         sound.currentTime = 0; // Reset sound to start
         sound.play().catch(e => console.log('Sound play failed:', e));
-    }
-}
-
-// Add sound toggle functionality
-function toggleSound() {
-    soundEnabled = !soundEnabled;
-    const icon = document.querySelector('.sound-toggle i');
-    icon.textContent = soundEnabled ? '🔊' : '🔇';
-    playSound('buttonClick');
-}
-
-// Remove sound from handleNumberCard since server will handle it
-function handleNumberCard(game, player, card) {
-    if (card === 0) {
-        // Zero card can't cause a bust and can be held multiple times
-        player.regularCards.push(card);
-        // Add 15 bonus points if player reaches 7 cards in one turn
-        if (player.regularCards.length === MAX_REGULAR_CARDS) {
-            player.status = 'stood';
-            player.totalScore += 15; // Add bonus points
-        }
-    } else if (player.regularCards.includes(card)) {
-        const scIndex = player.specialCards.indexOf('SC');
-        if (scIndex > -1) {
-            player.specialCards.splice(scIndex, 1);
-            game.discardPile.push('SC');
-        } else {
-            player.status = 'busted';
-            player.bustedCard = card;
-            player.roundScore = 0;
-        }
-    } else {
-        player.regularCards.push(card);
-        // Add 15 bonus points if player reaches 7 cards in one turn
-        if (player.regularCards.length === MAX_REGULAR_CARDS) {
-            player.status = 'stood';
-            player.totalScore += 15; // Add bonus points
-        }
     }
 }
 
