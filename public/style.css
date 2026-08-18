@@ -13,15 +13,72 @@
     --gradient-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     --card-gradient: linear-gradient(135deg, #e94560 0%, #c62f47 100%);
     --glow: 0 0 10px rgba(233, 69, 96, 0.5);
+
+    /* Solid stand-in for surfaces that normally rely on backdrop-filter.
+       Used by the @supports fallback below. */
+    --surface-solid: rgba(22, 33, 62, 0.95);
+
+    /* Spacing - 4px base. The odd values that used to appear inline
+       (0.35rem, 0.7rem, 0.9rem) round to the nearest step. */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+
+    /* Radius - derived from what the sheet actually used.
+       15px and 16px were indistinguishable in context and collapse to one step. */
+    --radius-xs: 5px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-pill: 999px;
+    --radius-circle: 50%;
+
+    /* Stacking. Seven named rungs replacing thirteen ad-hoc values that
+       reached 20001 purely to beat 20000. Gaps are deliberate - insert
+       between rungs rather than inventing a new magic number. */
+    --z-base: 0;        /* board, players, cards in hand */
+    --z-raised: 10;     /* hover lift, count badges */
+    --z-sticky: 100;    /* game header, deck area */
+    --z-controls: 200;  /* fixed HIT / Stand bar */
+    --z-overlay: 300;   /* scrim behind popups */
+    --z-popup: 400;     /* tutorial, round summary, target pickers */
+    --z-toast: 500;     /* transient notices, disconnect banner */
 }
 
+/* Without backdrop-filter a translucent surface just shows whatever is behind it,
+   unblurred, which makes text on these surfaces hard to read. This replaces the old
+   .blur-bg rule, which stopped matching anything when the JS that applied that class
+   was removed. No !important is needed: an @supports block and its plain counterpart
+   never both apply, so there is nothing here to out-rank. */
 @supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
-    .blur-bg {
-        background: rgba(22, 33, 62, 0.95) !important;
+    .game-container,
+    .game-header,
+    .game-code-display,
+    .controls,
+    .menu-container,
+    .waiting-screen,
+    .deck-stats-container,
+    .remaining-pile .regular-cards,
+    .remaining-pile .special-cards,
+    .remaining-card .card-count,
+    .select-card-popup .card-count,
+    .card-example,
+    .tab-button,
+    .tutorial-popup,
+    .tutorial-popup .popup-content,
+    .history-popup .popup-content,
+    .round-summary-popup .popup-content {
+        background: var(--surface-solid);
     }
 }
 
-html, body {
+html,
+body {
     width: 100%;
     height: 100%;
 }
@@ -265,7 +322,8 @@ body::before {
     box-sizing: border-box;
 }
 
-.header-left, .header-right {
+.header-left,
+.header-right {
     display: flex;
     align-items: center;
     height: 100%;
@@ -582,7 +640,8 @@ body::before {
 }
 
 /* Card and Empty Slot Styling */
-.card, .empty-slot {
+.card,
+.empty-slot {
     width: 45px;  /* Match special card width */
     height: 63px; /* Match special card height */
     border-radius: 8px;
@@ -608,7 +667,8 @@ body::before {
     align-items: center;
     justify-content: center;
     position: relative;
-    border: 2px solid;
+    border-width: 2px;
+    border-style: solid;
     font-size: 1.2rem;
     width: 45px;
     height: 63px;
@@ -616,44 +676,12 @@ body::before {
     margin: 0;
 }
 
-.card.special.adder {
-    background: #fbb03a !important;
-    border-color: #fbb03a;
-    color: white !important;
-}
-
-.card.special.multiplier {
-    background: #fbb03a !important;
-    border-color: #fbb03a;
-    color: white !important;
-}
-
-.card.special.swap-card {
-    background: #42ae5d !important;
-    border-color: #42ae5d;
-    color: white !important;
-}
-
-.card.special.second-chance {
-    background: #e74c3c !important; /* Red color */
-    border-color: #c0392b !important;
-}
-
-.card.special.freeze {
-    background: #3498db !important; /* Blue color */
-    border-color: #2980b9 !important;
-}
-
 /* Second Chance Card Styling */
-.card.special.second-chance, 
-.discard-card.special.second-chance {
-    background: var(--highlight) !important;
-    color: white !important;
+.card.special.second-chance {
     position: relative;
 }
 
-.card.special.second-chance::before,
-.discard-card.special.second-chance::before {
+.card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "";
@@ -663,15 +691,11 @@ body::before {
 }
 
 /* Player & Discard Shared Styles */
-.card.special.second-chance, 
-.discard-card.special.second-chance {
-    background: var(--highlight) !important;
-    color: white !important;
+.card.special.second-chance {
     position: relative;
 }
 
-.card.special.second-chance::before,
-.discard-card.special.second-chance::before {
+.card.special.second-chance::before {
     text-shadow: none !important;
     filter: none !important;
     content: "";
@@ -681,20 +705,17 @@ body::before {
 }
 
 /* Used State for Both */
-.card.special.sc-used,
-.discard-card.special.sc-used {
+.card.special.sc-used {
     background: #95a5a6;
     opacity: 0.7;
 }
 
-.card.special.sc-used::before,
-.discard-card.special.sc-used::before {
+.card.special.sc-used::before {
     content: "🛡️❌";
     filter: grayscale(1);
 }
 
-.card.special.freeze::before,
-.discard-card.special.freeze::before {
+.card.special.freeze::before {
     content: "" !important; /* Single emoji */
     font-size: 1.8rem;
     position: absolute;
@@ -725,7 +746,7 @@ body::before {
     justify-content: center;
     align-items: center;
     gap: 1.2rem;
-    z-index: 1000;
+    z-index: var(--z-controls);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
@@ -853,7 +874,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -974,7 +995,7 @@ body::before {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 2rem;
     border: none;
     border-radius: 15px;
@@ -1010,7 +1031,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -1142,80 +1163,6 @@ body::before {
     border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
-.last-card.regular-card {
-    background: white !important;
-    color: #1a1a2e !important;
-    border: 2px solid #16213e !important;
-}
-
-.last-card.special {
-    color: white !important;
-}
-
-/* Special Card Styles for Last Card Drawn */
-.last-card.special.second-chance { 
-    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
-    border-color: #c0392b;
-}
-
-.last-card.special.freeze { 
-    background: linear-gradient(135deg, #3498db, #2980b9) !important;
-    border-color: #2980b9;
-}
-
-.last-card.special.draw-three { 
-    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
-    border-color: #f39c12;
-    color: #2c3e50 !important;
-}
-
-.last-card.special.steal-card { 
-    background: linear-gradient(135deg, #e67e22, #d35400) !important;
-    border-color: #d35400;
-    color: white !important;
-}
-
-.last-card.special.swap-card { 
-    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
-    border-color: #3a9a50;
-    color: white !important;
-}
-
-.last-card.special.remove-card {
-    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
-    border-color: #8e44ad !important;
-}
-
-.last-card.special.multiplier { 
-    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
-    border-color: #e9a232;
-    color: white !important;
-}
-
-.last-card.special.adder { 
-    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
-    border-color: #e9a232;
-    color: white !important;
-}
-
-.last-card.special.minus {
-    background: linear-gradient(135deg, #f1624f, #d95746) !important;
-    border-color: #d9574a !important;
-    color: white !important;
-}
-
-.last-card.special.divide {
-    background: linear-gradient(135deg, #f1624f, #d9574a) !important;
-    border-color: #d9574a !important;
-    color: white !important;
-}
-
-.last-card.special.select-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
-  border-color: #e74c3c !important;
-  color: white !important;
-}
-
 .no-card {
     color: rgba(255, 255, 255, 0.4);
     font-size: 1.5rem;
@@ -1282,13 +1229,6 @@ body::before {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Regular Number Cards */
-.remaining-card.regular-card {
-    background: white !important;
-    color: var(--text-dark) !important;
-    border: 2px solid var(--secondary);
-}
-
 /* Card Count Badge */
 .remaining-card .card-count {
     position: absolute;
@@ -1304,53 +1244,6 @@ body::before {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-}
-
-/* Special Cards Colors with Gradient */
-.remaining-card.special.second-chance { 
-    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
-    border-color: #c0392b;
-}
-
-.remaining-card.special.freeze { 
-    background: linear-gradient(135deg, #3498db, #2980b9) !important;
-    border-color: #2980b9;
-}
-
-.remaining-card.special.draw-three { 
-    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
-    border-color: #f39c12;
-    color: #2c3e50 !important;
-}
-
-.remaining-card.special.steal-card { 
-    background: linear-gradient(135deg, #e67e22, #d35400) !important;
-    border-color: #d35400;
-    color: white !important;
-}
-
-.remaining-card.special.swap-card { 
-    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
-    border-color: #3a9a50;
-    color: white !important;
-}
-
-.remaining-card.special.multiplier { 
-    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
-    border-color: #e9a232;
-    color: white !important;
-}
-
-.remaining-card.special.adder { 
-    background: linear-gradient(135deg, #fbb03a, #e9a232) !important;
-    border-color: #e9a232;
-    color: white !important;
-}
-
-.remaining-card.special.divide { 
-    background: linear-gradient(135deg, #f1624f, #d9574a) !important;
-    border-color: #d9574a;
-    color: white !important;
 }
 
 /* Regular Cards Section */
@@ -1393,13 +1286,6 @@ body::before {
     transform: translateY(-3px);
 }
 
-/* Regular Number Cards */
-.remaining-card.regular-card {
-    background: white !important;
-    color: var(--text-dark) !important;
-    border: 2px solid var(--secondary);
-}
-
 /* Card Count Badge */
 .remaining-card .discard-count {
     position: absolute;
@@ -1411,67 +1297,6 @@ body::before {
     padding: 2px 5px;
     border-radius: 3px;
     line-height: 1;
-}
-
-/* Regular Number Cards */
-.discard-card:not(.special) {
-    background: var(--text-light);
-    color: var(--text-dark);
-    font-size: 1.2rem;
-}
-
-/* Special Cards */
-.discard-card.special {
-    color: white;
-    font-size: 1.4rem;
-    font-weight: bold;
-    padding-top: 10px; /* Make space for symbol */
-    box-shadow: none !important;
-    background: var(--highlight) !important;
-    background: inherit !important; /* Keep original colors */
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.discard-card.special::before {
-    display: none; /* Remove the before pseudo-element */
-}
-
-/* Adder Cards (+ cards) */
-.discard-card.adder {
-    background: #fbb03a !important;
-    border-color: #e9a232 !important;
-    color: white !important;
-}
-
-/* Multiplier Cards (x cards) */
-.discard-card.multiplier {
-    background: #fbb03a !important;
-    border-color: #e9a232 !important;
-    color: white !important;
-}
-
-/* Second Chance Card */
-.discard-card.second-chance {
-    background: var(--highlight) !important;
-    color: white !important;
-    position: relative;
-    background: #e74c3c !important;
-    border-color: #c0392b !important;
-}
-
-/* Second Chance Icon */
-.discard-card.second-chance::before {
-    text-shadow: none !important;
-    filter: none !important;
-    content: "🛡️";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 1rem;
 }
 
 /* Card Count Badge */
@@ -1487,71 +1312,6 @@ body::before {
     line-height: 1;
 }
 
-/* Used Second Chance Card */
-.discard-card.sc-used {
-    background: #7f8c8d;
-    opacity: 0.7;
-}
-
-.discard-card.sc-used::before {
-    content: "❌";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.2rem;
-}
-
-/* Regular Number Cards */
-.discard-card:not(.special) {
-    background: #ffffff !important; /* White background */
-    color: var(--text-dark) !important; /* Dark text */
-    font-size: 1.2rem;
-    border: 2px solid var(--secondary);
-}
-
-/* Special Cards Symbols */
-.discard-card.adder::after {
-    display: none;
-}
-
-.discard-card.multiplier::after {
-    display: none;
-}
-
-/* Second Chance Card */
-.discard-card.second-chance::before {
-    text-shadow: none !important;
-    filter: none !important;
-    content: "🛡️";
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    font-size: 1rem;
-}
-
-/* Number in Special Cards */
-.discard-card.special::before {
-    content: attr(data-value);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.4rem;
-}
-
-.discard-card.special.freeze {
-  background: var(--highlight) !important;
-  color: white !important;
-}
-
-.discard-card.special.freeze::before {
-  text-shadow: none !important;
-  filter: none !important;
-  content: "❄️" !important;
-  font-size: 1.4rem;
-}
-
 /* Round Summary Popup */
 .round-summary-popup {
     position: fixed;
@@ -1565,7 +1325,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -1750,20 +1510,6 @@ body::before {
     min-height: 100px;
 }
 
-.discard-card.special {
-    position: relative;
-    padding-top: 15px;
-}
-
-.discard-card.special::before {
-    content: attr(data-value);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.2rem;
-}
-
 .status-info {
     display: flex;
     flex-direction: column;
@@ -1789,7 +1535,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -1845,49 +1591,12 @@ body::before {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Fix Second Chance color */
-.card.special.second-chance, 
-.discard-card.special.second-chance {
-  background: #e74c3c !important; /* Red color */
-  border-color: #c0392b !important;
-}
-
-/* Freeze card styling */
-.card.special.freeze,
-.discard-card.special.freeze {
-  background: #3498db !important; /* Blue color */
-  border-color: #2980b9 !important;
-}
-
-.card.special.second-chance::before,
-.discard-card.special.second-chance::before {
+.card.special.second-chance::before {
   content: "" !important;
 }
 
-.card.special.freeze::before,
-.discard-card.special.freeze::before {
+.card.special.freeze::before {
   content: "" !important;
-}
-
-/* Ensure discard cards show symbols */
-.discard-card.special {
-  font-size: 1.4rem;
-  padding-top: 0 !important;
-}
-
-.discard-card.special::before {
-  position: absolute;
-  bottom: 5px;
-  right: 5px;
-  font-size: 1rem;
-}
-
-/* Draw Three Card Styling */
-.card.special.draw-three,
-.discard-card.special.draw-three {
-    background: #f1c40f !important;
-    border-color: #f39c12 !important;
-    color: #2c3e50 !important;
 }
 
 .draw-three-indicator {
@@ -1913,7 +1622,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-popup);
   padding: 20px;
   pointer-events: auto;
   overflow: auto;
@@ -1975,16 +1684,6 @@ body::before {
   100% { opacity: 0.6; }
 }
 
-/* Regular Number Cards in Discard */
-.discard-card.regular-card {
-  background: var(--text-light) !important;
-  color: var(--text-dark) !important;
-  border: 2px solid var(--secondary);
-  font-weight: bold;
-  font-size: 1.2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
 /* Enhanced Menu Styling */
 .menu-container {
     background: rgba(22, 33, 62, 0.8);
@@ -2014,7 +1713,8 @@ body::before {
     width: 100%;
 }
 
-.lobby-button, .lobby-input {
+.lobby-button,
+.lobby-input {
     width: 100%;
     max-width: none;
     height: 50px;
@@ -2044,7 +1744,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-controls);
     padding: 0;
 }
 
@@ -2081,7 +1781,7 @@ body::before {
     border: none;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(233, 69, 96, 0.5);
-    z-index: 1001;
+    z-index: var(--z-controls);
     transition: all 0.2s ease;
     padding: 0;
     line-height: 1;
@@ -2182,17 +1882,6 @@ body::before {
 
 .card-table td:last-child {
     color: rgba(255, 255, 255, 0.9);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .tutorial-popup .tutorial-section {
@@ -2347,77 +2036,6 @@ body::before {
     opacity: 1;
 }
 
-/* Card colors within tutorial */
-.tutorial-popup .card.special.select-card {
-    background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
-    border-color: #e74c3c !important;
-    color: white !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.second-chance {
-    background: #e74c3c !important;
-    border-color: #c0392b !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.freeze {
-    background: #3498db !important;
-    border-color: #2980b9 !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.draw-three {
-    background: #f1c40f !important;
-    border-color: #f39c12 !important;
-    color: #2c3e50 !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.remove-card {
-    background: #9b59b6 !important;
-    border-color: #8e44ad !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.steal-card {
-    background: #e67e22 !important;
-    border-color: #d35400 !important;
-    color: white !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.swap-card {
-    background: #42ae5d !important;
-    border-color: #3a9a50 !important;
-    color: white !important;
-    font-size: 1.8rem;
-}
-
-.tutorial-popup .card.special.adder {
-    background: #fbb03a !important;
-    border-color: #e9a232 !important;
-    color: white !important;
-}
-
-.tutorial-popup .card.special.minus {
-    background: #f1624f !important;
-    border-color: #d9574a !important;
-    color: white !important;
-}
-
-.tutorial-popup .card.special.multiplier {
-    background: #fbb03a !important;
-    border-color: #e9a232 !important;
-    color: white !important;
-}
-
-.tutorial-popup .card.special.divide {
-    background: #f1624f !important;
-    border-color: #d9574a !important;
-    color: white !important;
-}
-
 /* Mobile adjustments for tutorial popup */
 @media screen and (max-width: 430px) {
     .tutorial-popup .popup-content {
@@ -2461,8 +2079,6 @@ body::before {
 
 /* Update Regular Cards */
 .card:not(.special) {
-    background: var(--text-light) !important;
-    color: var(--text-dark) !important;
     font-weight: bold;
     border: 2px solid var(--secondary);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -2620,7 +2236,7 @@ body::before {
     padding: 2rem;
     border-radius: 15px;
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
-    z-index: 1000;
+    z-index: var(--z-controls);
     width: 90%;
     max-width: 500px;
     text-align: center;
@@ -2715,43 +2331,6 @@ body::before {
     to { transform: rotate(360deg); }
 }
 
-/* Add to special card styles */
-.card.special.remove-card,
-.discard-card.special.remove-card {
-    background: #9b59b6 !important;
-    border-color: #8e44ad !important;
-    color: white !important;
-}
-
-.card.special.steal-card,
-.discard-card.special.steal-card {
-    background: #e67e22 !important;
-    border-color: #d35400 !important;
-    color: white !important;
-}
-
-.card.special.swap-card,
-.discard-card.special.swap-card {
-    background: #42ae5d !important;
-    border-color: #42ae5d !important;
-    color: white !important;
-}
-
-.remaining-card.special.remove-card {
-    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
-    border-color: #8e44ad !important;
-}
-
-.remaining-card.special.steal-card {
-    background: linear-gradient(135deg, #e67e22, #d35400) !important;
-    border-color: #d35400 !important;
-}
-
-.remaining-card.special.swap-card {
-    background: linear-gradient(135deg, #42ae5d, #3a9a50) !important;
-    border-color: #3a9a50 !important;
-}
-
 /* Remove cancel button styles */
 .cancel-freeze,
 .cancel-draw-three,
@@ -2772,7 +2351,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-popup);
   padding: 20px;
   pointer-events: auto;
   overflow: auto;
@@ -2792,7 +2371,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -2920,44 +2499,23 @@ body::before {
   background: white;
 }
 
-.remove-card-popup .card-button.special,
-.steal-card-popup .card-button.special {
-  color: white;
-}
-
 /* Minus cards (- cards) */
 .card.special.minus,
-.remaining-card.special.minus,
-.discard-card.special.minus {
-    background: #f1624f !important;
-    border-color: #d9574a !important;
-    color: white !important;
+.remaining-card.special.minus {
     text-shadow: none !important;
 }
 
 /* Divide card styling */
 .card.special.divide,
-.remaining-card.special.divide,
-.discard-card.special.divide {
-    background: #f1624f !important;
-    border-color: #d9574a !important;
-    color: white !important;
+.remaining-card.special.divide {
     text-shadow: none !important;
 }
 
 /* Update remove card popup card styles */
 .remove-card-popup .card-button.special,
 .steal-card-popup .card-button.special {
-    color: white;
     font-weight: bold;
-    text-shadow: none;
-}
-
-.remove-card-popup .card-button.special.minus,
-.steal-card-popup .card-button.special.minus {
-    background: #2c3e50 !important;
-    border-color: #34495e !important;
-}
+    text-shadow: none;}
 
 /* Swap Card Popup Styles */
 .swap-card-popup {
@@ -2972,7 +2530,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: var(--z-popup);
     padding: 20px;
     pointer-events: auto;
     overflow: auto;
@@ -3049,10 +2607,8 @@ body::before {
 }
 
 .swap-card-popup .card-button.special {
-    color: white;
     font-weight: bold;
-    text-shadow: none;
-}
+    text-shadow: none;}
 
 .swap-card-popup .card-button.swap-selectable.selected {
     transform: scale(1.1);
@@ -3225,7 +2781,7 @@ body::before {
 /* Popup Target Buttons */
 .freeze-target,
 .draw-three-target,
-.remove-card-popup .card-button {
+.remove-card-popup .card-button.regular {
     width: 100%;
     padding: 1.2rem;
     margin: 0.5rem 0;
@@ -3300,67 +2856,12 @@ draw-three-target.self-target:hover {
     padding: 0;
     width: 50px;
     height: 70px;
+    border: none;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
-}
-
-.remove-card-popup .card-button.special.adder,
-.steal-card-popup .card-button.special.adder {
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.multiplier,
-.steal-card-popup .card-button.special.multiplier {
-    background: #27ae60 !important;
-    border-color: #219a52 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.second-chance,
-.steal-card-popup .card-button.special.second-chance {
-    background: #e74c3c !important;
-    border-color: #c0392b !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.freeze,
-.steal-card-popup .card-button.special.freeze {
-    background: #3498db !important;
-    border-color: #2980b9 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.draw-three,
-.steal-card-popup .card-button.special.draw-three {
-    background: #f1c40f !important;
-    border-color: #f39c12 !important;
-    color: #2c3e50 !important;
-}
-
-.remove-card-popup .card-button.special.steal-card,
-.steal-card-popup .card-button.special.steal-card {
-    background: #e67e22 !important;
-    border-color: #d35400 !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.minus,
-.steal-card-popup .card-button.special.minus {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
-    color: white !important;
-}
-
-.remove-card-popup .card-button.special.divide,
-.steal-card-popup .card-button.special.divide {
-    background: #1a1a1a !important;
-    border-color: #34495e !important;
-    color: white !important;
-}
+    font-size: 1.4rem;}
 
 /* Regular cards in remove-card popup */
 .remove-card-popup .card-button.regular,
@@ -3686,16 +3187,11 @@ draw-three-target.self-target:hover {
 
 /* Select Card Styling - Updated with more subtle gradient */
 .card.special.select-card,
-.discard-card.special.select-card,
 .remaining-card.special.select-card {
-  background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important;
-  border-color: #e74c3c !important;
-  color: white !important;
   position: relative;
 }
 
 .card.special.select-card::before,
-.discard-card.special.select-card::before,
 .remaining-card.special.select-card::before {
   content: "🃏" !important;
   font-size: 1.8rem;
@@ -3718,7 +3214,7 @@ draw-three-target.self-target:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-popup);
   padding: 20px;
   pointer-events: auto;
   overflow: auto;
@@ -3989,19 +3485,8 @@ h3 span.emoji {
 }
 
 /* Special card styling within select popup */
-.select-card-popup .card-button.special {
-  color: white !important; /* Ensure text is white for most special cards */
-  border-width: 2px;
-}
-
-/* Specific card type styling overrides */
-.select-card-popup .card-button.special.multiplier {
-  color: var(--text-dark) !important; /* Black text for multiplier cards */
-}
-
-.select-card-popup .card-button.special.minus {
-  color: white !important; /* White text for minus cards */
-}
+.select-card-popup .card-button.special { /* Ensure text is white for most special cards */
+  border-width: 2px;}
 
 .select-card-popup .card-count {
   position: absolute;
@@ -4041,7 +3526,7 @@ h3 span.emoji {
     display: flex;
     align-items: center;
     gap: 8px;
-    z-index: 1100;
+    z-index: var(--z-overlay);
     margin-top: 20px; /* Add top margin for spacing */
 }
 
@@ -4063,8 +3548,6 @@ h3 span.emoji {
 
 /* Update Regular Cards */
 .card:not(.special) {
-    background: var(--text-light) !important;
-    color: var(--text-dark) !important;
     font-weight: bold;
     border: 2px solid var(--secondary);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -4081,7 +3564,7 @@ h3 span.emoji {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 3000;
+    z-index: var(--z-overlay);
     max-width: min(90%, 480px);
     padding: 0.9rem 1.4rem;
     border-radius: 10px;
@@ -4126,7 +3609,7 @@ h3 span.emoji {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-controls);
     padding: 1rem;
 }
 
@@ -4300,21 +3783,6 @@ h3 span.emoji {
     vertical-align: middle;
 }
 
-.history-card.second-chance { background: #e74c3c; color: #fff; }
-.history-card.freeze { background: #3498db; color: #fff; }
-.history-card.draw-three { background: #f1c40f; color: #2c3e50; }
-.history-card.remove-card { background: #9b59b6; color: #fff; }
-.history-card.steal-card { background: #e67e22; color: #fff; }
-.history-card.swap-card { background: #42ae5d; color: #fff; }
-.history-card.select-card {
-    background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
-    color: #fff;
-}
-.history-card.adder,
-.history-card.multiplier { background: #fbb03a; color: #fff; }
-.history-card.minus,
-.history-card.divide { background: #f1624f; color: #fff; }
-
 /* ---------------------------------------------------------------------------
    Disconnects: the round is held open until everyone is back
    --------------------------------------------------------------------------- */
@@ -4333,7 +3801,7 @@ h3 span.emoji {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20000;
+    z-index: var(--z-toast);
     padding: 1rem;
 }
 
@@ -4445,7 +3913,7 @@ h3 span.emoji {
     border: 2px solid var(--highlight);
     border-radius: 12px;
     padding: 0.85rem 1.25rem;
-    z-index: 20001;
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
@@ -4584,14 +4052,762 @@ h3 span.emoji {
 }
 
 /* The browser hides [hidden] elements with `display: none`, but that rule is a bare
-   attribute selector - the same specificity as a class, so any `display` set on the same
-   element here would win just by being defined later and it would never hide. */
-.lobby-error[hidden] {
-    display: none !important;
+   attribute selector - the same specificity as a class, so any `display` set on the
+   same element would win just by being defined later, and the element would never
+   hide. Declaring the guard once here, after the component layer, covers every
+   element the JS toggles instead of relying on each component to remember. The
+   compound selectors match a class as well, so they out-rank a single class. */
+[hidden],
+.card[hidden],
+.lobby-error[hidden],
+.game-container[hidden],
+.controls[hidden] {
+    display: none;
 }
 
 .field-hint {
     color: rgba(255, 255, 255, 0.45);
     font-size: 0.75rem;
     line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Card appearance
+   ---------------------------------------------------------------------------
+   Colour and geometry are independent, so they are set independently:
+
+     colour   <- [data-card-type="<type>"]   assigned by client.js (el.dataset.cardType)
+     geometry <- the context class      .card / .remaining-card / .last-card /
+                                        .history-card / .card-button
+
+   Adding a card type means adding one block here. Nothing else in this file and
+   nothing in client.js needs to know about it.
+
+   This block sits at the end of the file on purpose: the context rules above set
+   `border` as a shorthand, which would otherwise reset the border-color set here.
+   --------------------------------------------------------------------------- */
+
+/* The defaults live in the var() fallbacks rather than as declarations here, so
+   that this rule can carry the specificity needed to beat the context rules
+   without also out-ranking the per-type blocks below. A number card matches no
+   per-type block and lands on the fallbacks. */
+.card[data-card-type],
+.remaining-card[data-card-type],
+.last-card[data-card-type],
+.history-card[data-card-type],
+.card-button[data-card-type] {
+    background: var(--card-face, var(--primary));
+    border-color: var(--card-edge, var(--secondary));
+    color: var(--card-ink, var(--text-dark));
+}
+
+[data-card-type="second-chance"] { --card-face: #e74c3c; --card-face-2: #c0392b; --card-edge: #c0392b; --card-ink: #fff; }
+[data-card-type="freeze"]        { --card-face: #3498db; --card-face-2: #2980b9; --card-edge: #2980b9; --card-ink: #fff; }
+[data-card-type="draw-three"]    { --card-face: #f1c40f; --card-face-2: #f39c12; --card-edge: #f39c12; --card-ink: #2c3e50; }
+[data-card-type="remove-card"]   { --card-face: #9b59b6; --card-face-2: #8e44ad; --card-edge: #8e44ad; --card-ink: #fff; }
+[data-card-type="steal-card"]    { --card-face: #e67e22; --card-face-2: #d35400; --card-edge: #d35400; --card-ink: #fff; }
+[data-card-type="swap-card"]     { --card-face: #42ae5d; --card-face-2: #3a9a50; --card-edge: #3a9a50; --card-ink: #fff; }
+[data-card-type="adder"]         { --card-face: #fbb03a; --card-face-2: #e9a232; --card-edge: #e9a232; --card-ink: #fff; }
+[data-card-type="multiplier"]    { --card-face: #fbb03a; --card-face-2: #e9a232; --card-edge: #e9a232; --card-ink: #fff; }
+[data-card-type="minus"]         { --card-face: #f1624f; --card-face-2: #d9574a; --card-edge: #d9574a; --card-ink: #fff; }
+[data-card-type="divide"]        { --card-face: #f1624f; --card-face-2: #d9574a; --card-edge: #d9574a; --card-ink: #fff; }
+
+/* The one type whose face is a gradient in every context, so it opts out of the
+   flat/lifted distinction below by setting both faces to the same thing. */
+[data-card-type="select-card"] {
+    --card-face: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    --card-face-lift: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    --card-edge: #e74c3c;
+    --card-ink: #fff;
+}
+
+/* "Last card drawn" is the one panel that lifts the flat face into a gradient.
+   One rule covers all twelve types. */
+.last-card[data-card-type] {
+    background: var(--card-face-lift,
+        linear-gradient(135deg,
+            var(--card-face, var(--primary)),
+            var(--card-face-2, var(--primary))));
+}
+
+
+/* ===========================================================================
+   RESPONSIVE
+   ---------------------------------------------------------------------------
+   Merged from the former mobile.css. That file was linked after this one, so
+   its rules won ties on source order; appending them here in the same order
+   preserves that exactly while removing a stylesheet and a request.
+
+   Breakpoints in use:
+     max-width: 430px                      phones
+     431px - 767px                         large phones / small tablets
+     max-width: 932px and (landscape)      phones held sideways
+     min-width: 768px                      tablet and up
+   =========================================================================== */
+/* Mobile-specific styles (max-width: 430px for iPhone 14 Pro Max) */
+@media screen and (max-width: 430px) {
+    /* Reset body for mobile */
+    body {
+        padding: 0;
+        margin: 0;
+        width: 100vw;
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+        align-items: stretch; /* let containers fill width to avoid centering offsets */
+    }
+
+    /* Lobby Screen Adjustments */
+    .lobby-screen {
+        padding: 1rem;
+        margin-top: 1rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .game-logo {
+        margin: 1rem 0;
+    }
+
+    .logo-image {
+        width: 80px;
+        height: 80px;
+    }
+
+    .game-logo .hit {
+        font-size: 4rem;
+    }
+
+    /* Menu Container */
+    .menu-container {
+        padding: 1.5rem;
+        margin: 1rem;
+        width: auto;
+    }
+
+    .header-left {
+        flex: 0 0 auto;
+        min-width: 80px;
+        display: flex !important;
+        align-items: center;
+    }
+
+    .header-left .game-logo {
+        font-size: 1.5rem;
+        display: flex !important;
+        justify-content: flex-start;
+    }
+
+    .header-left .logo-image {
+        height: 48px;
+        width: auto;
+    }
+
+    /* Ensure header is visible and sized correctly on mobile */
+    .game-header {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        padding: 0.5rem 0.75rem;
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Make logo smaller and centered on very small screens */
+    .header-left .logo-image {
+        height: 44px;
+    }
+
+    .header-right {
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: flex-end; /* keep buttons on the right */
+        gap: 0.5rem;
+        padding-top: 0.5rem;
+        display: flex !important;
+        align-items: center;
+        flex-wrap: wrap; /* Allow buttons to wrap to next line instead of hiding */
+        z-index: var(--z-sticky); /* ensure buttons sit above other header layers */
+    }
+
+    .header-right .game-button {
+        padding: 0.5rem 0.7rem;
+        min-width: auto;
+        font-size: 0.75rem;
+        height: 35px;
+        white-space: nowrap;
+        gap: 0.35rem;
+    }
+
+    /* Three buttons plus the share link do not fit across a phone header, and a
+       wrapped row spills past the header background. The scroll icon carries the
+       meaning on its own, so the word is dropped here. */
+    .header-right .game-button .button-label {
+        display: none;
+    }
+
+    .game-header .game-code-display {
+        /* Keep the game-code display available on mobile but compact it */
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-right: 0.25rem;
+        font-size: 0.9rem;
+        opacity: 0.95;
+    }
+
+    /* Ensure header buttons remain visible and usable on small screens */
+    .header-right .game-button {
+        display: inline-flex !important;
+        box-sizing: border-box;
+    }
+
+    /* Game Container */
+    .game-container {
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        height: calc(100vh - 70px); /* Account for fixed controls */
+        overflow-y: auto;
+        max-height: calc(100vh - 70px); /* Account for header and controls */
+    }
+
+    .game-board {
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow: visible;
+        max-height: none;
+    }
+
+    /* Deck Area */
+    .deck-area {
+        flex-direction: column;
+        gap: 1rem;
+        margin: 0.5rem 0;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .deck-count {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 1.1rem;
+    }
+
+    /* Players Container */
+    .players-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 80px;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-y: visible;
+        padding: 0.5rem 0 !important;
+        max-height: none;
+        align-items: center !important; /* center player boxes horizontally */
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .player {
+        min-width: unset;
+        width: calc(100% - 1rem);
+        max-width: 520px; /* constrain width on larger phones */
+        margin: 0.4rem auto; /* center each player card */
+        box-sizing: border-box;
+        padding: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        height: fit-content;
+        gap: 0.6rem;
+    }
+
+    .player.current-turn {
+        border: 2px solid var(--highlight) !important;
+        animation: border-pulse 2s infinite;
+    }
+
+    /* Card Grid */
+    .card-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.3rem;
+        padding: 0.3rem;
+        width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+    }
+
+    .card-grid.special {
+        background: rgba(15, 52, 96, 0.2);
+    }
+
+    .cards-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        margin: 0.5rem 0;
+    }
+
+    .cards-label {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+        margin: 0;
+    }
+
+    .card, .empty-slot {
+        width: 40px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    /* Special Cards */
+    .special-cards-container {
+        gap: 0.3rem;
+        padding: 0.5rem;
+        min-height: 40px; /* Ensure space for special cards */
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        overflow: visible;
+    }
+
+    .card.special {
+        width: 40px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    /* Controls */
+    .controls {
+        height: 60px;
+        padding: 0.5rem;
+        gap: 0.8rem;
+    }
+
+    .game-button {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        min-width: 100px;
+        height: 40px;
+    }
+
+    /* Popups */
+    .winner-popup,
+    .round-summary-popup,
+    .freeze-popup,
+    .draw-three-popup,
+    .tutorial-popup,
+    .info-popup {
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .popup-content {
+        padding: 1rem;
+    }
+
+    /* Tutorial Popup */
+    .tutorial-popup {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        padding: 1rem;
+        box-sizing: border-box;
+    }
+
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Waiting Screen */
+    .waiting-screen {
+        width: 90%;
+        max-height: 80vh;
+        padding: 1rem;
+    }
+
+    /* Tutorial Popup - Full Screen Mobile */
+    .tutorial-popup {
+        padding: 0;
+    }
+
+    .tutorial-popup .popup-content {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .tutorial-popup .tutorial-title {
+        font-size: 1.4rem;
+        margin: 0.8rem 0 0.5rem 0;
+        padding: 0 1rem;
+    }
+
+    .tutorial-popup .tutorial-content {
+        padding: 0 1rem 5rem 1rem;
+    }
+
+    .tutorial-popup .tutorial-section h3 {
+        font-size: 1rem;
+        margin: 0.8rem 0 0.3rem 0;
+    }
+
+    .tutorial-popup .tutorial-section p {
+        font-size: 0.85rem;
+        margin: 0.3rem 0;
+    }
+
+    .tutorial-popup .tutorial-section ul {
+        font-size: 0.8rem;
+        padding-left: 1rem;
+        margin: 0.4rem 0;
+    }
+
+    .tutorial-popup .tutorial-section li {
+        margin: 0.2rem 0;
+        line-height: 1.2;
+    }
+
+    .card-table {
+        font-size: 0.75rem;
+        margin: 0.6rem 0;
+    }
+
+    .card-table td {
+        padding: 0.4rem;
+    }
+
+    /* History Log - full screen on mobile like the tutorial */
+    .history-popup {
+        padding: 0;
+    }
+
+    .history-popup .popup-content {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 0;
+    }
+
+    .history-popup .history-title {
+        font-size: 1.25rem;
+        margin: max(0.9rem, env(safe-area-inset-top)) 3.5rem 0.6rem 3.5rem;
+    }
+
+    .history-popup .history-content {
+        padding: 0 0.75rem 4rem 0.75rem;
+    }
+
+    .history-entry {
+        font-size: 0.82rem;
+        padding: 0.45rem 0.5rem;
+    }
+
+    .history-card {
+        min-width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.78rem;
+    }
+
+    /* Round Summary */
+    .round-summary-popup .popup-content {
+        padding: 1rem;
+    }
+
+    .player-summary {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .summary-scores {
+        width: 100%;
+    }
+
+    /* Remaining Pile */
+    .remaining-pile {
+        padding: 0.8rem;
+    }
+
+    .remaining-card {
+        width: 40px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    /* Share Link */
+    .share-link-input {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    /* Scores Section */
+    .scores {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.3rem;
+        padding: 0.5rem;
+    }
+
+    .score-box {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .score-value {
+        font-size: 1rem;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.7rem;
+    }
+
+    /* Player Header */
+    .player-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .player-header h3 {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Player Status */
+    .player-status {
+        padding: 0.8rem;
+        margin: 0.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .status-icon {
+        font-size: 1.4rem;
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Freeze and Draw Three Indicators */
+    .draw-three-indicator,
+    .second-chance-indicator {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.8rem;
+    }
+
+    /* Fixed positioning for Safari notch */
+    @supports (padding-top: env(safe-area-inset-top)) {
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .controls {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+        }
+    }
+
+    /* Remove Card Popup Mobile Styles */
+    .remove-card-popup {
+        width: 95%;
+        padding: 1rem;
+    }
+
+    .remove-card-popup .card-button {
+        width: 40px;
+        height: 56px;
+        font-size: 1rem;
+    }
+
+    .remove-card-popup .player-section {
+        padding: 0.8rem;
+    }
+
+    .remove-card-popup .cards-list {
+        gap: 0.3rem;
+    }
+
+    .remove-card-popup h3 {
+        font-size: 1.2rem;
+    }
+
+    .cards-section {
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+
+    .cards-label {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+    }
+
+    .cards-section {
+        gap: 0.8rem;
+        margin: 0.8rem 0;
+    }
+
+    .card-grid {
+        padding: 0.8rem;
+        gap: 0.3rem;
+    }
+
+    .card-grid .card,
+    .card-grid .empty-slot {
+        font-size: 0.9rem;
+    }
+
+    .player {
+        padding: 0.8rem;
+    }
+
+    .player-header h3 {
+        font-size: 1rem;
+    }
+
+    .scores {
+        gap: 0.3rem;
+        padding: 0.5rem;
+    }
+
+    .score-box {
+        padding: 0.3rem;
+        font-size: 0.8rem;
+    }
+
+    .score-value {
+        font-size: 1rem;
+    }
+
+    .tutorial-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tab-button {
+        flex: 1;
+        min-width: 70px;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+
+    .card-example {
+        padding: 0.8rem;
+    }
+
+    .card-explanation {
+        font-size: 0.85rem;
+    }
+
+    .tutorial-popup .close-button {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.5rem;
+        top: max(1rem, env(safe-area-inset-top));
+        right: 1rem;
+    }
+}
+@media screen and (min-width: 431px) and (max-width: 767px) {
+    /* Inherit most styles from smaller phones but adjust some dimensions */
+    .player {
+        min-width: unset;
+        width: calc(100% - 2rem);
+        margin: 1rem;
+    }
+
+    .card, .empty-slot, .card.special {
+        width: 45px;
+        height: 63px;
+    }
+
+    .controls {
+        height: 70px;
+    }
+
+    .game-button {
+        height: 50px;
+    }
+
+    .game-header {
+        height: auto;
+        min-height: 90px;
+        padding: 0.75rem;
+    }
+
+    .header-left .logo-image {
+        height: 60px;
+    }
+
+    .header-right {
+        flex-wrap: nowrap;
+    }
+}
+
+/* Landscape mode adjustments */
+@media screen and (max-width: 932px) and (orientation: landscape) {
+    .game-container {
+        height: auto;
+        min-height: calc(100vh - 60px);
+    }
+
+    .players-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .player {
+        width: calc(50% - 1.5rem);
+        min-width: unset;
+    }
+
+    .controls {
+        position: sticky;
+        bottom: 0;
+    }
+
+    .cards-section {
+        flex-direction: row;
+        gap: 0.8rem;
+    }
+
+    .cards-container {
+        flex: 1;
+    }
+
+    .card-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .game-header {
+        height: auto;
+        min-height: 70px;
+    }
+
+    .header-left .logo-image {
+        height: 45px;
+    }
+
+    .header-right {
+        flex: 1;
+        justify-content: flex-end;
+    }
 }
