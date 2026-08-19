@@ -2,6 +2,10 @@ const socket = io();
 let currentGameId = null;
 let isHost = false;
 const MAX_REGULAR_CARDS = 7;
+// Nothing caps how many special cards a hand can hold, so this is only how many
+// empty placeholders the special grid draws — enough to keep the box a stable
+// shape without padding it out to a full regular row of dead slots.
+const SPECIAL_CARD_SLOTS = 4;
 let activeFreezePopup = null;
 let activeDrawThreePopup = null;
 let soundEnabled = true;
@@ -1526,9 +1530,10 @@ function syncCardGrid(grid, cards, isSpecial, animate) {
     // Anything left in the pool was played, stolen, or discarded.
     pool.forEach(bucket => bucket.forEach(el => removeCard(el, animate)));
 
-    // Reuse the empty slots we already have and top up to a full row of seven.
+    // Reuse the empty slots we already have and top the grid up to its capacity.
     const slotQueue = slots.slice();
-    const needed = Math.max(0, MAX_REGULAR_CARDS - cards.length);
+    const capacity = isSpecial ? SPECIAL_CARD_SLOTS : MAX_REGULAR_CARDS;
+    const needed = Math.max(0, capacity - cards.length);
     const finalSlots = [];
     for (let i = 0; i < needed; i++) {
         finalSlots.push(slotQueue.shift() || buildSlot(isSpecial));

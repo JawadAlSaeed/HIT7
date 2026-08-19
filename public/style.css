@@ -467,32 +467,31 @@ body::before {
     }
 }
 
-/* Player Card - Updated for consistent sizing */
-.player {
-    flex: 0 0 calc(25% - 0.75rem);
-    min-width: 300px;
-    max-width: 450px; /* Added max-width to maintain consistency */
-    scroll-snap-align: center; /* Changed from start to center */
-    height: auto;
-    margin: 0 auto; /* Center individual players */
-    padding: 1rem;
-    gap: 0.5rem;
-    max-height: calc(100vh - 250px); /* Adjust based on other elements */
-}
+/* Player Card.
+   One block, one spacing scale. This used to be two .player rules fighting each
+   other, and the losing one still landed `max-height: calc(100vh - 250px)` with
+   no overflow rule — so on any short viewport the rounded background stopped
+   partway down and the card grids spilled out below the box. The panel hugs its
+   content instead; the scrolling belongs to .players-container and .my-hand.
 
+   Every gap inside the panel now comes from this flex `gap`, so the children
+   below carry no vertical margins of their own to double up with it. */
 .player {
     flex: 1;
-    min-width: 350px; /* Increased from 280px */
-    max-width: 450px; /* Increased from 400px */
+    min-width: 350px;
+    max-width: 450px;
+    scroll-snap-align: center;
+    margin: 0 auto;
+    padding: var(--space-4);
     background: rgba(22, 33, 62, 0.9);
-    padding: 1.2rem;
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(233, 69, 96, 0.2);
     height: fit-content;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: var(--space-3);
 }
 
 .player:hover {
@@ -555,15 +554,15 @@ body::before {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
     background: rgba(15, 52, 96, 0.5);
-    padding: 0.8rem;
-    border-radius: 12px;
-    margin: 0.8rem 0;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    margin: 0;
     border: 1px solid rgba(233, 69, 96, 0.1);
 }
 
 .score-box {
     text-align: center;
-    padding: 0.7rem;
+    padding: var(--space-2);
     background: rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     transition: transform 0.3s ease;
@@ -584,13 +583,15 @@ body::before {
     text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
 }
 
+/* Sits inside .player-header, which has no gap of its own, so the top margin
+   is what separates it from the name. */
 .player-status {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin: 1rem 0;
-    padding: 1rem;
-    border-radius: 12px;
+    gap: var(--space-3);
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
     background: rgba(15, 52, 96, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -628,15 +629,19 @@ body::before {
     display: inline-block;
 }
 
-/* Card Grid and Slots */
+/* Card Grid and Slots.
+   No margin here: this rule is overridden further down by one that sets
+   width:100%, and a margin on top of that pushed the grid 8px past the panel
+   on both sides — the right-hand column was clipped and the left had a double
+   gap. Spacing between the grids comes from .cards-section's gap. */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(7, 45px); /* Exactly 7 slots of 45px each */
-    gap: 0.5rem;
-    margin: 0.5rem;
-    padding: 0.5rem;
+    grid-template-columns: repeat(7, 45px);
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-2);
     background: rgba(15, 52, 96, 0.3);
-    border-radius: 15px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     justify-content: center;
@@ -2679,8 +2684,8 @@ body::before {
 .cards-section {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    margin: 1rem 0;
+    gap: var(--space-3);
+    margin: 0;
     flex-shrink: 1;
     min-width: 0;
 }
@@ -2697,29 +2702,54 @@ body::before {
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 0.8rem;
+    padding: var(--space-2);
     background: rgba(15, 52, 96, 0.5);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(233, 69, 96, 0.2);
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-2);
     text-align: center;
 }
 
 .card-grid {
+    --cols: 7;
+    --cell-gap: var(--space-2);
+    --cell: calc((100% - (var(--cols) - 1) * var(--cell-gap)) / var(--cols));
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    padding: 1rem;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: var(--cell-gap);
+    padding: var(--space-2);
     background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid rgba(233, 69, 96, 0.2);
     min-width: 0;
     width: 100%;
     box-sizing: border-box;
 }
 
+/* A card is one grid cell, same as an empty slot. The 45x63 the first block
+   above hands it is a floor for the old fixed-column layout only; in the 1fr
+   grid the two have to agree or the cards sit narrower than the gaps between
+   the slots they replace. */
+.card-grid .card {
+    width: auto;
+    height: auto;
+    aspect-ratio: 5 / 7;
+    min-width: 0;
+    /* .card.special carries `margin: 0 3px` for the contexts where it is laid
+       out inline; inside a grid track that just makes the special cards 6px
+       narrower than the slots they sit next to. */
+    margin: 0;
+}
+
+/* Special cards top up to four placeholders, not seven — nothing about the game
+   caps them at seven, and drawing a full regular-sized row of empties left a
+   tall dead box under every hand (two ragged rows of it on a phone). auto-fit
+   collapses the tracks the four do not use, so the row stays centred and the
+   cells stay exactly the size of a regular card. */
 .card-grid.special {
     background: rgba(15, 52, 96, 0.2);
+    grid-template-columns: repeat(auto-fit, var(--cell));
+    justify-content: center;
 }
 
 .empty-slot {
@@ -4338,8 +4368,7 @@ h3 span.emoji {
 
     /* Card Grid */
     .card-grid {
-        grid-template-columns: repeat(7, 1fr);
-        gap: 0.3rem;
+        --cell-gap: 0.3rem;
         padding: 0.3rem;
         width: 100%;
         box-sizing: border-box;
@@ -4658,8 +4687,8 @@ h3 span.emoji {
     }
 
     .card-grid {
+        --cell-gap: 0.3rem;
         padding: 0.8rem;
-        gap: 0.3rem;
     }
 
     .card-grid .card,
@@ -4797,7 +4826,7 @@ h3 span.emoji {
     }
 
     .card-grid {
-        grid-template-columns: repeat(4, 1fr);
+        --cols: 4;
     }
 
     .game-header {
@@ -5523,8 +5552,8 @@ h3 span.emoji {
     /* Four columns instead of seven. At 360px that takes a card from 41px to
        74px, which is the difference between guessing and reading. */
     .my-hand .card-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 7px;
+        --cols: 4;
+        --cell-gap: 7px;
         padding: 8px;
         width: 100%;
         /* The base rule's `margin: 0.5rem` plus `width: 100%` pushed the grid
@@ -5808,8 +5837,8 @@ h3 span.emoji {
     }
 
     .player-sheet .card-grid {
-        grid-template-columns: repeat(7, 1fr);
-        gap: 5px;
+        --cols: 7;
+        --cell-gap: 5px;
     }
 
     .player-sheet .card,
@@ -6020,7 +6049,7 @@ h3 span.emoji {
     .deck-button { padding: 0 6px; gap: 3px; }
     .deck-button-label { display: none; }
 
-    .my-hand .card-grid { gap: 5px; padding: 6px; }
+    .my-hand .card-grid { --cell-gap: 5px; padding: 6px; }
 
     .share-link { display: none; }
 
@@ -6060,7 +6089,8 @@ h3 span.emoji {
     /* Height is the scarce axis here, so spend width instead of stacking — but
        a fixed 7 columns squeezed cards to 33px once the two grids sat side by
        side. auto-fill holds a floor and wraps instead of shrinking past it. */
-    .my-hand .card-grid {
+    .my-hand .card-grid,
+    .my-hand .card-grid.special {
         grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
     }
 
@@ -6144,4 +6174,18 @@ h3 span.emoji {
     background: var(--secondary);
     border-color: var(--highlight);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   Big phones and small tablet windows still get the phone layout, but not the
+   phone's card size. Four columns was sized for a 360px screen; at 600px it
+   inflates every card to 128px and pushes the special row off the first
+   screenful. Comes after the phone block on purpose — same specificity, so
+   source order is what lets it win.
+   ========================================================================== */
+
+@media screen and (min-width: 431px) and (max-width: 767px) {
+    .my-hand .card-grid {
+        --cols: 7;
+    }
 }
