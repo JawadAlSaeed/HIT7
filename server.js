@@ -8,14 +8,25 @@ require('dotenv').config();
 
 const app = express();
 
-// Configuration
+// Origins allowed to talk to this server. Heroku serves the app from a
+// *.herokuapp.com hostname that is not known ahead of time.
+const allowedOrigins = ['https://hit7.click', 'http://localhost:3000'];
+if (process.env.PRODUCTION_URL) allowedOrigins.push(process.env.PRODUCTION_URL);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // same-origin or non-browser client
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    return new URL(origin).hostname.endsWith('.herokuapp.com');
+  } catch (e) {
+    return false;
+  }
+};
+
 const createIoServer = (server) => {
   return new Server(server, {
     cors: {
-      origin: [
-        'https://hit7.click',
-        'http://localhost:3000'
-      ],
+      origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
       methods: ['GET', 'POST'],
       credentials: true
     },
@@ -24,17 +35,11 @@ const createIoServer = (server) => {
 };
 
 // Middleware
-// Build allowed connect-src list (include ws/wss for production)
-const allowedConnect = ["'self'"];
+// Build allowed connect-src list (include ws/wss so Socket.IO can upgrade)
+const allowedConnect = ["'self'", 'wss:'];
 if (process.env.PRODUCTION_URL) {
   allowedConnect.push(process.env.PRODUCTION_URL);
-  // Allow websocket origin for production URL (replace http(s) with ws(s))
-  try {
-    const wsUrl = process.env.PRODUCTION_URL.replace(/^http/, 'ws');
-    allowedConnect.push(wsUrl);
-  } catch (e) {
-    // ignore
-  }
+  allowedConnect.push(process.env.PRODUCTION_URL.replace(/^http/, 'ws'));
 } else {
   allowedConnect.push('http://localhost:3000', 'ws://localhost:3000');
 }
