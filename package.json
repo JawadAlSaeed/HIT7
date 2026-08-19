@@ -7,7 +7,6 @@
     "start": "node server.js",
     "postinstall": "npm run build",
     "build": "echo 'No build step required'",
-    
     "dev": "cross-env NODE_ENV=development node server.js",
     "stop": "npx kill-port 3000"
   },
@@ -28,7 +27,7 @@
     "express": "^4.21.2",
     "helmet": "^7.2.0",
     "socket.io": "^4.8.1",
-    "uuid": "^9.0.1"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
@@ -38,5 +37,7 @@
     "node": "18.x",
     "npm": "9.x"
   },
-  "domains": ["hit7.click"]
+  "domains": [
+    "hit7.click"
+  ]
 }
