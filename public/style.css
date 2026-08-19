@@ -283,6 +283,9 @@ body::before {
     width: 100vw;
     height: 100vh;
     max-width: none;
+    /* 100vw plus 1rem of padding was overflowing the viewport by 32px; body's
+       overflow-x hid it, but the right edge of the board was being clipped. */
+    box-sizing: border-box;
     margin: 0; /* remove negative margin to avoid layout shift */
     padding: 1rem;
     background: rgba(22, 33, 62, 0.8);
@@ -4809,5 +4812,1157 @@ h3 span.emoji {
     .header-right {
         flex: 1;
         justify-content: flex-end;
+    }
+}
+/* ==================================================================== */
+/* MOTION SYSTEM                                                        */
+/* Appended last on purpose: these rules must win over the older        */
+/* scattered transitions above without needing !important.              */
+/* ==================================================================== */
+
+:root {
+    --dur-tap: 110ms;
+    --dur-fast: 160ms;
+    --dur-base: 220ms;
+    --dur-slow: 320ms;
+    --ease-out: cubic-bezier(.22, .75, .28, 1);
+    --ease-in: cubic-bezier(.5, 0, .85, .4);
+    --ease-back: cubic-bezier(.2, 1.25, .4, 1);
+}
+
+/* ---------- keyframes ---------- */
+
+@keyframes deal {
+    from { opacity: 0; transform: translateY(-22px) scale(.86) rotate(-5deg); }
+    to   { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes special-pop {
+    0%   { opacity: 0; transform: scale(.5); }
+    60%  { opacity: 1; transform: scale(1.14); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes card-shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-7px) rotate(-3deg); }
+    35% { transform: translateX(6px) rotate(3deg); }
+    55% { transform: translateX(-4px) rotate(-2deg); }
+    75% { transform: translateX(3px); }
+}
+
+@keyframes bust-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+    30% { box-shadow: 0 0 0 6px rgba(244, 67, 54, .45); }
+}
+
+@keyframes card-leave {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-14px) scale(.9); }
+}
+
+@keyframes sheet-in {
+    from { opacity: 0; transform: scale(.93) translateY(14px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes sheet-in-centered {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(.93); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes scrim-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes turn-breathe {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(233, 69, 96, .18); }
+    50%      { box-shadow: 0 0 0 5px rgba(233, 69, 96, .06); }
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ---------- cards ---------- */
+
+/* Only cards the reconciler just added carry .is-new, so the six cards
+   already on the table never re-animate when the board updates. */
+.card.is-new {
+    animation: deal var(--dur-base) var(--ease-back) backwards;
+}
+
+/* Special cards change the game, so they get the bigger entrance. */
+.card.special.is-new {
+    animation: special-pop var(--dur-slow) var(--ease-back) backwards;
+}
+
+.card.is-leaving {
+    animation: card-leave var(--dur-fast) var(--ease-in) forwards;
+    pointer-events: none;
+}
+
+.card.is-bust {
+    animation: card-shake 420ms var(--ease-out), bust-ring 420ms var(--ease-out);
+}
+
+.card:not(.special) {
+    transition: transform var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* ---------- turn highlight ---------- */
+
+.player {
+    transition: border-color var(--dur-base) var(--ease-out),
+                box-shadow var(--dur-base) var(--ease-out),
+                opacity var(--dur-base) var(--ease-out);
+}
+
+.player.current-turn {
+    animation: turn-breathe 2.4s var(--ease-out) var(--dur-base) infinite;
+}
+
+/* ---------- score roll ---------- */
+
+.score-value {
+    font-variant-numeric: tabular-nums;
+    transition: color var(--dur-base) var(--ease-out);
+}
+
+.score-value.is-rolling {
+    color: var(--highlight);
+}
+
+/* ---------- popups ---------- */
+
+/* Every popup shell in the game, entering. The centered ones translate
+   themselves, so they need the variant that preserves translate(-50%,-50%). */
+.winner-popup,
+.info-popup,
+.reset-confirmation-popup,
+.round-summary-popup,
+.freeze-popup,
+.draw-three-popup,
+.tutorial-popup,
+.remove-card-popup,
+.steal-card-popup,
+.swap-card-popup,
+.select-card-popup,
+.history-popup,
+.disconnect-popup,
+.connection-lost-popup {
+    animation: scrim-in var(--dur-fast) var(--ease-out) backwards;
+}
+
+.winner-popup .popup-content,
+.info-popup .popup-content,
+.reset-confirmation-popup .popup-content,
+.round-summary-popup .popup-content,
+.freeze-popup .popup-content,
+.draw-three-popup .popup-content,
+.tutorial-popup .popup-content,
+.remove-card-popup .popup-content,
+.steal-card-popup .popup-content,
+.swap-card-popup .popup-content,
+.select-card-popup .popup-content,
+.history-popup .popup-content,
+.disconnect-popup .popup-content,
+.connection-lost-popup .popup-content {
+    animation: sheet-in var(--dur-base) var(--ease-back) backwards;
+}
+
+/* Shells that position their own content with translate(-50%, -50%) would
+   have it clobbered by the plain sheet-in transform. */
+.info-popup .popup-content,
+.reset-confirmation-popup .popup-content,
+.round-summary-popup .popup-content {
+    animation-name: sheet-in-centered;
+}
+
+/* Closing: faster than opening. Getting out of the way must not feel slow. */
+.popup-closing {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-in);
+}
+
+.popup-closing .popup-content {
+    opacity: 0;
+    transform: scale(.97) translateY(6px);
+    transition: opacity var(--dur-fast) var(--ease-in),
+                transform var(--dur-fast) var(--ease-in);
+}
+
+.info-popup.popup-closing .popup-content,
+.reset-confirmation-popup.popup-closing .popup-content,
+.round-summary-popup.popup-closing .popup-content {
+    transform: translate(-50%, -50%) scale(.97);
+}
+
+/* ---------- notices ---------- */
+
+.restart-notice {
+    animation: toast-in var(--dur-base) var(--ease-back) backwards;
+}
+
+/* ---------- buttons ---------- */
+
+.game-button,
+.lobby-button,
+.card-button {
+    transition: transform var(--dur-tap) var(--ease-out),
+                background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.game-button:active:not(:disabled),
+.lobby-button:active:not(:disabled),
+.card-button:active:not(:disabled) {
+    transform: translateY(0) scale(.96);
+}
+
+/* ---------- accessibility ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ---------- last card drawn slot ---------- */
+
+/* The outgoing card is taken out of flow so the incoming one does not jump
+   sideways for the 160ms they overlap. */
+.last-card-container {
+    position: relative;
+}
+
+.last-card.is-new {
+    animation: deal var(--dur-base) var(--ease-back) backwards;
+}
+
+.last-card.is-leaving {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    margin-left: -25px;
+    animation: card-leave var(--dur-fast) var(--ease-in) forwards;
+    pointer-events: none;
+}
+
+
+/* ==========================================================================
+   PHONE LAYOUT
+   ==========================================================================
+
+   Lives at the end of style.css because mobile.css was retired in PR #11 and
+   this has to win over the consolidated responsive rules above it.
+
+   What this replaces was not merely cramped, it was unplayable: `body {
+   overflow: hidden; height: 100vh }` plus a 766px remaining-deck grid stacked
+   above the players left 1,251px of the board unreachable by any gesture —
+   your own hand sat at y=1389 on an 812px screen.
+
+   The shape:
+
+     shell        fixed to the dynamic viewport, never scrolls itself
+       header     one row, sticky
+       turn strip whose turn it is
+       rail       opponents, horizontal scroll, tap to open a sheet
+       hand       YOUR cards — the only thing that scrolls
+       thumb bar  Hit / Stand, above the home indicator
+
+   Two rules worth keeping in mind before editing:
+
+   1. Size with dvh, never vh. `vh` resolves to the *largest* viewport, which is
+      the height with the browser toolbar hidden — so a bottom-pinned bar sized
+      in vh ends up underneath that toolbar.
+
+   2. Only .my-hand and .opponent-rail scroll. Browser chrome collapses in
+      response to *page* scroll, so a shell that never scrolls keeps the chrome
+      still and the height constant.
+   ========================================================================== */
+
+/* Desktop-side hiding of the phone-only chrome. Outside the media query so it
+   applies at every width above the breakpoint. */
+.turn-strip,
+.opponent-rail,
+.my-hand,
+.deck-button {
+    display: none;
+}
+
+/* A phone turned sideways is 852px wide but only ~390px tall, so width alone
+   would hand it the desktop board and hide the rail and hand entirely. The
+   second condition catches every landscape phone regardless of width, while
+   `pointer: coarse` keeps a merely-short desktop window out of it. */
+@media screen and (max-width: 767px),
+       screen and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+
+    /* ---------------------------------------------------------------- shell */
+
+    html {
+        /* Stops iOS bumping font sizes in landscape. */
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        height: 100dvh;
+        min-height: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: block;
+    }
+
+    /* Older engines without dvh still get a usable, if slightly tall, shell. */
+    @supports not (height: 100dvh) {
+        body { height: 100vh; }
+    }
+
+    .game-container {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        max-height: 100dvh;
+        width: 100%;
+        margin: 0;
+        overflow: hidden;
+        gap: 0;
+        border-radius: 0;
+        /* Without border-box the safe-area and thumb-bar padding get *added* to
+           100dvh and the shell grows taller than the screen it is meant to fit. */
+        box-sizing: border-box;
+        /* Horizontal padding here costs 32px of board width on every phone;
+           the inner regions do their own padding instead. */
+        padding-left: 0;
+        padding-right: 0;
+        padding-top: env(safe-area-inset-top);
+    }
+
+    @supports not (height: 100dvh) {
+        .game-container { height: 100vh; max-height: 100vh; }
+    }
+
+    /* ---------------------------------------------------------------- header */
+
+    .game-header {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.6rem;
+        margin: 0;
+        border-radius: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--secondary);
+        /* One row. The old layout wrapped a fourth button onto a second row and
+           spent 36px of every screen on it. style.css also pins a 72px
+           min-height that has nothing to do with the content. */
+        flex-wrap: nowrap;
+        min-height: 0;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .header-left {
+        flex: 0 0 auto;
+    }
+
+    .header-left {
+        max-width: 34px;
+        overflow: hidden;
+    }
+
+    .header-left .logo-image {
+        height: 28px;
+        width: auto;
+        max-width: 34px;
+        margin: 0;
+    }
+
+    .header-left .game-logo {
+        margin: 0;
+    }
+
+    .header-right {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.35rem;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    .game-code-display {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        background: none;
+        border: 0;
+    }
+
+    .share-link {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 8ch;
+    }
+
+    /* Reset / History / How-to-play collapse to icon-width squares. Their text
+       labels are what forced the second header row. */
+    .header-right .game-button {
+        flex: 0 0 auto;
+        width: 38px;
+        min-width: 38px;
+        height: 40px;
+        min-height: 40px;
+        padding: 0;
+        font-size: 1rem;
+        line-height: 1;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Reset and History keep their glyph and drop their word; the tutorial
+       button has no glyph, so it goes entirely. */
+    .header-right .button-label {
+        display: none;
+    }
+
+    #headerTutorialBtn {
+        display: none;
+    }
+
+    /* client.js writes `display: block` straight onto this element for the
+       host, and only !important outranks an inline style. Sized, not hidden —
+       the host still needs Reset. */
+    #resetButton {
+        display: inline-flex !important;
+    }
+
+    /* ----------------------------------------------------------- deck button */
+
+    .deck-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+        height: 40px;
+        padding: 0 8px;
+        border-radius: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: transparent;
+        color: var(--text-light);
+        font-family: inherit;
+        cursor: pointer;
+        transition: background var(--dur-fast) var(--ease-out),
+                    border-color var(--dur-fast) var(--ease-out),
+                    transform var(--dur-tap) var(--ease-out);
+    }
+
+    .deck-button:active {
+        transform: scale(0.96);
+    }
+
+    .deck-button-count {
+        font-size: 0.85rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .deck-button-label {
+        font-size: 0.58rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .deck-button-last {
+        min-width: 20px;
+        height: 26px;
+        padding: 0 3px;
+        border-radius: 4px;
+        background: var(--text-light);
+        color: var(--text-dark);
+        font-size: 0.72rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ------------------------------------------------------------ turn strip */
+
+    .turn-strip {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: rgba(255, 255, 255, 0.04);
+        color: rgba(255, 255, 255, 0.65);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .turn-strip .turn-pip {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        flex: none;
+    }
+
+    .turn-strip.is-mine {
+        background: rgba(233, 69, 96, 0.16);
+        color: #ffb3c0;
+        border-bottom-color: rgba(233, 69, 96, 0.3);
+    }
+
+    .turn-strip.is-mine .turn-pip {
+        background: var(--highlight);
+        animation: turn-pip 1.8s var(--ease-out) infinite;
+    }
+
+    @keyframes turn-pip {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.45; transform: scale(0.8); }
+    }
+
+    /* ------------------------------------------------------------ game board */
+
+    .game-board {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+        background: none;
+        border: 0;
+    }
+
+    /* Desktop's equal-panel container is unused on phones. */
+    .players-container {
+        display: none;
+    }
+
+    /* --------------------------------------------------------- opponent rail */
+
+    .opponent-rail {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 8px;
+        padding: 8px 10px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .opponent-rail::-webkit-scrollbar { display: none; }
+
+    .opponent-rail:empty { display: none; }
+
+    .opp-tile {
+        flex: 0 0 auto;
+        width: 88px;
+        padding: 7px 9px;
+        border-radius: 11px;
+        background: var(--accent);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+        font-family: inherit;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        transition: border-color var(--dur-fast) var(--ease-out),
+                    transform var(--dur-tap) var(--ease-out);
+    }
+
+    .opp-tile:active { transform: scale(0.96); }
+
+    .opp-tile.turn-now {
+        border-color: var(--highlight);
+        background: rgba(233, 69, 96, 0.18);
+    }
+
+    .opp-tile.is-out { opacity: 0.55; }
+    .opp-tile.is-away { opacity: 0.4; }
+
+    .opp-name {
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .opp-score {
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .opp-status {
+        font-size: 0.58rem;
+        opacity: 0.7;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .opp-pips {
+        display: flex;
+        gap: 2px;
+        margin-top: 4px;
+    }
+
+    .opp-pips i {
+        flex: 1;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.16);
+    }
+
+    .opp-pips i.on { background: var(--highlight); }
+
+    /* ---------------------------------------------------------- my own hand */
+
+    /* The only scrolling region in the game. */
+    .my-hand {
+        display: block;   /* undoes the desktop hide at the top of this file */
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 10px;
+        scrollbar-width: none;
+    }
+
+    .my-hand::-webkit-scrollbar { display: none; }
+
+    .my-hand .player {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    /* The breathing ring is for spotting your seat among many. On a phone your
+       hand is the whole screen, so it is just noise. */
+    .my-hand .player.current-turn {
+        animation: none;
+    }
+
+    .my-hand .player-header h3 {
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    .my-hand .scores {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin: 10px 0;
+    }
+
+    .my-hand .score-box {
+        padding: 7px 8px;
+        min-width: 0;
+    }
+
+    .my-hand .score-value {
+        font-size: 1.3rem;
+    }
+
+    /* Four columns instead of seven. At 360px that takes a card from 41px to
+       74px, which is the difference between guessing and reading. */
+    .my-hand .card-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 7px;
+        padding: 8px;
+        width: 100%;
+    }
+
+    .my-hand .card,
+    .my-hand .empty-slot {
+        width: auto;
+        height: auto;
+        aspect-ratio: 5 / 7;
+        min-width: 0;
+        font-size: clamp(1rem, 5.5vw, 1.7rem);
+        border-radius: 9px;
+    }
+
+    .my-hand .card.special {
+        width: auto;
+        height: auto;
+        font-size: clamp(0.8rem, 4vw, 1.2rem);
+    }
+
+    .my-hand .cards-label {
+        font-size: 0.58rem;
+        letter-spacing: 0.14em;
+        margin-bottom: 2px;
+    }
+
+    /* --------------------------------------------------------- the thumb bar */
+
+    .controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 500;
+        /* client.js sets an inline `display: flex` on this element, and inline
+           wins over any stylesheet — so the proportions come from flex-grow
+           rather than grid columns, which that inline style would defeat. */
+        display: flex;
+        gap: 10px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        margin: 0;
+        background: var(--secondary);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* The bar is fixed, so the shell has to reserve its height or it covers the
+       last row of cards. 54px button + 20px padding + the home indicator. */
+    .game-container {
+        padding-bottom: calc(74px + env(safe-area-inset-bottom));
+    }
+
+    .controls .game-button {
+        height: 54px;              /* comfortably over the 44px tap minimum */
+        min-height: 54px;
+        width: auto;
+        flex: 1 1 0;
+        margin: 0;
+        padding: 0;
+        border-radius: 13px;
+        font-size: 1rem;
+        letter-spacing: 0.09em;
+    }
+
+    /* Hit is the action you reach for most, so it gets the wider half. */
+    .controls #flipCard {
+        flex-grow: 1.35;
+    }
+
+    /* ------------------------------------------------- deck as a bottom sheet */
+
+    /* Open/closed is a display switch, not a fade. If visibility depended on a
+       transition finishing, a stalled or reduced-motion browser would leave the
+       sheet permanently invisible — the animation decorates, it never gates. */
+    .deck-area {
+        display: none;
+    }
+
+    body.deck-sheet-open .deck-area {
+        position: fixed;
+        inset: 0;
+        z-index: 900;
+        display: flex;
+        align-items: flex-end;
+        justify-content: stretch;
+        padding: 0;
+        margin: 0;
+        background: rgba(8, 8, 18, 0.66);
+        opacity: 1;
+        pointer-events: auto;
+        animation: scrim-in var(--dur-fast) var(--ease-out);
+    }
+
+    .deck-area .discard-info {
+        width: 100%;
+        max-height: 72dvh;
+        margin: 0;
+        padding: 10px 12px calc(18px + env(safe-area-inset-bottom));
+        border-radius: 20px 20px 0 0;
+        background: var(--secondary);
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow: hidden;
+        /* Resting position is on-screen; the keyframe only slides it in. */
+        transform: none;
+        animation: sheet-up var(--dur-base) var(--ease-back);
+    }
+
+    @keyframes sheet-up {
+        from { transform: translateY(100%); }
+        to   { transform: none; }
+    }
+
+    /* Grab handle, so the sheet reads as a sheet. */
+    .deck-area .discard-info::before {
+        content: "";
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.22);
+        margin: 0 auto 2px;
+        flex: none;
+    }
+
+    .deck-stats-container {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin: 0;
+        padding: 0 2px;
+    }
+
+    .remaining-pile {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 4px 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .remaining-pile .regular-cards,
+    .remaining-pile .special-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .remaining-card {
+        width: auto;
+        height: auto;
+        aspect-ratio: 5 / 7;
+        min-width: 0;
+        font-size: 0.8rem;
+        border-radius: 6px;
+    }
+
+    /* ---------------------------------------------------- opponent hand sheet */
+
+    .player-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 950;
+        display: flex;
+        align-items: flex-end;
+        background: rgba(8, 8, 18, 0.66);
+    }
+
+    .player-sheet .popup-content {
+        position: relative;
+        width: 100%;
+        max-height: 80dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 10px 12px calc(18px + env(safe-area-inset-bottom));
+        border-radius: 20px 20px 0 0;
+        background: var(--secondary);
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        transform: none;
+        left: auto;
+        top: auto;
+    }
+
+    .player-sheet .sheet-grab {
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.22);
+        margin: 0 auto 10px;
+    }
+
+    .player-sheet .close-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .player-sheet .player {
+        width: 100%;
+        margin: 0;
+        padding: 10px 0 0;
+        background: none;
+        border: 0;
+        box-shadow: none;
+        animation: none;
+    }
+
+    .player-sheet .card-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+    }
+
+    .player-sheet .card,
+    .player-sheet .empty-slot {
+        width: auto;
+        height: auto;
+        aspect-ratio: 5 / 7;
+        min-width: 0;
+        font-size: 0.85rem;
+    }
+
+    /* ------------------------------------------------------- popups on phones */
+
+    /* Every popup shell becomes a bottom sheet: reachable by thumb, and it
+       cannot overflow a short viewport the way a centred box does. */
+    .winner-popup .popup-content,
+    .round-summary-popup .popup-content,
+    .freeze-popup .popup-content,
+    .draw-three-popup .popup-content,
+    .remove-card-popup .popup-content,
+    .steal-card-popup .popup-content,
+    .swap-card-popup .popup-content,
+    .select-card-popup .popup-content,
+    .history-popup .popup-content,
+    .tutorial-popup .popup-content {
+        width: 100%;
+        max-width: none;
+        max-height: 82dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: 18px 18px 0 0;
+        padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+    }
+
+    .winner-popup,
+    .round-summary-popup,
+    .freeze-popup,
+    .draw-three-popup,
+    .remove-card-popup,
+    .steal-card-popup,
+    .swap-card-popup,
+    .select-card-popup,
+    .history-popup,
+    .tutorial-popup {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+    }
+
+    /* These shells centre their content with translate(-50%, -50%); as a bottom
+       sheet that would drag it back off-screen. */
+    .round-summary-popup .popup-content,
+    .winner-popup .popup-content {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        animation-name: sheet-in;
+    }
+
+    /* Card pickers inside popups need thumb-sized targets. */
+    .card-button {
+        min-height: 52px;
+        min-width: 44px;
+    }
+
+    /* -------------------------------------------------------------- the lobby */
+
+    /* The lobby scrolls inside itself, same rule as the hand — the page never
+       scrolls, so the browser chrome never collapses. */
+    .lobby-screen {
+        padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom));
+        margin: 0;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        overflow-y: auto;
+        max-height: 100dvh;
+    }
+
+    .lobby-screen .logo-image {
+        max-width: 96px;
+    }
+
+    .lobby-screen .game-logo {
+        margin: 0.75rem 0;
+    }
+
+    .menu-container {
+        padding: 1.25rem;
+        margin: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .lobby-button {
+        min-height: 52px;
+        width: 100%;
+        font-size: 1rem;
+    }
+
+    /* 16px is the threshold below which iOS zooms the page on focus. */
+    .lobby-form input[type="text"] {
+        font-size: 16px;
+        min-height: 48px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* ---------------------------------------------------------- notifications */
+
+    .game-notification,
+    .restart-notice {
+        top: calc(env(safe-area-inset-top) + 8px);
+        left: 8px;
+        right: 8px;
+        max-width: none;
+        transform: none;
+        font-size: 0.85rem;
+    }
+
+    .game-notification.fade-out {
+        transform: translateY(-12px);
+    }
+}
+
+/* ==========================================================================
+   Very small phones — folded Galaxy Fold is 280px, older Androids 320px.
+   ========================================================================== */
+
+@media screen and (max-width: 340px) {
+    .opp-tile { width: 76px; }
+
+    .my-hand .card-grid { gap: 5px; padding: 6px; }
+
+    .share-link { display: none; }
+
+    .controls .game-button { font-size: 0.85rem; letter-spacing: 0.05em; }
+}
+
+/* ==========================================================================
+   Landscape — a phone on its side has roughly 380px of height, so the rail
+   moves alongside the hand instead of stacking above it.
+   ========================================================================== */
+
+@media screen and (max-width: 950px) and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+    .game-board {
+        flex-direction: row;
+        gap: 0;
+    }
+
+    .opponent-rail {
+        flex: 0 0 108px;
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+        border-bottom: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.07);
+        padding: 8px;
+    }
+
+    .opp-tile {
+        width: 100%;
+    }
+
+    .my-hand {
+        flex: 1 1 auto;
+        padding: 8px;
+    }
+
+    /* Height is the scarce axis here, so spend width instead of stacking — but
+       a fixed 7 columns squeezed cards to 33px once the two grids sat side by
+       side. auto-fill holds a floor and wraps instead of shrinking past it. */
+    .my-hand .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    }
+
+    /* Regular and special grids share the row; without this they split the
+       width evenly regardless of how many cards each is actually holding. */
+    .my-hand .cards-section {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .my-hand .cards-container {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .my-hand .scores {
+        margin: 6px 0;
+    }
+
+    .turn-strip {
+        padding: 4px 12px;
+        font-size: 0.65rem;
+    }
+
+    /* Side-by-side keeps the buttons out of the middle of a short screen. */
+    .controls {
+        grid-template-columns: 1fr 1fr;
+        padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    }
+
+    .controls .game-button {
+        height: 44px;
+        min-height: 44px;
+    }
+
+    .game-container {
+        padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    }
+
+    .game-header {
+        padding: 0.25rem 0.6rem;
+    }
+
+    .header-left .logo-image {
+        height: 24px;
     }
 }

@@ -2,7 +2,10 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report real numbers on
+             iOS; without it every inset is 0 and notch handling silently does nothing.
+             interactive-widget keeps the on-screen keyboard from covering the name field. -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo+Play:wght@700&display=swap" rel="stylesheet">
@@ -83,10 +86,26 @@
                     <div class="game-code-display">
                         <span class="share-link" id="shareLink"></span>
                     </div>
-                    <button id="resetButton" class="game-button red">Reset</button>
+                    <!-- Phone-only: opens the remaining-deck sheet. Hidden on desktop, where the
+                         full pile is on the board already. -->
+                    <button id="deckButton" class="deck-button" type="button"
+                            aria-haspopup="dialog" aria-expanded="false"
+                            aria-label="Cards left in the deck">
+                        <span class="deck-button-count" id="deckButtonCount">0</span>
+                        <span class="deck-button-label">left</span>
+                        <span class="deck-button-last" id="deckButtonLast">—</span>
+                    </button>
+                    <button id="soundToggle" class="game-button" title="Mute sound" aria-label="Mute sound" aria-pressed="false">🔊</button>
+                    <button id="resetButton" class="game-button red" title="Reset" aria-label="Reset game">⟲<span class="button-label">Reset</span></button>
                     <button id="historyButton" class="game-button green" title="History" aria-label="History">📜<span class="button-label">History</span></button>
                     <button id="headerTutorialBtn" class="game-button purple">How to Play</button>
                 </div>
+            </div>
+
+            <!-- Phone-only: says whose turn it is without costing a whole panel. -->
+            <div class="turn-strip" id="turnStrip" aria-live="polite">
+                <span class="turn-pip"></span>
+                <span id="turnStripText">Waiting…</span>
             </div>
 
             <div class="game-board">
@@ -105,7 +124,13 @@
                         <div class="remaining-pile" id="discard"></div>  <!-- Changed id kept for compatibility -->
                     </div>
                 </div>
+
+                <!-- On phones the opponents render as tiles in the rail and the player's own
+                     panel renders into #myHand. On desktop both sit empty and every panel goes
+                     into #playersContainer as before. -->
+                <div class="opponent-rail" id="opponentRail"></div>
                 <div id="playersContainer" class="players-container"></div>
+                <div class="my-hand" id="myHand"></div>
             </div>
         </div>
 

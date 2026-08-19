@@ -20,3 +20,6 @@ pids
 .idea/
 .vscode/
 *.swp
+
+# Claude Code local tooling (dev server launch config)
+.claude/
