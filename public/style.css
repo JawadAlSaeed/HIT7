@@ -5888,7 +5888,7 @@ h3 span.emoji {
    moves alongside the hand instead of stacking above it.
    ========================================================================== */
 
-@media screen and (max-width: 950px) and (orientation: landscape) and (max-height: 500px) {
+@media screen and (max-width: 950px) and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
     .game-board {
         flex-direction: row;
         gap: 0;
@@ -5913,9 +5913,25 @@ h3 span.emoji {
         padding: 8px;
     }
 
-    /* Height is the scarce axis here, so widen the grid rather than stacking. */
+    /* Height is the scarce axis here, so spend width instead of stacking — but
+       a fixed 7 columns squeezed cards to 33px once the two grids sat side by
+       side. auto-fill holds a floor and wraps instead of shrinking past it. */
     .my-hand .card-grid {
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    }
+
+    /* Regular and special grids share the row; without this they split the
+       width evenly regardless of how many cards each is actually holding. */
+    .my-hand .cards-section {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .my-hand .cards-container {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .my-hand .scores {

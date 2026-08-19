@@ -1088,7 +1088,24 @@ function isPhoneLayout() {
 }
 
 function renderPlayers(game) {
-    if (isPhoneLayout()) {
+    // Panels left in the container the other layout owns would sit there
+    // forever, so every render evicts them rather than trusting the
+    // breakpoint listener to have fired. Rotating a phone mid-game, or any
+    // missed change event, self-corrects on the next update.
+    const phone = isPhoneLayout();
+    const stale = phone
+        ? ['playersContainer']
+        : ['opponentRail', 'myHand'];
+
+    stale.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.children.length) {
+            el.innerHTML = '';
+            lastPlayerState.clear();
+        }
+    });
+
+    if (phone) {
         renderPlayersPhone(game);
     } else {
         renderPlayersBoard(game);
