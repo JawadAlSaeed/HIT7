@@ -201,6 +201,55 @@ function dismissPopup(popup) {
     setTimeout(done, 220);
 }
 
+// Peeking at the board from inside a target-picker popup.
+//
+// With a mouse you hold the button down, look, and let go. A finger cannot do
+// that usefully: while it is held down you cannot tap anything you just looked
+// at, and a touch that got cancelled (a scroll, a notification) never fired
+// touchend, which left the popup invisible *and* click-through-proof for the
+// rest of the round. So coarse pointers get a tap toggle instead, and the hold
+// path keeps its pointer with setPointerCapture so the release always lands.
+function wireViewGameButton(popup) {
+    const viewButton = popup.querySelector('#viewGameButton');
+    if (!viewButton) return;
+
+    const setLabel = (text) => {
+        viewButton.innerHTML = '<span class="icon">\u{1F441}\u{FE0F}</span> ' + text;
+    };
+
+    if (window.matchMedia('(pointer: coarse)').matches) {
+        setLabel('Tap to view game');
+        viewButton.setAttribute('aria-pressed', 'false');
+
+        viewButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            // popup-peeking keeps this one button lit and tappable while the
+            // rest of the sheet steps aside - popup-hiding would take the
+            // button with it and there would be no way back.
+            const peeking = popup.classList.toggle('popup-peeking');
+            viewButton.setAttribute('aria-pressed', peeking ? 'true' : 'false');
+            setLabel(peeking ? 'Tap to hide board' : 'Tap to view game');
+        });
+        return;
+    }
+
+    const show = () => popup.classList.remove('popup-hiding');
+
+    viewButton.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        // Capture means the matching pointerup is delivered here even though
+        // popup-hiding sets pointer-events: none on the popup.
+        try { viewButton.setPointerCapture(e.pointerId); } catch (err) { /* no capture; the listeners below still fire */ }
+        popup.classList.add('popup-hiding');
+    });
+
+    // Every way a press can end, including the ones that used to strand the
+    // popup. All on the button itself, so they die with the popup.
+    ['pointerup', 'pointercancel', 'lostpointercapture', 'mouseleave'].forEach(
+        (type) => viewButton.addEventListener(type, show)
+    );
+}
+
 // Socket event listeners
 socket.on('game-created', handleGameCreated);
 socket.on('game-joined', handleGameJoined);
@@ -270,40 +319,9 @@ socket.on('select-freeze-target', (gameId, targets) => {
     });
   });
 
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-  
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
-  
-  // Clean up event listeners when popup is removed
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
-        observer.disconnect();
-      }
-    });
-  });
-  
+  wireViewGameButton(popup);
+
   document.body.appendChild(popup);
-  observer.observe(document.body, { childList: true });
 });
 
 // draw-three popup handler (single instance kept earlier in file)
@@ -2271,26 +2289,7 @@ function showRemoveCardPopup(gameId, players) {
     });
   });
 
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-  
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
+  wireViewGameButton(popup);
   
   document.body.appendChild(popup);
   
@@ -2298,8 +2297,6 @@ function showRemoveCardPopup(gameId, players) {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
         document.body.style.overflow = 'auto';
         observer.disconnect();
       }
@@ -2476,33 +2473,13 @@ function showSwapCardPopup(gameId, players) {
     }
   });
 
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
+  wireViewGameButton(popup);
 
   document.body.appendChild(popup);
 
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
         document.body.style.overflow = 'auto';
         observer.disconnect();
       }
@@ -2581,33 +2558,13 @@ function showStealCardPopup(gameId, players) {
     });
   });
 
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
+  wireViewGameButton(popup);
 
   document.body.appendChild(popup);
 
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
         document.body.style.overflow = 'auto';
         observer.disconnect();
       }
@@ -2771,35 +2728,12 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
     });
   });
   
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault(); // Prevent default behavior
-    popup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent default behavior
-    popup.classList.add('popup-hiding');
-  });
-  
-  // Handle mouseup and touchend on the button or anywhere on the document
-  const handleUp = () => {
-    if (popup.parentElement) { // Check if popup is still in the DOM
-      popup.classList.remove('popup-hiding');
-    }
-  };
-  
-  // Add event listeners for mouseup and touchend
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
+  wireViewGameButton(popup);
   
   // Add a cleanup function to remove event listeners when popup is removed
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
         document.body.style.overflow = 'auto';
         observer.disconnect();
       }
@@ -3152,26 +3086,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
     });
   });
 
-  // Add HOLD TO VIEW GAME button functionality
-  const viewButton = popup.querySelector('#viewGameButton');
-  viewButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  viewButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    popup.classList.add('popup-hiding');
-  });
-  
-  const handleUp = () => {
-    if (popup.parentElement) {
-      popup.classList.remove('popup-hiding');
-    }
-  };
-  
-  document.addEventListener('mouseup', handleUp);
-  document.addEventListener('touchend', handleUp);
+  wireViewGameButton(popup);
 
   document.body.appendChild(popup);
   activeDrawThreePopup = popup;
@@ -3180,8 +3095,6 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if ([...mutation.removedNodes].includes(popup)) {
-        document.removeEventListener('mouseup', handleUp);
-        document.removeEventListener('touchend', handleUp);
         document.body.style.overflow = 'auto';
         observer.disconnect();
       }

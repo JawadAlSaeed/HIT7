@@ -5179,7 +5179,11 @@ h3 span.emoji {
         flex: 0 0 auto;
     }
 
+    /* The <=430px block sets `min-width: 80px`, and min-width beats max-width,
+       so without this reset the logo column eats 80px and pushes the last
+       header button off the right edge. */
     .header-left {
+        min-width: 0;
         max-width: 34px;
         overflow: hidden;
     }
@@ -5247,8 +5251,11 @@ h3 span.emoji {
         display: none;
     }
 
+    /* `.header-right .game-button { display: inline-flex !important }` in the
+       <=430px block outranks even an ID selector, so this needs !important too
+       — otherwise a fifth header item appears and the row overflows. */
     #headerTutorialBtn {
-        display: none;
+        display: none !important;
     }
 
     /* client.js writes `display: block` straight onto this element for the
@@ -5480,6 +5487,10 @@ h3 span.emoji {
         margin: 0;
         padding: 12px;
         border-radius: 14px;
+        /* content-box (the default the 431-767px block leaves it at) adds the
+           24px of padding on top of width:100%, so the right edge of your own
+           hand was clipped by the scroller. */
+        box-sizing: border-box;
     }
 
     /* The breathing ring is for spotting your seat among many. On a phone your
@@ -5516,6 +5527,11 @@ h3 span.emoji {
         gap: 7px;
         padding: 8px;
         width: 100%;
+        /* The base rule's `margin: 0.5rem` plus `width: 100%` pushed the grid
+           8px past its own box, so the right-hand column was clipped while the
+           left had a double gap. */
+        margin: 0;
+        box-sizing: border-box;
     }
 
     .my-hand .card,
@@ -5547,7 +5563,11 @@ h3 span.emoji {
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 500;
+        /* 200, below --z-popup (400): at 500 the bar painted over every popup
+           and swallowed the bottom ~60px of each bottom sheet, including the
+           Hold-to-view pill. The buttons are disabled while a popup is open
+           anyway, so nothing is lost by letting the sheet cover them. */
+        z-index: var(--z-controls);
         /* client.js sets an inline `display: flex` on this element, and inline
            wins over any stylesheet — so the proportions come from flex-grow
            rather than grid columns, which that inline style would defeat. */
@@ -5598,8 +5618,13 @@ h3 span.emoji {
         inset: 0;
         z-index: 900;
         display: flex;
-        align-items: flex-end;
-        justify-content: stretch;
+        /* The base rule makes this a *column*, so the main axis is vertical:
+           `align-items: flex-end` only pushed the sheet to the right, and
+           `justify-content: stretch` is not a thing on a main axis, so it fell
+           back to flex-start and the bottom sheet sat at the top of the screen. */
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: stretch;
         padding: 0;
         margin: 0;
         background: rgba(8, 8, 18, 0.66);
@@ -5610,6 +5635,11 @@ h3 span.emoji {
 
     .deck-area .discard-info {
         width: 100%;
+        max-width: none;
+        /* Without this the base rule's 1.5rem padding is *added* to width:100%
+           and the sheet ends up 417px wide on a 393px screen, hanging off both
+           edges. */
+        box-sizing: border-box;
         max-height: 72dvh;
         margin: 0;
         padding: 10px 12px calc(18px + env(safe-area-inset-bottom));
@@ -5645,15 +5675,54 @@ h3 span.emoji {
     .deck-stats-container {
         flex: 0 0 auto;
         display: flex;
-        gap: 10px;
+        /* "Cards left" and "Last card drawn" are two labels at 1.4rem with
+           nowrap and a 3rem gap — 411px of content in a 391px box. Wrapping is
+           what keeps the last card on screen instead of half off it. */
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
         justify-content: space-between;
         margin: 0;
-        padding: 0 2px;
+        padding: 6px 8px;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .deck-area .deck-stat-item {
+        gap: 0.4rem;
+        min-width: 0;
+    }
+
+    .deck-area .stat-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+
+    .deck-area .stat-value {
+        font-size: 1rem;
+    }
+
+    /* 50x70 is a desktop card. Next to a label it is what tipped the row over
+       the edge of the screen. */
+    .deck-area .last-card {
+        width: 30px;
+        height: 42px;
+        min-width: 30px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+    }
+
+    .deck-area .no-card {
+        font-size: 1rem;
     }
 
     .remaining-pile {
         flex: 1 1 auto;
         min-height: 0;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
@@ -5774,6 +5843,10 @@ h3 span.emoji {
         border-radius: 18px 18px 0 0;
         padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
         box-sizing: border-box;
+        /* The shared desktop rule puts `margin: 20px` on every popup body. On a
+           full-width sheet that leaves a 20px gutter down each side, so the
+           sheet reads as a floating box with cropped corners instead. */
+        margin: 0;
     }
 
     .winner-popup,
@@ -5790,6 +5863,20 @@ h3 span.emoji {
         align-items: flex-end;
         justify-content: center;
         padding: 0;
+        /* The <=430px block puts `width: 90%`, `height: 100vh` and
+           `max-height: 80vh` on the *scrims* rather than on the boxes inside
+           them, so a scrim ended 171px short of the bottom of the screen and
+           took the sheet anchored to it along. */
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        /* The sheet scrolls; the scrim behind it never does. */
+        overflow: hidden;
+        /* .tutorial-popup carries a 1px red border meant for a centred box; on
+           a full-screen scrim it is a hairline around the whole phone. */
+        border: 0;
+        z-index: var(--z-popup);
     }
 
     /* These shells centre their content with translate(-50%, -50%); as a bottom
@@ -5807,6 +5894,58 @@ h3 span.emoji {
     .card-button {
         min-height: 52px;
         min-width: 44px;
+    }
+
+    /* Hold-to-view is absolutely positioned at `bottom: 25px` on desktop, which
+       inside a scrolling sheet lands it on top of the target buttons. In the
+       flow it is just the last row of the sheet. */
+    .view-game-button {
+        /* Sticky, not static: in a tall picker the last row of the sheet is two
+           screens down, and the whole point of this button is that it is there
+           when you want to check the board. */
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        transform: none;
+        width: 100%;
+        margin: 4px 0 0;
+        padding: 14px 18px;
+        min-height: 52px;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    /* Two classes beat one, so the desktop rule that lifts this pill 85px off
+       the bottom of the swap picker would otherwise win here and leave it
+       stranded mid-sheet. */
+    .swap-card-popup .view-game-button {
+        bottom: 0;
+    }
+
+    /* The swap sheet pads itself with !important, 140px of it at the bottom to
+       clear two absolutely positioned buttons. Both are in the flow here, so
+       that reservation is just empty space at the end of the card list. */
+    .swap-card-popup .popup-content {
+        padding: 16px 14px calc(20px + env(safe-area-inset-bottom)) !important;
+    }
+
+    /* Confirm is the primary action, and absolutely positioned it floated over
+       the middle of the card list. Sticky above the peek pill keeps both
+       reachable however far down the list you are. */
+    .confirm-swap-button {
+        position: sticky;
+        bottom: 56px;
+        left: auto;
+        transform: none;
+        width: 100%;
+        min-height: 52px;
+        margin: 4px 0 0;
+        box-sizing: border-box;
+        z-index: 2;
+    }
+
+    .confirm-swap-button:hover:not(:disabled) {
+        transform: none;
     }
 
     /* -------------------------------------------------------------- the lobby */
@@ -5875,6 +6014,11 @@ h3 span.emoji {
 
 @media screen and (max-width: 340px) {
     .opp-tile { width: 76px; }
+
+    /* At 280px the deck pill and the logo meet with nothing between them. The
+       count and the last card carry the meaning; the word "left" does not. */
+    .deck-button { padding: 0 6px; gap: 3px; }
+    .deck-button-label { display: none; }
 
     .my-hand .card-grid { gap: 5px; padding: 6px; }
 
@@ -5965,4 +6109,39 @@ h3 span.emoji {
     .header-left .logo-image {
         height: 24px;
     }
+}
+
+/* ==========================================================================
+   Peek mode — the touch counterpart of hold-to-view.
+   Last in the file on purpose: it has to outrank each popup's own background,
+   several of which are already !important.
+   ========================================================================== */
+
+.popup-peeking {
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    /* The board underneath stays look-only; the one exception is the pill. */
+    pointer-events: none;
+}
+
+.popup-peeking .popup-content {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* visibility, not display: the sheet keeps its height so the pill does not
+   jump to a new place between taps. */
+.popup-peeking .popup-content > *:not(.view-game-button) {
+    visibility: hidden;
+}
+
+.popup-peeking .view-game-button {
+    pointer-events: auto;
+    background: var(--secondary);
+    border-color: var(--highlight);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
