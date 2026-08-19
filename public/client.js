@@ -176,8 +176,30 @@ const initializeButtons = () => {
 // Initialize only once when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeButtons();
+    initSound();
+    initMobileChrome();
     checkUrlParams();
 });
+
+// Popups fade their backdrop and shrink their sheet on the way out rather than
+// vanishing. Closing runs faster than opening - getting out of the way should
+// never feel slow.
+function dismissPopup(popup) {
+    if (!popup || !popup.parentElement || popup.classList.contains('popup-closing')) return;
+
+    popup.classList.add('popup-closing');
+    popup.style.pointerEvents = 'none';
+
+    const done = () => popup.remove();
+    const content = popup.querySelector('.popup-content');
+
+    if (content) {
+        content.addEventListener('transitionend', done, { once: true });
+    }
+    // transitionend never fires with reduced motion or on a hidden tab, and the
+    // popup must not be left stranded on screen.
+    setTimeout(done, 220);
+}
 
 // Socket event listeners
 socket.on('game-created', handleGameCreated);
@@ -244,7 +266,7 @@ socket.on('select-freeze-target', (gameId, targets) => {
   popup.querySelectorAll('.freeze-target').forEach(btn => {
     btn.addEventListener('click', () => {
       socket.emit('freeze-player', currentGameId, btn.dataset.id);
-      popup.remove();
+      dismissPopup(popup);
     });
   });
 
@@ -296,7 +318,7 @@ socket.on('rematch-started', (game) => {
     popups.forEach(popup => popup.remove());
     
     // Clear the board for new game
-    document.getElementById('playersContainer').innerHTML = '';
+    clearPlayersBoard();
     
     // Update game display
     updateGameDisplay(game);
@@ -318,7 +340,7 @@ socket.on('game-reset-with-players', (game) => {
     popups.forEach(popup => popup.remove());
     
     // Clear the board for new game
-    document.getElementById('playersContainer').innerHTML = '';
+    clearPlayersBoard();
     
     // Update game display
     updateGameDisplay(game);
@@ -408,7 +430,7 @@ function createGame() {
 
     // Clear any existing game state
     currentGameId = null;
-    document.getElementById('playersContainer').innerHTML = '';
+    clearPlayersBoard();
 
     socket.emit('create-game', name);
 }
@@ -603,6 +625,7 @@ function updateGameDisplay(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
     updateRemainingPile(game.deck);
     updateLastCardDrawn(game.lastCardDrawn);
+    updateDeckButton(game.deck, game.lastCardDrawn);
     updateHistory(game.history);
     renderPlayers(game);
 }
@@ -715,19 +738,39 @@ function renderCard({ cardType, displayValue, count }) {
 function updateLastCardDrawn(card) {
     const container = document.getElementById('lastCardDrawn');
     if (!container) return;
-    
-    if (card === null || card === undefined) {
+
+    const key = card === null || card === undefined ? '' : String(card);
+
+    // Nothing changed, so leave the node alone - rewriting it would replay the
+    // entrance animation on every unrelated game update.
+    if (container.dataset.value === key) return;
+
+    const outgoing = container.querySelector('.last-card');
+    container.dataset.value = key;
+
+    if (!key) {
         container.innerHTML = '<span class="no-card">---</span>';
         return;
     }
-    
-    const { cardType, displayValue } = getCardVisual(card);
 
-    container.innerHTML = `
-        <div class="last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}">
-            ${displayValue}
-        </div>
-    `;
+    const { cardType, displayValue } = getCardVisual(card);
+    const incoming = document.createElement('div');
+    incoming.className = `last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}`;
+    incoming.textContent = displayValue;
+
+    // The old card lifts out while the new one deals in, so you can always tell
+    // the slot changed even when the two cards look similar.
+    if (outgoing && !prefersReducedMotion()) {
+        outgoing.classList.add('is-leaving');
+        outgoing.addEventListener('animationend', () => outgoing.remove(), { once: true });
+        setTimeout(() => outgoing.remove(), 400);
+        incoming.classList.add('is-new');
+        clearAfter(incoming, 'is-new', 600);
+        container.appendChild(incoming);
+    } else {
+        container.innerHTML = '';
+        container.appendChild(incoming);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -862,7 +905,7 @@ function showHistory() {
     renderHistoryList(popup.querySelector('.history-list'));
 
     const closePopup = () => {
-        popup.remove();
+        dismissPopup(popup);
         document.removeEventListener('keydown', handleEscape);
     };
 
@@ -1031,88 +1074,597 @@ function showRoundRestartedNotice(roundNumber) {
     setTimeout(() => notice.remove(), 5000);
 }
 
-function renderPlayers(game) {
-    document.getElementById('playersContainer').innerHTML = game.players
-        .map((player, index) => playerTemplate(player, index === game.currentPlayer))
-        .join('');
+// ---------------------------------------------------------------------------
+// Player rendering
+//
+// This reconciles the existing DOM instead of replacing playersContainer's
+// innerHTML. Two reasons: a card that was already on the table must not
+// re-run its entrance animation every time anything else changes, and
+// rebuilding the whole board on every update was already causing a visible
+// flicker.
+// ---------------------------------------------------------------------------
+
+// What each player looked like on the previous update, so we can tell which
+// cards are new and which status changes deserve a reaction.
+const lastPlayerState = new Map();
+
+// Wiping the board has to drop the remembered state too, otherwise the next
+// render compares fresh panels against a dead game's scores.
+function clearPlayersBoard() {
+    ['playersContainer', 'opponentRail', 'myHand'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+    lastPlayerState.clear();
 }
 
-function playerTemplate(player, isCurrentTurn) {
-    const emptyRegularSlots = Array(7 - player.regularCards.length).fill(0)
-        .map(() => '<div class="empty-slot"></div>').join('');
-    const emptySpecialSlots = Array(7 - player.specialCards.length).fill(0)
-        .map(() => '<div class="empty-slot special"></div>').join('');
+// Phones get a different shape entirely: your own hand fills the screen, the
+// other players compress into a tap-to-open rail. Anything wider keeps the
+// board where every panel is equal.
+// Must stay identical to the media query mobile.css opens with, or the rail and
+// hand get styled but never filled. A landscape phone is wide but short, so
+// width alone would misread it as a desktop.
+const PHONE_QUERY = window.matchMedia(
+    '(max-width: 767px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse)'
+);
 
-    // connected is absent on the stripped-down player objects some popups pass in, so
-    // only an explicit false counts as away.
-    const isAway = player.connected === false;
+function isPhoneLayout() {
+    return PHONE_QUERY.matches;
+}
 
-    return `
-        <div class="player ${isCurrentTurn ? 'current-turn' : ''} ${player.status} ${isAway ? 'disconnected' : ''}" data-player-id="${player.id}">
-            <div class="player-header">
-                <h3>${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}</h3>
-                <div class="player-status">
-                    ${isAway ? '<div class="away-indicator">🔌 DISCONNECTED</div>' : ''}
-                    ${getStatusIcon(player.status)}
-                    ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
-                    ${player.specialCards.includes('SC') ? `
-                        <div class="second-chance-indicator">🛡️ SECOND CHANCE</div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <div class="scores">
-                ${scoreBox('ROUND SCORE', player.roundScore)}
-                ${scoreBox('TOTAL SCORE', player.totalScore)}
-                ${scoreBox('CARDS', `${player.regularCards.length}/${MAX_REGULAR_CARDS}`)}
-            </div>
+function renderPlayers(game) {
+    if (isPhoneLayout()) {
+        renderPlayersPhone(game);
+    } else {
+        renderPlayersBoard(game);
+    }
+    updateTurnStrip(game);
+    refreshOpenPlayerSheet(game);
+}
 
-            <div class="cards-section">
-                <div class="cards-container">
-                    <div class="cards-label">REGULAR CARDS</div>
-                    <div class="card-grid regular">
-                        ${player.regularCards.map(card => `<div class="card">${card}</div>`).join('')}
-                        ${emptyRegularSlots}
-                    </div>
-                </div>
+// Desktop / tablet: one equal panel per player, in seat order.
+function renderPlayersBoard(game) {
+    const container = document.getElementById('playersContainer');
+    if (!container) return;
 
-                <div class="cards-container">
-                    <div class="cards-label">SPECIAL CARDS</div>
-                    <div class="card-grid special">
-                        ${player.specialCards.map(card => {
-                            const cardClass = getSpecialCardClass(card);
-                            const cardDisplay = getSpecialCardDisplay(card);
-                            
-                            // Add inline style for special cards
-                            let cardStyle = '';
-                            if (card === 'Select') {
-                                cardStyle = 'background: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) !important; border-color: #e74c3c !important;';
-                            } else if (card === 'Swap') {
-                                cardStyle = 'background: #42ae5d !important; border-color: #42ae5d !important; color: white !important;';
-                            } else if (card.endsWith('+') || card === '2x') {
-                              cardStyle = 'background: #fbb03a !important; border-color: #fbb03a !important; color: white !important;';
-                            } else if (card === 'ST') {
-                              cardStyle = 'background: #e67e22 !important; color: white !important;';
-                            } else if (card === '2÷' || card.endsWith('-')) {
-                                cardStyle = 'background: #f1624f !important; border-color: #f1624f !important; color: white !important;';
-                            }
-                            
-                            return `<div class="card special ${cardClass}" ${cardStyle ? `style="${cardStyle}"` : ''}>
-                                ${cardDisplay}
-                            </div>`;
-                        }).join('')}
-                        ${emptySpecialSlots}
-                    </div>
-                </div>
-            </div>
+    const seen = new Set();
 
-            ${player.drawThreeRemaining > 0 ? `
-                <div class="draw-three-indicator">
-                    🎯 DRAW ${player.drawThreeRemaining} MORE CARDS
-                </div>
-            ` : ''}
+    game.players.forEach((player, index) => {
+        seen.add(player.id);
+
+        let panel = container.querySelector(`.player[data-player-id="${cssEscape(player.id)}"]`);
+        const isNewPanel = !panel;
+        if (isNewPanel) {
+            panel = buildPlayerPanel(player);
+            container.appendChild(panel);
+        }
+
+        // Put the panel at its seat. Only touch the DOM when it is actually in
+        // the wrong place — moving a node restarts its animations.
+        if (container.children[index] !== panel) {
+            container.insertBefore(panel, container.children[index] || null);
+        }
+
+        syncPlayerPanel(panel, player, index === game.currentPlayer, isNewPanel);
+    });
+
+    // Drop players who left.
+    [...container.querySelectorAll('.player')].forEach(panel => {
+        const id = panel.dataset.playerId;
+        if (!seen.has(id)) {
+            panel.remove();
+            lastPlayerState.delete(id);
+        }
+    });
+}
+
+// Phone: my panel goes in #myHand at full size, everyone else becomes a tile.
+function renderPlayersPhone(game) {
+    const hand = document.getElementById('myHand');
+    const rail = document.getElementById('opponentRail');
+    if (!hand || !rail) return;
+
+    const meIndex = game.players.findIndex(p => p.id === socket.id);
+    const me = meIndex >= 0 ? game.players[meIndex] : null;
+
+    if (me) {
+        let panel = hand.querySelector(`.player[data-player-id="${cssEscape(me.id)}"]`);
+        const isNewPanel = !panel;
+        if (isNewPanel) {
+            hand.innerHTML = '';
+            panel = buildPlayerPanel(me);
+            panel.classList.add('is-me');
+            hand.appendChild(panel);
+        }
+        syncPlayerPanel(panel, me, meIndex === game.currentPlayer, isNewPanel);
+    } else {
+        // Spectator, or the seat is gone: fall back to showing everyone.
+        hand.innerHTML = '';
+    }
+
+    const opponents = game.players.filter(p => p.id !== socket.id);
+    const seen = new Set();
+
+    opponents.forEach((player, index) => {
+        seen.add(player.id);
+
+        let tile = rail.querySelector(`.opp-tile[data-player-id="${cssEscape(player.id)}"]`);
+        if (!tile) {
+            tile = buildOpponentTile(player);
+            rail.appendChild(tile);
+        }
+        if (rail.children[index] !== tile) {
+            rail.insertBefore(tile, rail.children[index] || null);
+        }
+
+        const isTheirTurn = game.players[game.currentPlayer]?.id === player.id;
+        syncOpponentTile(tile, player, isTheirTurn);
+    });
+
+    [...rail.querySelectorAll('.opp-tile')].forEach(tile => {
+        if (!seen.has(tile.dataset.playerId)) tile.remove();
+    });
+}
+
+function buildOpponentTile(player) {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'opp-tile';
+    tile.dataset.playerId = player.id;
+    tile.innerHTML = `
+        <span class="opp-name"></span>
+        <span class="opp-score"></span>
+        <span class="opp-status"></span>
+        <span class="opp-pips">${Array.from({ length: MAX_REGULAR_CARDS }, () => '<i></i>').join('')}</span>
+    `;
+    tile.addEventListener('click', () => openPlayerSheet(player.id));
+    return tile;
+}
+
+function syncOpponentTile(tile, player, isTheirTurn) {
+    tile.classList.toggle('turn-now', isTheirTurn);
+    tile.classList.toggle('is-out', player.status === 'busted' || player.status === 'stood');
+    tile.classList.toggle('is-away', player.connected === false);
+
+    setText(tile.querySelector('.opp-name'), player.name);
+    setText(tile.querySelector('.opp-score'), player.roundScore);
+
+    const [icon, label] = STATUS_PARTS[player.status] || ['', ''];
+    setText(tile.querySelector('.opp-status'), `${icon} ${label}`);
+
+    const pips = tile.querySelectorAll('.opp-pips i');
+    pips.forEach((pip, i) => pip.classList.toggle('on', i < player.regularCards.length));
+
+    tile.setAttribute('aria-label',
+        `${player.name}, ${label.toLowerCase()}, ${player.roundScore} points, ${player.regularCards.length} cards. Tap to see their hand.`);
+}
+
+const STATUS_PARTS = {
+    active: ['⭐', 'ACTIVE'],
+    stood: ['🛑', 'STOOD'],
+    busted: ['💥', 'BUSTED'],
+    waiting: ['⏳', 'WAITING'],
+    frozen: ['❄️', 'FROZEN']
+};
+
+// ---------------------------------------------------------------------------
+// Opponent sheet — the full hand behind a tap
+// ---------------------------------------------------------------------------
+
+function openPlayerSheet(playerId) {
+    playSound('buttonClick');
+    document.querySelectorAll('.player-sheet').forEach(s => s.remove());
+
+    const game = latestGame;
+    const player = game?.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    const sheet = document.createElement('div');
+    sheet.className = 'player-sheet';
+    sheet.dataset.playerId = playerId;
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', `${player.name}'s hand`);
+    sheet.innerHTML = `
+        <div class="popup-content">
+            <div class="sheet-grab"></div>
+            <button class="close-button" aria-label="Close">✕</button>
+            <div class="sheet-body"></div>
         </div>
     `;
+
+    const body = sheet.querySelector('.sheet-body');
+    const panel = buildPlayerPanel(player);
+    body.appendChild(panel);
+    // trackState:false — the rail and hand own lastPlayerState; a sheet render
+    // must not overwrite it or the next real update loses its "what's new" diff.
+    syncPlayerPanel(panel, player, false, true, false);
+
+    const close = () => dismissPopup(sheet);
+    sheet.querySelector('.close-button').addEventListener('click', close);
+    sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+
+    const onKey = e => {
+        if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+
+    document.body.appendChild(sheet);
+}
+
+// Keeps an open sheet live as the game moves on underneath it.
+function refreshOpenPlayerSheet(game) {
+    const sheet = document.querySelector('.player-sheet:not(.popup-closing)');
+    if (!sheet) return;
+
+    const player = game.players.find(p => p.id === sheet.dataset.playerId);
+    if (!player) { dismissPopup(sheet); return; }
+
+    const panel = sheet.querySelector('.player');
+    if (panel) syncPlayerPanel(panel, player, false, false, false);
+}
+
+// ---------------------------------------------------------------------------
+// Turn strip and deck button
+// ---------------------------------------------------------------------------
+
+function updateTurnStrip(game) {
+    const strip = document.getElementById('turnStrip');
+    const text = document.getElementById('turnStripText');
+    if (!strip || !text) return;
+
+    const current = game.players[game.currentPlayer];
+    const mine = current?.id === socket.id;
+
+    if (game.status !== 'playing' || !current) {
+        strip.classList.remove('is-mine');
+        setText(text, game.status === 'finished' ? 'Game over' : 'Waiting…');
+        return;
+    }
+
+    strip.classList.toggle('is-mine', mine);
+    setText(text, mine ? 'Your turn' : `${current.name} is playing`);
+}
+
+function updateDeckButton(deck, lastCard) {
+    const count = document.getElementById('deckButtonCount');
+    const last = document.getElementById('deckButtonLast');
+    if (count) setText(count, deck.length);
+    if (last) {
+        const { displayValue } = lastCard === null || lastCard === undefined
+            ? { displayValue: '—' }
+            : getCardVisual(lastCard);
+        setText(last, displayValue);
+    }
+}
+
+// The remaining-deck grid is 94% of a phone screen, so on phones it lives
+// behind this button instead of on the board.
+function toggleDeckSheet(open) {
+    const btn = document.getElementById('deckButton');
+    document.body.classList.toggle('deck-sheet-open', open);
+    if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+
+function initMobileChrome() {
+    const deckBtn = document.getElementById('deckButton');
+    if (deckBtn) {
+        deckBtn.addEventListener('click', () => {
+            playSound('buttonClick');
+            toggleDeckSheet(!document.body.classList.contains('deck-sheet-open'));
+        });
+    }
+
+    // Tapping the dimmed area behind the deck sheet closes it.
+    const deckArea = document.querySelector('.deck-area');
+    if (deckArea) {
+        deckArea.addEventListener('click', e => {
+            if (e.target === deckArea) toggleDeckSheet(false);
+        });
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && document.body.classList.contains('deck-sheet-open')) {
+            toggleDeckSheet(false);
+        }
+    });
+
+    // Rotating the phone or resizing across the breakpoint swaps layouts, so
+    // panels have to be emptied out of the container they no longer belong in.
+    const onBreakpoint = () => {
+        document.getElementById('playersContainer').innerHTML = '';
+        document.getElementById('opponentRail').innerHTML = '';
+        document.getElementById('myHand').innerHTML = '';
+        lastPlayerState.clear();
+        toggleDeckSheet(false);
+        if (latestGame) renderPlayers(latestGame);
+    };
+
+    if (PHONE_QUERY.addEventListener) PHONE_QUERY.addEventListener('change', onBreakpoint);
+    else PHONE_QUERY.addListener(onBreakpoint);
+}
+
+// document.querySelector needs socket ids escaped; CSS.escape is not in every
+// browser we support.
+function cssEscape(value) {
+    if (window.CSS && typeof CSS.escape === 'function') return CSS.escape(value);
+    return String(value).replace(/["\\]/g, '\\$&');
+}
+
+// Builds the parts of a panel that never change shape, so syncPlayerPanel only
+// ever has to write text and reconcile the two card grids.
+function buildPlayerPanel(player) {
+    const panel = document.createElement('div');
+    panel.className = 'player';
+    panel.dataset.playerId = player.id;
+    panel.innerHTML = `
+        <div class="player-header">
+            <h3></h3>
+            <div class="player-status"></div>
+        </div>
+
+        <div class="scores">
+            ${scoreBox('ROUND SCORE', 0)}
+            ${scoreBox('TOTAL SCORE', 0)}
+            ${scoreBox('CARDS', `0/${MAX_REGULAR_CARDS}`)}
+        </div>
+
+        <div class="cards-section">
+            <div class="cards-container">
+                <div class="cards-label">REGULAR CARDS</div>
+                <div class="card-grid regular"></div>
+            </div>
+
+            <div class="cards-container">
+                <div class="cards-label">SPECIAL CARDS</div>
+                <div class="card-grid special"></div>
+            </div>
+        </div>
+
+        <div class="draw-three-slot"></div>
+    `;
+    return panel;
+}
+
+// track=false renders a read-only copy (the opponent sheet) without touching
+// lastPlayerState, which the live rail and hand depend on for their diffs.
+function syncPlayerPanel(panel, player, isCurrentTurn, isNewPanel, track = true) {
+    const previous = lastPlayerState.get(player.id);
+
+    // connected is absent on the stripped-down player objects some popups pass
+    // in, so only an explicit false counts as away.
+    const isAway = player.connected === false;
+
+    panel.classList.toggle('current-turn', isCurrentTurn);
+    panel.classList.toggle('disconnected', isAway);
+    ['active', 'stood', 'busted', 'waiting', 'frozen'].forEach(s => {
+        panel.classList.toggle(s, player.status === s);
+    });
+
+    const nameEl = panel.querySelector('.player-header h3');
+    const nameHtml = `${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}`;
+    if (nameEl.innerHTML !== nameHtml) nameEl.innerHTML = nameHtml;
+
+    const statusEl = panel.querySelector('.player-status');
+    const statusHtml = `
+        ${isAway ? '<div class="away-indicator">🔌 DISCONNECTED</div>' : ''}
+        ${getStatusIcon(player.status)}
+        ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
+        ${player.specialCards.includes('SC') ? '<div class="second-chance-indicator">🛡️ SECOND CHANCE</div>' : ''}
+    `;
+    if (statusEl.innerHTML !== statusHtml) statusEl.innerHTML = statusHtml;
+
+    const scoreEls = panel.querySelectorAll('.score-value');
+    setScore(scoreEls[0], player.roundScore, isNewPanel);
+    setScore(scoreEls[1], player.totalScore, isNewPanel);
+    setText(scoreEls[2], `${player.regularCards.length}/${MAX_REGULAR_CARDS}`);
+
+    // A brand new panel should not fire seven entrance animations at once —
+    // that happens when you rejoin a game already in progress.
+    const animate = !isNewPanel;
+
+    syncCardGrid(panel.querySelector('.card-grid.regular'), player.regularCards, false, animate);
+    syncCardGrid(panel.querySelector('.card-grid.special'), player.specialCards, true, animate);
+
+    const drawSlot = panel.querySelector('.draw-three-slot');
+    const drawHtml = player.drawThreeRemaining > 0
+        ? `<div class="draw-three-indicator">🎯 DRAW ${player.drawThreeRemaining} MORE CARDS</div>`
+        : '';
+    if (drawSlot.innerHTML !== drawHtml) drawSlot.innerHTML = drawHtml;
+
+    // Busting is the one moment worth reacting to, so shake the card that did it
+    // — but only on the update where the bust actually happened.
+    if (animate && player.status === 'busted' && previous && previous.status !== 'busted') {
+        shakeBustedCard(panel, player.bustedCard);
+    }
+
+    if (track) {
+        lastPlayerState.set(player.id, {
+            status: player.status,
+            roundScore: player.roundScore,
+            totalScore: player.totalScore
+        });
+    }
+}
+
+// Reconciles one grid against the card list the server sent. Cards that are
+// still in hand keep their existing element (and so never re-animate); only
+// genuinely new values get .is-new.
+function syncCardGrid(grid, cards, isSpecial, animate) {
+    if (!grid) return;
+
+    // Cards mid-exit are already on their way out; ignore them entirely.
+    const live = [...grid.children].filter(el => !el.classList.contains('is-leaving'));
+    const existing = live.filter(el => el.classList.contains('card'));
+    const slots = live.filter(el => !el.classList.contains('card'));
+
+    // Match by value, consuming each element once, so a hand holding two "3+"
+    // cards keeps both rather than collapsing them.
+    const pool = new Map();
+    existing.forEach(el => {
+        const key = el.dataset.value;
+        if (!pool.has(key)) pool.set(key, []);
+        pool.get(key).push(el);
+    });
+
+    const ordered = cards.map(card => {
+        const key = String(card);
+        const bucket = pool.get(key);
+        if (bucket && bucket.length) return { el: bucket.shift(), fresh: false };
+        return { el: buildCard(card, isSpecial), fresh: true };
+    });
+
+    // Anything left in the pool was played, stolen, or discarded.
+    pool.forEach(bucket => bucket.forEach(el => removeCard(el, animate)));
+
+    // Reuse the empty slots we already have and top up to a full row of seven.
+    const slotQueue = slots.slice();
+    const needed = Math.max(0, MAX_REGULAR_CARDS - cards.length);
+    const finalSlots = [];
+    for (let i = 0; i < needed; i++) {
+        finalSlots.push(slotQueue.shift() || buildSlot(isSpecial));
+    }
+    slotQueue.forEach(el => el.remove());
+
+    // Write the final order, moving nodes only when they are out of place.
+    const target = [...ordered.map(o => o.el), ...finalSlots];
+    target.forEach((el, i) => {
+        if (grid.children[i] !== el) {
+            grid.insertBefore(el, grid.children[i] || null);
+        }
+    });
+
+    if (animate) {
+        ordered.forEach(o => {
+            if (o.fresh) playCardEntrance(o.el);
+        });
+    }
+}
+
+function buildCard(card, isSpecial) {
+    const el = document.createElement('div');
+    el.dataset.value = String(card);
+
+    if (!isSpecial) {
+        el.className = 'card';
+        el.textContent = card;
+        return el;
+    }
+
+    el.className = `card special ${getSpecialCardClass(card)}`;
+    el.textContent = getSpecialCardDisplay(card);
+    return el;
+}
+
+function buildSlot(isSpecial) {
+    const el = document.createElement('div');
+    el.className = isSpecial ? 'empty-slot special' : 'empty-slot';
+    return el;
+}
+
+// Entrance classes are always cleared on a timer as well as on animationend.
+// A backgrounded or non-compositing tab can leave an animation running forever,
+// and .is-new holds the card at opacity 0 - so without this a player who tabs
+// away mid-draw comes back to invisible cards.
+function clearAfter(el, className, ms) {
+    const strip = () => el.classList.remove(className);
+    el.addEventListener('animationend', strip, { once: true });
+    setTimeout(strip, ms);
+}
+
+function playCardEntrance(el) {
+    el.classList.add('is-new');
+    clearAfter(el, 'is-new', 600);
+}
+
+function removeCard(el, animate) {
+    if (!animate) {
+        el.remove();
+        return;
+    }
+    el.classList.add('is-leaving');
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    // animationend never fires when the tab is hidden or motion is reduced.
+    setTimeout(() => el.remove(), 400);
+}
+
+function shakeBustedCard(panel, bustedCard) {
+    const grid = panel.querySelector('.card-grid.regular');
+    if (!grid) return;
+    const card = bustedCard != null
+        ? grid.querySelector(`.card[data-value="${cssEscape(String(bustedCard))}"]`)
+        : null;
+    const target = card || grid.querySelector('.card:last-of-type');
+    if (!target) return;
+    target.classList.add('is-bust');
+    clearAfter(target, 'is-bust', 800);
+}
+
+function setText(el, value) {
+    if (el && el.textContent !== String(value)) el.textContent = value;
+}
+
+// Rolls the number instead of snapping to it. Falls back to a plain write when
+// either end is not a number, or when the player asked for less motion.
+function setScore(el, value, immediate) {
+    if (!el) return;
+
+    const from = Number(el.textContent);
+    const to = Number(value);
+
+    // A hidden tab pauses requestAnimationFrame, which would freeze the roll
+    // partway and leave a stale number on screen. A score is information, not
+    // decoration, so anything other than a clean animated path snaps instead.
+    const canAnimate = !immediate
+        && Number.isFinite(from) && Number.isFinite(to) && from !== to
+        && !prefersReducedMotion()
+        && document.visibilityState === 'visible';
+
+    stopRoll(el);
+
+    if (!canAnimate) {
+        setText(el, value);
+        return;
+    }
+
+    const duration = 380;
+    const start = performance.now();
+    el.classList.add('is-rolling');
+
+    const finish = () => {
+        stopRoll(el);
+        el.textContent = to;
+        el.classList.remove('is-rolling');
+    };
+
+    const step = now => {
+        const p = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(from + (to - from) * eased);
+        if (p < 1) {
+            el._rollFrame = requestAnimationFrame(step);
+        } else {
+            finish();
+        }
+    };
+
+    el._rollFrame = requestAnimationFrame(step);
+    // Backstop: if the frames stop coming, land on the real number anyway.
+    el._rollTimer = setTimeout(finish, duration + 200);
+}
+
+function stopRoll(el) {
+    if (el._rollFrame) {
+        cancelAnimationFrame(el._rollFrame);
+        el._rollFrame = null;
+    }
+    if (el._rollTimer) {
+        clearTimeout(el._rollTimer);
+        el._rollTimer = null;
+    }
+}
+
+function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 // Helper functions
@@ -1169,16 +1721,10 @@ function getSpecialCardDisplay(card) {
 }
 
 function getStatusIcon(status) {
-    const statusMap = {
-        active: ['⭐', 'ACTIVE'],
-        stood: ['🛑', 'STOOD'], 
-        busted: ['💥', 'BUSTED'],
-        waiting: ['⏳', 'WAITING'],
-        frozen: ['❄️', 'FROZEN'] // Add frozen status
-    };
+    const [icon, label] = STATUS_PARTS[status] || ['', ''];
     return `
-        <span class="status-icon">${statusMap[status][0]}</span>
-        <span class="status-text">${statusMap[status][1]}</span>
+        <span class="status-icon">${icon}</span>
+        <span class="status-text">${label}</span>
     `;
 }
 
@@ -1440,7 +1986,7 @@ function handleAllBusted() {
             `Starting new round in ${count}...`;
         if (count <= 0) {
             clearInterval(countdown);
-            popup.remove();
+            dismissPopup(popup);
         }
         count--;
     }, 1000);
@@ -1518,7 +2064,7 @@ function showWinnerPopup(winner, isHost) {
     if (isHost) {
         document.getElementById('rematchButton').addEventListener('click', () => {
             socket.emit('request-rematch', currentGameId);
-            popup.remove();
+            dismissPopup(popup);
         });
     }
 }
@@ -1649,7 +2195,7 @@ function handleRoundSummary({ players, allBusted }) {
         countdownElement.textContent = count;
         if (count <= 0) {
             clearInterval(interval);
-            popup.remove();
+            dismissPopup(popup);
         }
         count--;
     }, 1000);
@@ -1724,7 +2270,7 @@ function showRemoveCardPopup(gameId, players) {
       const isSpecial = btn.dataset.special === 'true';
       
       socket.emit('remove-card', gameId, targetId, cardIndex, isSpecial);
-      popup.remove();
+      dismissPopup(popup);
     });
   });
 
@@ -1929,7 +2475,7 @@ function showSwapCardPopup(gameId, players) {
         index: selectedCards[1].index,
         isSpecial: selectedCards[1].isSpecial
       });
-      popup.remove();
+      dismissPopup(popup);
     }
   });
 
@@ -2034,7 +2580,7 @@ function showStealCardPopup(gameId, players) {
       const isSpecial = btn.dataset.special === 'true';
 
       socket.emit('steal-card', gameId, targetId, cardIndex, isSpecial);
-      popup.remove();
+      dismissPopup(popup);
     });
   });
 
@@ -2234,7 +2780,7 @@ function showSelectCardPopup(gameId, deck, fullDeck = null) {
       const finalCard = isNaN(selectedCard) ? selectedCard : parseInt(selectedCard);
       
       // Close the popup first
-      popup.remove();
+      dismissPopup(popup);
       
       // Handle selected card
       handleSelectedCard(gameId, finalCard);
@@ -2491,14 +3037,14 @@ function showTutorial() {
     // Close button functionality
     popup.querySelector('.close-button').addEventListener('click', () => {
         playSound('buttonClick');
-        popup.remove();
+        dismissPopup(popup);
         document.removeEventListener('keydown', handleEscape);
     });
 
     // Close on escape key
     const handleEscape = (e) => {
         if (e.key === 'Escape') {
-            popup.remove();
+            dismissPopup(popup);
             document.removeEventListener('keydown', handleEscape);
         }
     };
@@ -2507,14 +3053,100 @@ function showTutorial() {
     document.body.appendChild(popup);
 }
 
+// ---------------------------------------------------------------------------
+// Sound
+//
+// Each cue plays from a small pool of clones. With a single <audio> element a
+// second draw restarted the first one mid-note, so fast play sounded clipped.
+// Levels are mixed per cue: clicks sit under the table, wins sit on top.
+// ---------------------------------------------------------------------------
+
+const SOUND_LEVELS = {
+    buttonClick: 0.25,
+    cardFlip: 0.45,
+    standSound: 0.45,
+    secondChanceSound: 0.6,
+    bustCardSound: 0.6,
+    bustSound: 0.7,
+    roundEnd: 0.6,
+    winSound: 0.8
+};
+
+const SOUND_POOL_SIZE = 3;
+const soundPools = new Map();
+
+function getSoundPool(soundId) {
+    if (soundPools.has(soundId)) return soundPools.get(soundId);
+
+    const source = document.getElementById(soundId);
+    if (!source) return null;
+
+    const volume = SOUND_LEVELS[soundId] ?? 0.5;
+    const pool = [source];
+    for (let i = 1; i < SOUND_POOL_SIZE; i++) {
+        const clone = source.cloneNode();
+        clone.removeAttribute('id');
+        pool.push(clone);
+    }
+    pool.forEach(el => { el.volume = volume; });
+
+    const entry = { pool, next: 0 };
+    soundPools.set(soundId, entry);
+    return entry;
+}
+
 function playSound(soundId) {
     if (!soundEnabled) return;
-    const sound = document.getElementById(soundId);
-    if (sound) {
-        sound.volume = 0.5; // Set volume to 50%
-        sound.currentTime = 0; // Reset sound to start
-        sound.play().catch(e => console.log('Sound play failed:', e));
+
+    const entry = getSoundPool(soundId);
+    if (!entry) return;
+
+    const el = entry.pool[entry.next];
+    entry.next = (entry.next + 1) % entry.pool.length;
+
+    el.currentTime = 0;
+    // Autoplay policy rejects until the first gesture; that is expected, not a bug.
+    el.play().catch(() => {});
+}
+
+function setSoundEnabled(enabled) {
+    soundEnabled = enabled;
+    try {
+        localStorage.setItem('hit7-sound', enabled ? 'on' : 'off');
+    } catch (e) {
+        // Private browsing can refuse storage; the toggle still works for this session.
     }
+    if (!enabled) {
+        soundPools.forEach(({ pool }) => pool.forEach(el => { el.pause(); el.currentTime = 0; }));
+    }
+    syncSoundButton();
+}
+
+function syncSoundButton() {
+    const btn = document.getElementById('soundToggle');
+    if (!btn) return;
+    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    btn.title = soundEnabled ? 'Mute sound' : 'Unmute sound';
+    btn.setAttribute('aria-label', btn.title);
+    btn.setAttribute('aria-pressed', String(!soundEnabled));
+}
+
+function initSound() {
+    try {
+        soundEnabled = localStorage.getItem('hit7-sound') !== 'off';
+    } catch (e) {
+        soundEnabled = true;
+    }
+
+    const btn = document.getElementById('soundToggle');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            setSoundEnabled(!soundEnabled);
+            // Play after the flip so unmuting confirms itself audibly.
+            if (soundEnabled) playSound('buttonClick');
+        });
+    }
+    syncSoundButton();
 }
 
 socket.on('select-draw-three-target', (gameId, targets) => {
@@ -2548,7 +3180,7 @@ socket.on('select-draw-three-target', (gameId, targets) => {
   popup.querySelectorAll('.draw-three-target').forEach(btn => {
     btn.addEventListener('click', () => {
       socket.emit('draw-three-select', currentGameId, btn.dataset.id);
-      popup.remove();
+      dismissPopup(popup);
     });
   });
 
