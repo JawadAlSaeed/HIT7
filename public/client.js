@@ -497,6 +497,105 @@ function resetGame() {
     socket.emit('reset-game', currentGameId);
 }
 
+// ---------------------------------------------------------------------------
+// Game settings
+//
+// The server owns these and validates every change; this half only draws them and
+// sends what the host taps. The card counts are duplicated from lib/deck.js because
+// the lobby has to show them before a deck is ever dealt.
+// ---------------------------------------------------------------------------
+
+const DECK_MODE_INFO = {
+    normal: {
+        label: 'Normal',
+        size: 94,
+        blurb: 'The Flip 7 deck. Numbers, Freeze, Draw Three, Second Chance and the plus cards.'
+    },
+    extreme: {
+        label: 'Extreme',
+        size: 108,
+        blurb: 'Everything. Adds Remove, Steal, Swap, Select, the minus cards and Halve.'
+    }
+};
+
+const WIN_SCORE_OPTIONS = [100, 150, 200, 300];
+const DEFAULT_SETTINGS = { deckMode: 'extreme', winningScore: 200 };
+
+const settingsOf = game => {
+    const settings = { ...DEFAULT_SETTINGS, ...(game && game.settings) };
+    if (!DECK_MODE_INFO[settings.deckMode]) settings.deckMode = DEFAULT_SETTINGS.deckMode;
+    return settings;
+};
+
+// Only the host gets buttons. Everyone else gets exactly the same information as plain
+// text, so nobody has to ask what they are about to play.
+function renderLobbySettings(gameData) {
+    const panel = document.getElementById('lobbySettings');
+    if (!panel) return;
+
+    const settings = settingsOf(gameData);
+
+    const option = (isSelected, attrs, inner) => isHost
+        ? `<button type="button" class="setting-option${isSelected ? ' selected' : ''}" ${attrs}>${inner}</button>`
+        : `<span class="setting-option${isSelected ? ' selected' : ''}">${inner}</span>`;
+
+    const deckOptions = Object.entries(DECK_MODE_INFO).map(([id, info]) => option(
+        id === settings.deckMode,
+        `data-setting="deckMode" data-value="${id}"`,
+        `${info.label}<span class="setting-sub">${info.size} cards</span>`
+    )).join('');
+
+    const scoreOptions = WIN_SCORE_OPTIONS.map(score => option(
+        score === settings.winningScore,
+        `data-setting="winningScore" data-value="${score}"`,
+        String(score)
+    )).join('');
+
+    panel.innerHTML = `
+        <div class="setting-group">
+            <div class="setting-label">Deck</div>
+            <div class="setting-options">${deckOptions}</div>
+            <p class="setting-blurb">${escapeHtml(DECK_MODE_INFO[settings.deckMode].blurb)}</p>
+        </div>
+        <div class="setting-group">
+            <div class="setting-label">First to</div>
+            <div class="setting-options">${scoreOptions}</div>
+        </div>
+        ${isHost ? '' : '<p class="setting-blurb">The host picks these.</p>'}
+    `;
+}
+
+// Delegated, so re-rendering the panel's contents never loses the handler.
+function wireLobbySettings() {
+    const panel = document.getElementById('lobbySettings');
+    if (!panel || panel.dataset.wired) return;
+    panel.dataset.wired = 'true';
+
+    panel.addEventListener('click', event => {
+        const button = event.target.closest('button[data-setting]');
+        if (!button || !isHost) return;
+        const { setting, value } = button.dataset;
+        socket.emit('update-settings', currentGameId, {
+            [setting]: setting === 'winningScore' ? Number(value) : value
+        });
+    });
+}
+
+// The target score is the one rule a player cannot work out from the board.
+function updateSettingsDisplay(game) {
+    const settings = settingsOf(game);
+
+    const target = document.getElementById('targetScore');
+    if (target) target.textContent = settings.winningScore;
+
+    const badge = document.getElementById('modeBadge');
+    if (badge) {
+        const info = DECK_MODE_INFO[settings.deckMode];
+        badge.textContent = `${info.label} · to ${settings.winningScore}`;
+        badge.hidden = false;
+    }
+}
+
 // Game state handlers
 function handleGameCreated({ gameId, gameUrl, token }) {
     console.log('Game created with URL:', gameUrl);
@@ -587,6 +686,7 @@ function handleGameUpdate(game) {
 
     // Update deck count immediately
     document.getElementById('deckCount').textContent = game.deck.length;
+    updateSettingsDisplay(game);
     // Update the remaining pile display immediately
     updateRemainingPile(game.deck);
     // Update the last card drawn
@@ -614,6 +714,7 @@ function handleGameUpdate(game) {
         if (shareInput) {
           shareInput.value = currentGameUrl || (window.location.origin + '/join/' + (game.id || currentGameId || ''));
         }
+        renderLobbySettings(game);
         if (isHost) updateStartButton(game.players.length);
         } else {
             // Show waiting screen if it doesn't exist
@@ -646,6 +747,7 @@ function updateGameDisplay(game) {
     // game updates.
     latestGame = game;
     document.getElementById('deckCount').textContent = game.deck.length;
+    updateSettingsDisplay(game);
     updateRemainingPile(game.deck);
     updateLastCardDrawn(game.lastCardDrawn);
     updateDeckButton(game.deck, game.lastCardDrawn);
@@ -1886,6 +1988,7 @@ function showWaitingScreen(gameData) {
           <div class="copied-message">Link copied!</div>
         </div>
         ` : ''}
+        <div class="lobby-settings" id="lobbySettings"></div>
         <div class="players-list">
             ${gameData.players.map(player => `
                 <div class="player-item">
@@ -1911,6 +2014,9 @@ function showWaitingScreen(gameData) {
     
     waitingScreen.innerHTML = content;
     document.body.appendChild(waitingScreen);
+
+    renderLobbySettings(gameData);
+    wireLobbySettings();
 
     // Ensure start button calls startGame and is wired (in case innerHTML changes later)
     const startBtn = document.getElementById('startGameBtn');
@@ -2043,36 +2149,44 @@ function handleAllBusted() {
     }, 1000);
 }
 
-function showWinnerPopup(winner, isHost) {
-    // Get all players from the current game state
-    const container = document.getElementById('playersContainer');
-    const allPlayerElements = container.querySelectorAll('.player');
-    const allPlayers = [];
-    
-    // Extract player data from the DOM
-    allPlayerElements.forEach(playerEl => {
-        const playerName = playerEl.querySelector('h3').textContent.replace('(YOU)', '').trim();
-        const playerTotalScore = parseInt(playerEl.querySelectorAll('.score-value')[1].textContent);
-        const playerId = playerEl.dataset.playerId;
-        
-        allPlayers.push({
-            name: playerName,
-            totalScore: playerTotalScore,
-            id: playerId,
-            isWinner: playerId === winner.id
-        });
-    });
-    
-    // Sort players by score (descending)
-    allPlayers.sort((a, b) => b.totalScore - a.totalScore);
-    
-    // Create leaderboard HTML
-    const topPlayers = allPlayers.slice(0, 3); // Get top 3 players
-    const leaderboardHTML = topPlayers.map((player, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+// Superlatives, in the order they are worth reading. Each one is won by whoever has the
+// highest value for that stat; anything nobody actually did is left out entirely, so a
+// quiet game shows a short list rather than a column of zeroes.
+const AWARDS = [
+    { key: 'bestRound',     icon: '🔥',  title: 'Best Round',    unit: 'points in one round' },
+    { key: 'sevens',        icon: '🌟',  title: 'Perfect Sevens', unit: 'full hands' },
+    { key: 'busts',         icon: '💥',  title: 'Most Busts',    unit: 'busts' },
+    { key: 'powerPlays',    icon: '🥷',  title: 'Most Ruthless', unit: 'cards played at somebody' },
+    { key: 'timesTargeted', icon: '🎯',  title: 'Most Picked On', unit: 'times targeted' },
+    { key: 'cardsDrawn',    icon: '🎴',  title: 'Most Greedy',   unit: 'cards drawn' },
+    { key: 'secondChances', icon: '🛡️', title: 'Most Saves',    unit: 'second chances burned' },
+    { key: 'timeouts',      icon: '⏰',  title: 'Most Absent',   unit: 'turns run out of time' }
+];
+
+const MAX_AWARDS_SHOWN = 4;
+
+function buildAwards(players) {
+    const statOf = player => player.stats || {};
+
+    return AWARDS.map(award => {
+        const best = Math.max(0, ...players.map(p => statOf(p)[award.key] || 0));
+        if (best === 0) return null;
+
+        const holders = players.filter(p => (statOf(p)[award.key] || 0) === best);
+        return { ...award, value: best, holders: holders.map(p => p.name) };
+    }).filter(Boolean).slice(0, MAX_AWARDS_SHOWN);
+}
+
+function showWinnerPopup(winner, isHost, players = []) {
+    // The server sends every player on game-over, so nothing here has to read the board
+    // back out of the DOM the way this used to.
+    const ranked = [...players].sort((a, b) => b.totalScore - a.totalScore);
+
+    const leaderboardHTML = ranked.map((player, index) => {
+        const medal = ['🥇', '🥈', '🥉'][index] || `${index + 1}.`;
         const isCurrentPlayer = player.id === socket.id;
-        const winnerClass = player.isWinner ? 'winner' : '';
-        
+        const winnerClass = player.id === winner.id ? 'winner' : '';
+
         return `
             <div class="leaderboard-row ${winnerClass} ${isCurrentPlayer ? 'current-player' : ''}">
                 <div class="rank">${medal}</div>
@@ -2082,6 +2196,21 @@ function showWinnerPopup(winner, isHost) {
         `;
     }).join('');
 
+    const awards = buildAwards(ranked);
+    const awardsHTML = awards.map(award => `
+        <div class="award-row">
+            <div class="award-icon">${award.icon}</div>
+            <div class="award-body">
+                <div class="award-title">${award.title}</div>
+                <div class="award-holder">${escapeHtml(award.holders.join(' & '))}</div>
+            </div>
+            <div class="award-value">
+                <strong>${award.value}</strong>
+                <span>${award.unit}</span>
+            </div>
+        </div>
+    `).join('');
+
     const popup = document.createElement('div');
     popup.className = 'winner-popup';
     popup.innerHTML = `
@@ -2090,14 +2219,23 @@ function showWinnerPopup(winner, isHost) {
             <h2>WINNER!</h2>
             <div class="winner-name">${escapeHtml(winner.name)}</div>
             <div class="winner-score">${winner.totalScore} Points</div>
-            
+
             <div class="leaderboard">
-                <h3>Top Players</h3>
+                <h3>Final Scores</h3>
                 <div class="leaderboard-container">
                     ${leaderboardHTML}
                 </div>
             </div>
-            
+
+            ${awards.length ? `
+            <div class="awards">
+                <h3>Highlights</h3>
+                <div class="awards-container">
+                    ${awardsHTML}
+                </div>
+            </div>
+            ` : ''}
+
             ${isHost ? `
                 <button id="rematchButton" class="game-button green">
                     Rematch?
@@ -2123,7 +2261,7 @@ function showWinnerPopup(winner, isHost) {
 function handleGameOver({ players, winner }) {
     playSound('winSound');
     toggleActionButtons(false);
-    showWinnerPopup(winner, isHost); // Pass isHost flag
+    showWinnerPopup(winner, isHost, players);
 }
 
 function handleGameReset() {

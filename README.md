@@ -6,7 +6,24 @@
 ## 🎮 About The Game
 HIT 7 is an exciting multiplayer card game that combines luck, strategy, and risk management. Players take turns drawing cards to build their hands while avoiding duplicates. Use special cards strategically, and be the first to reach 200 points to win!
 
+## ⚙️ Game Setup
+
+The host picks both of these in the waiting room, before the first card is dealt.
+
+### Deck
+
+| Deck | Cards | What's in it |
+|---|---|---|
+| **Normal** | 94 | The Flip 7 deck: numbers, Freeze, Draw Three, Second Chance and the plus cards. |
+| **Extreme** | 108 | Everything below. Adds Remove, Steal, Swap, Select, the minus cards and Halve. |
+
+### Target score
+
+`100`, `150`, `200` (default) or `300`.
+
 ## 🃏 Game Components
+
+The full **Extreme** deck. **Normal** leaves out every card marked ⚡ below.
 
 ### Regular Cards (79 cards)
 - One '0' card
@@ -21,19 +38,19 @@ HIT 7 is an exciting multiplayer card game that combines luck, strategy, and ris
 - 🛡️ Second Chance (3) - Protects you from busting on a duplicate
 - ❄️ Freeze (3) - Skip another player's turn
 - 🎯 Draw Three (3) - Force a player to draw three cards in succession
-- 🗑️ Remove Card (3) - Remove any card from any player's collection
-- 🥷 Steal Card (2) - Steal a card from another player
-- ⇄️ Swap Card (2) - Swap two cards between different players (including yourself)
-- 🃏 Select Card (1) - Select any card from the Deck
+- 🗑️ Remove Card (3) ⚡ - Remove any card from any player's collection
+- 🥷 Steal Card (2) ⚡ - Steal a card from another player
+- ⇄️ Swap Card (2) ⚡ - Swap two cards between different players (including yourself)
+- 🃏 Select Card (1) ⚡ - Select any card from the Deck
 
 #### Point Modifier Cards
 - ➕ Adders (5):
   - 2+, 4+, 6+, 8+, 10+
-- ➖ Minus (5):
+- ➖ Minus (5) ⚡:
   - 2-, 4-, 6-, 8-, 10-
 - ✖️ Multiplier (1):
   - 2x
-- ➗ Divide (1):
+- ➗ Divide (1) ⚡:
   - 2÷ (Halves your score)
 
 ## 🎲 Gameplay Rules
@@ -63,7 +80,11 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 ## 🏆 Winning the Game
 - Points accumulate across multiple rounds
 - if a player busts they lose their points collected in that round
-- The first player to reach 200 points or more wins!
+- The first player to reach the target score or more wins!
+- Take too long on your turn and you bust automatically - the table should never
+  be stuck waiting on somebody who has walked away
+- The final screen shows every score plus the highlights of the game: best round,
+  most busts, most ruthless, and whoever got picked on the most
 
 
 ## 🛠️ Technical Details
@@ -74,10 +95,19 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 
 ## 🎵 Features
 - Real-time multiplayer
+- Two decks and four target scores
 - Sound effects and animations
 - Interactive tutorial
 - Special card effects
 - Cross-platform compatibility
+
+## 🧪 Development
+
+```bash
+npm install
+npm run dev    # http://localhost:3000
+npm test       # node:test, no extra dependencies
+```
 
 ## 🚀 Quick Start
 1. Visit [HIT7.click](https://hit7.click)

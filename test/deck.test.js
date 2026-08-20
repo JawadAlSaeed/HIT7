@@ -1,7 +1,17 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { DECK_SIZE, createDeck, reshuffleFromDiscard } = require('../lib/deck');
+const {
+  DECK_MODES,
+  DEFAULT_DECK_MODE,
+  NUMBER_CARD_COUNT,
+  createDeck,
+  deckSize,
+  isDeckMode,
+  reshuffleFromDiscard
+} = require('../lib/deck');
+
+const DECK_SIZE = deckSize(DEFAULT_DECK_MODE);
 
 // How many copies of each card a full deck holds. Anything more than this in play at
 // once means a card has been duplicated.
@@ -20,7 +30,49 @@ const countCards = cards => {
 };
 
 test('a fresh deck is 108 cards', () => {
-  assert.strictEqual(createDeck().length, DECK_SIZE);
+  assert.strictEqual(createDeck().length, 108);
+  assert.strictEqual(DECK_SIZE, 108);
+});
+
+test('normal is the 94-card Flip 7 deck, extreme is 108', () => {
+  assert.strictEqual(createDeck('normal').length, 94);
+  assert.strictEqual(createDeck('extreme').length, 108);
+  assert.strictEqual(deckSize('normal'), 94);
+  assert.strictEqual(deckSize('extreme'), 108);
+});
+
+test('both modes hold the same 79 number cards', () => {
+  for (const mode of Object.keys(DECK_MODES)) {
+    const numbers = createDeck(mode).filter(card => typeof card === 'number');
+    assert.strictEqual(numbers.length, NUMBER_CARD_COUNT, `${mode} numbers`);
+  }
+});
+
+test('normal leaves out every card that reaches across the table', () => {
+  const normal = createDeck('normal');
+  for (const card of ['RC', 'ST', 'Swap', 'Select', '2-', '4-', '6-', '8-', '10-', '2÷']) {
+    assert.ok(!normal.includes(card), `normal should not contain ${card}`);
+  }
+  // The ones it keeps, it keeps in full.
+  for (const card of ['Freeze', 'D3', 'SC', '2x', '10+']) {
+    assert.ok(normal.includes(card), `normal should contain ${card}`);
+  }
+});
+
+test('extreme is normal plus the extra cards, nothing removed', () => {
+  const countCardsIn = mode => countCards(createDeck(mode));
+  const normal = countCardsIn('normal');
+  const extreme = countCardsIn('extreme');
+
+  for (const [card, count] of normal) {
+    assert.ok(extreme.get(card) >= count, `extreme dropped ${card}`);
+  }
+});
+
+test('an unknown deck mode falls back instead of throwing', () => {
+  assert.strictEqual(isDeckMode('nonsense'), false);
+  assert.strictEqual(createDeck('nonsense').length, deckSize(DEFAULT_DECK_MODE));
+  assert.strictEqual(createDeck(undefined).length, deckSize(DEFAULT_DECK_MODE));
 });
 
 test('a fresh deck holds one 0, one 1, two 2s ... twelve 12s', () => {
