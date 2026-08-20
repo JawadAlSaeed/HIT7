@@ -12,14 +12,6 @@ recorded in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 
 ## Open issues
 
-### No reconnect after a refresh
-**Severity**: HIGH
-Disconnecting now removes you from the game cleanly, but there is no way back in:
-joining is lobby-only, and a returning socket has a new id. Refreshing mid-game costs
-you your seat and your banked score.
-**Fix**: issue a token on join, store it against the player, and let a socket
-presenting a known token reclaim that seat instead of creating a new player.
-
 ### Targeting cards can only be played on the turn they are drawn
 **Severity**: MEDIUM
 Freeze, Draw Three, Remove Card, Steal and Swap open their target popup the moment
@@ -29,6 +21,10 @@ and is cleared at the end of the round.
 The `request-draw-three-targets` / `request-freeze-targets` / … events already exist
 server-side and would support playing a held card; the client has no button to send
 them outside the Select flow.
+In practice this is close to unreachable: each of these cards opens its popup the
+instant it is drawn and `pendingTarget` holds the turn until it is aimed, so no other
+player can act in the gap. Steal is the one way a copy can land in a hand that cannot
+use it.
 
 ### The client reconstructs game state from the DOM
 **Severity**: MEDIUM
@@ -37,23 +33,10 @@ HTML, and `showWinnerPopup` parses player names out of `<h3>` text. Any change t
 markup silently changes the parsed state. The server sends the full game object on
 every update - that should be cached and read instead.
 
-### Reshuffling builds a brand new deck
-**Severity**: LOW - by design, but worth stating
-When the deck runs out, `createDeck()` makes a fresh 108-card deck and the discard pile
-is cleared, rather than reshuffling the discards. Cards currently in players' hands are
-not accounted for, so the same card can exist twice across a reshuffle, and the
-remaining-pile display resets to a full deck. This is fine for the game as designed;
-it just means the pile is not a reliable count of what is truly left.
-
 ### Round-end delay is a fixed 5s `setTimeout`
 **Severity**: LOW
 Nothing cancels it if every player leaves during the summary. The timer checks that its
 game is still the live one before scoring, so this is inert - just untidy.
-
-### No rate limiting on socket events
-**Severity**: LOW
-A client can emit `flip-card` as fast as it likes. Turn and status checks mean this
-cannot corrupt a game, but nothing stops one socket from generating load.
 
 ---
 
@@ -79,12 +62,23 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 | Draw Three could target a stuck player | Parked the turn on someone who could not act |
 | `showNotification` undefined | Every swap threw instead of announcing |
 | Dead code | `startServer`, `use-freeze`, `checkFinalWinner` |
+| No reconnect after a refresh | A closed tab lost its seat; join was lobby-only |
+| Reshuffling built a brand new deck | The same card could exist twice inside a round |
+| A stalled turn hung the table | Nothing resolved the turn of a player who walked away |
+| No rate limiting on socket events | One socket could emit as fast as it liked |
 
 ---
 
 ## Testing
 
-`server.js` has no test suite in the repo. The fixes above were verified by driving a
+`npm test` runs the suite in `test/`, built on `node:test` - no extra dependencies.
+It currently covers `lib/deck.js`: deck composition, and the invariant that a reshuffle
+can never put a card back in play while a copy is sitting in somebody's hand.
+
+Everything still living in `server.js` is untested, because requiring it starts a
+server. Extracting more of the rules the way `lib/deck.js` was extracted is the way in.
+
+Earlier fixes were verified by driving a
 real server with scripted socket.io clients - full games to 200 points asserting
 per-update invariants (hand size, no duplicate cards, busted players at 0, deck never
 in draw order, totals growing by exactly one round score), plus targeted checks for
@@ -95,3 +89,4 @@ Worth automating next, as they are the paths hardest to reason about:
 2. Select as the last card in the deck.
 3. Second Chance consumed by a Swap-induced duplicate.
 4. Every player busting in the same round.
+5. A turn timing out while a target popup is open.

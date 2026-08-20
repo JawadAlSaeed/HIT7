@@ -268,6 +268,7 @@ socket.on('round-summary', handleRoundSummary);
 socket.on('rejoined', handleRejoined);
 socket.on('rejoin-failed', handleRejoinFailed);
 socket.on('round-restarted', handleRoundRestarted);
+socket.on('turn-timeout', handleTurnTimeout);
 
 // Fires on the first connection and again after every reconnect, so it is the one place
 // that can put a returning player back in their seat - whether they reloaded the page or
@@ -778,6 +779,8 @@ const HISTORY_ICONS = {
     'draw': '🎴',
     'select': '🃏',
     'bust': '💥',
+    'timeout': '⏰',
+    'deck-empty': '📭',
     'second-chance': '🛡️',
     'stand': '✋',
     'seven-bonus': '🌟',
@@ -816,6 +819,8 @@ function formatHistoryEntry(entry) {
         case 'draw':          return `${player} drew ${cards[0] || ''}`;
         case 'select':        return `${player} picked ${cards[0] || ''} out of the deck`;
         case 'bust':          return `${player} <span class="history-bad">BUSTED</span> on ${cards[0] || ''}`;
+        case 'timeout':       return `${player} <span class="history-bad">ran out of time</span> and busted`;
+        case 'deck-empty':    return `${player} could not draw — every card is in a hand`;
         case 'second-chance': return `${player} burned 🛡️ to survive ${cards[0] || ''}`;
         case 'stand':         return `${player} stood`;
         case 'seven-bonus':   return `${player} filled all 7 cards <span class="history-good">+15</span>`;
@@ -1822,6 +1827,32 @@ function handleRejoinFailed(message) {
     latestGame = null;
     const lobby = document.querySelector('.lobby-screen');
     if (lobby) lobby.style.display = '';
+}
+
+// The server has already busted them and moved the turn on. All this has to do is take
+// down a popup that is now aimed at nothing, and tell the table why the turn jumped.
+function handleTurnTimeout({ playerId, playerName }) {
+    if (playerId === socket.id) {
+        document.querySelectorAll(
+            '.freeze-popup, .draw-three-popup, .remove-card-popup, ' +
+            '.steal-card-popup, .swap-card-popup, .select-card-popup'
+        ).forEach(p => p.remove());
+        activeFreezePopup = null;
+        activeDrawThreePopup = null;
+        document.body.style.overflow = 'auto';
+        toggleActionButtons(false);
+    }
+
+    document.querySelectorAll('.timeout-notice').forEach(n => n.remove());
+    const notice = document.createElement('div');
+    notice.className = 'restart-notice timeout-notice';
+    const who = playerId === socket.id ? 'You' : escapeHtml(playerName || 'A player');
+    notice.innerHTML = `
+        <strong>⏰ Out of time</strong>
+        <span>${who} took too long, so the turn busted automatically.</span>
+    `;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 5000);
 }
 
 function handleRoundRestarted(game) {
