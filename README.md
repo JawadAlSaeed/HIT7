@@ -8,7 +8,7 @@ HIT 7 is an exciting multiplayer card game that combines luck, strategy, and ris
 
 ## ⚙️ Game Setup
 
-The host picks both of these in the waiting room, before the first card is dealt.
+The host picks all three of these in the waiting room, before the first card is dealt.
 
 ### Deck
 
@@ -20,6 +20,28 @@ The host picks both of these in the waiting room, before the first card is dealt
 ### Target score
 
 `100`, `150`, `200` (default) or `300`.
+
+### Bots
+
+`0` to `5`. Bots take real seats at the table, so people plus bots have to fit in six.
+Since a game needs two players, one human and one bot is a valid game - which is how
+you practise on your own.
+
+They are marked 🤖 in the waiting room and on the board, so nobody has to guess who is
+real. Each one gets a personality, and they are dealt out so a table of bots is a table
+of different players:
+
+| Bot | How it plays |
+|---|---|
+| **Cautious** | Banks early, rarely busts. |
+| **Reckless** | Chases the seven-card bonus off a cliff. |
+| **Streaky** | Safe while it is ahead, all in the moment it falls behind. |
+| **Copycat** | Reads the room and matches it, which is a fine instinct and a terrible plan. |
+
+None of them plays the odds perfectly, on purpose. A bot works out its chances from the
+deck for the mode and the cards it can actually see - never the shuffled pile - and then
+every so often does the opposite of what it worked out. Each also drifts a little from
+round to round, so the same bot never plays two rounds the same way.
 
 ## 🃏 Game Components
 
@@ -100,11 +122,12 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 - Modern web browser required
 - JavaScript enabled
 - Responsive design (mobile-friendly)
-- Supports 2-6 players
+- Supports 2-6 players, humans and bots in any mix
 
 ## 🎵 Features
 - Real-time multiplayer
 - Two decks and four target scores
+- Bots with four personalities, for filling a table or practising alone
 - Sound effects and animations
 - Interactive tutorial
 - Special card effects

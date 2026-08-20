@@ -2,6 +2,9 @@ const socket = io();
 let currentGameId = null;
 let isHost = false;
 const MAX_REGULAR_CARDS = 7;
+// Mirrors MAX_PLAYERS in server.js. Only used to work out how many bot seats are
+// still going spare; the server clamps the number it is actually sent regardless.
+const MAX_PLAYERS = 6;
 // Nothing caps how many special cards a hand can hold, so this is only how many
 // empty placeholders the special grid draws — enough to keep the box a stable
 // shape without padding it out to a full regular row of dead slots.
@@ -519,11 +522,17 @@ const DECK_MODE_INFO = {
 };
 
 const WIN_SCORE_OPTIONS = [100, 150, 200, 300];
-const DEFAULT_SETTINGS = { deckMode: 'extreme', winningScore: 200 };
+
+// Bots are seats, so the most you can have is a full table minus yourself. Built
+// rather than written out, so it follows MAX_PLAYERS if that ever changes.
+const BOT_COUNT_OPTIONS = Array.from({ length: MAX_PLAYERS }, (_, n) => n);
+
+const DEFAULT_SETTINGS = { deckMode: 'extreme', winningScore: 200, botCount: 0 };
 
 const settingsOf = game => {
     const settings = { ...DEFAULT_SETTINGS, ...(game && game.settings) };
     if (!DECK_MODE_INFO[settings.deckMode]) settings.deckMode = DEFAULT_SETTINGS.deckMode;
+    if (!Number.isInteger(settings.botCount)) settings.botCount = 0;
     return settings;
 };
 
@@ -551,6 +560,23 @@ function renderLobbySettings(gameData) {
         String(score)
     )).join('');
 
+    // Bots take real seats, so anything above the number going spare is not on
+    // offer. The server clamps it too; this is only so the lobby does not lie.
+    const players = (gameData && gameData.players) || [];
+    const humans = players.filter(p => !p.isBot).length;
+    const roomFor = Math.max(0, MAX_PLAYERS - humans);
+
+    const botOptions = BOT_COUNT_OPTIONS.map(count => option(
+        count === settings.botCount,
+        `data-setting="botCount" data-value="${count}"${count > roomFor ? ' disabled' : ''}`,
+        String(count)
+    )).join('');
+
+    const bots = players.filter(p => p.isBot);
+    const botBlurb = bots.length
+        ? `Playing: ${bots.map(p => `${escapeHtml(p.name)} (${escapeHtml(botLabel(p))})`).join(', ')}.`
+        : 'Add a bot or two to fill the table. One bot is enough for a game.';
+
     panel.innerHTML = `
         <div class="setting-group">
             <div class="setting-label">Deck</div>
@@ -561,7 +587,30 @@ function renderLobbySettings(gameData) {
             <div class="setting-label">First to</div>
             <div class="setting-options">${scoreOptions}</div>
         </div>
+        <div class="setting-group">
+            <div class="setting-label">Bots</div>
+            <div class="setting-options">${botOptions}</div>
+            <p class="setting-blurb">${botBlurb}</p>
+        </div>
         ${isHost ? '' : '<p class="setting-blurb">The host picks these.</p>'}
+    `;
+}
+
+// Bots come down with the personality they were built with, so the lobby can say
+// who it is you are about to play. Falls back rather than showing a blank.
+function botLabel(player) {
+    return (player && player.bot && player.bot.label) || 'Bot';
+}
+
+// One row of the lobby list. Kept in one place because two different renderers
+// draw this list, and the badge has to be on both of them.
+function lobbyPlayerRow(player, hostId) {
+    return `
+        <div class="player-item${player.isBot ? ' is-bot' : ''}">
+            ${escapeHtml(player.name)}
+            ${player.isBot ? `<span class="bot-badge">🤖 ${escapeHtml(botLabel(player))}</span>` : ''}
+            ${player.id === hostId ? '<span class="host-badge">HOST</span>' : ''}
+        </div>
     `;
 }
 
@@ -573,10 +622,11 @@ function wireLobbySettings() {
 
     panel.addEventListener('click', event => {
         const button = event.target.closest('button[data-setting]');
-        if (!button || !isHost) return;
+        if (!button || !isHost || button.disabled) return;
         const { setting, value } = button.dataset;
+        const numeric = setting === 'winningScore' || setting === 'botCount';
         socket.emit('update-settings', currentGameId, {
-            [setting]: setting === 'winningScore' ? Number(value) : value
+            [setting]: numeric ? Number(value) : value
         });
     });
 }
@@ -700,13 +750,8 @@ function handleGameUpdate(game) {
         if (waitingScreen) {
             const playersList = waitingScreen.querySelector('.players-list');
             if (playersList) {
-                playersList.innerHTML = game.players.map(player => `
-                    <div class="player-item">
-                        ${escapeHtml(player.name)}
-                        ${player.id === game.hostId ? 
-                            '<span class="host-badge">HOST</span>' : ''}
-                    </div>
-                `).join('');
+                playersList.innerHTML = game.players
+                    .map(player => lobbyPlayerRow(player, game.hostId)).join('');
             }
             // Always update the start button when we get a game update in lobby
         // Update share link input too
@@ -1557,12 +1602,14 @@ function syncPlayerPanel(panel, player, isCurrentTurn, isNewPanel, track = true)
 
     panel.classList.toggle('current-turn', isCurrentTurn);
     panel.classList.toggle('disconnected', isAway);
+    panel.classList.toggle('bot', Boolean(player.isBot));
     ['active', 'stood', 'busted', 'waiting', 'frozen'].forEach(s => {
         panel.classList.toggle(s, player.status === s);
     });
 
     const nameEl = panel.querySelector('.player-header h3');
-    const nameHtml = `${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}`;
+    const botMark = player.isBot ? '<span class="bot-mark" title="Bot">🤖</span> ' : '';
+    const nameHtml = `${botMark}${escapeHtml(player.name.toUpperCase())} ${player.id === socket.id ? '<span class="you">(YOU)</span>' : ''}`;
     if (nameEl.innerHTML !== nameHtml) nameEl.innerHTML = nameHtml;
 
     const statusEl = panel.querySelector('.player-status');
@@ -1990,13 +2037,7 @@ function showWaitingScreen(gameData) {
         ` : ''}
         <div class="lobby-settings" id="lobbySettings"></div>
         <div class="players-list">
-            ${gameData.players.map(player => `
-                <div class="player-item">
-                    ${escapeHtml(player.name)}
-                    ${player.id === gameData.hostId ? 
-                        '<span class="host-badge">HOST</span>' : ''}
-                </div>
-            `).join('')}
+            ${gameData.players.map(player => lobbyPlayerRow(player, gameData.hostId)).join('')}
         </div>
         ${isHost ? `
             <div class="button-group">
