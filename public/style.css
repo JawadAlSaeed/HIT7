@@ -2285,6 +2285,25 @@ body::before {
     font-size: 0.8rem;
 }
 
+/* Nobody should have to guess which of these are people. The lobby badge names
+   the personality as well, because it is the only place with room to say it. */
+.waiting-screen .player-item .bot-badge {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* On the board there is only room for the mark itself. */
+.player .bot-mark {
+    font-size: 0.9em;
+    opacity: 0.85;
+    margin-right: 0.1em;
+}
+
 .waiting-screen .button-group {
     display: flex;
     gap: 1rem;

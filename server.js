@@ -8,8 +8,15 @@ const {
   createDeck,
   reshuffleFromDiscard: reshuffleDeck,
   isDeckMode,
+  isSwappableSpecial,
   DEFAULT_DECK_MODE
 } = require('./lib/deck');
+const {
+  PERSONALITY_KEYS,
+  personality: botPersonality,
+  decideMove: decideBotMove,
+  thinkDelay: botThinkDelay
+} = require('./lib/bot');
 require('dotenv').config();
 
 const app = express();
@@ -79,7 +86,10 @@ const MAX_HISTORY_ENTRIES = 200;
 // carry the choices over by spreading the game, without either having to list them.
 const createSettings = () => ({
   deckMode: DEFAULT_DECK_MODE,
-  winningScore: DEFAULT_WINNING_SCORE
+  winningScore: DEFAULT_WINNING_SCORE,
+  // Bots are seats, not a mode. This is only ever the number the host asked for;
+  // syncBotSeats is what makes game.players actually agree with it.
+  botCount: 0
 });
 
 // Settings arrive from a client, so nothing here trusts them: anything unrecognised
@@ -93,6 +103,12 @@ const sanitizeSettings = (current, incoming) => {
   if (WIN_SCORE_OPTIONS.includes(incoming.winningScore)) {
     settings.winningScore = incoming.winningScore;
   }
+  // A table has to have room for at least one person, so a host can never fill every
+  // seat with bots. The real ceiling also depends on how many humans are already
+  // sitting down, which only syncBotSeats can see.
+  if (Number.isInteger(incoming.botCount)) {
+    settings.botCount = Math.min(MAX_PLAYERS - 1, Math.max(0, incoming.botCount));
+  }
   return settings;
 };
 
@@ -101,6 +117,7 @@ const sanitizeSettings = (current, incoming) => {
 const settingsOf = game => ({ ...createSettings(), ...game.settings });
 const deckModeOf = game => settingsOf(game).deckMode;
 const winningScoreOf = game => settingsOf(game).winningScore;
+const botCountOf = game => settingsOf(game).botCount;
 // A whole turn's worth of thinking. Past this the table is stuck waiting on somebody
 // who has walked away, so the server resolves the turn for them.
 // Overridable so the timeout can be exercised without sitting through two minutes.
@@ -179,7 +196,7 @@ const publicPlayers = players => players.map(({ token, ...player }) => player);
 const publicGame = game => {
   // The clock is deliberately not sent: the turn limit is a backstop against an absent
   // player, not a countdown to play against.
-  const { roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, ...rest } = game;
+  const { roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, botClock, ...rest } = game;
   return {
     ...rest,
     deck: sortDeckForDisplay(game.deck),
@@ -198,13 +215,6 @@ const removeOneCard = (cards, card) => {
 
 const isCurrentTurn = (game, socketId) =>
   game.players[game.currentPlayer] && game.players[game.currentPlayer].id === socketId;
-
-// Swap only moves cards that score points. Targeting cards (Freeze, D3, RC, ST,
-// Swap, Select) are played the moment they are drawn, so a hand has no way to use
-// one that arrives later.
-const isSwappableSpecial = card =>
-  card === 'SC' || card === '2x' || card === '2÷' ||
-  card.endsWith('+') || card.endsWith('-');
 
 const countSwappableCards = player =>
   player.regularCards.length + player.specialCards.filter(isSwappableSpecial).length;
@@ -244,7 +254,9 @@ const syncHost = game => {
   const original = findByToken(game, game.hostToken);
   const acting = (original && original.connected)
     ? original
-    : game.players.find(p => p.connected);
+    // Never a bot. A bot would never kick the player everyone is waiting on, and a
+    // table would look hosted when there is nobody there at all.
+    : game.players.find(p => p.connected && !isBot(p));
   if (acting) game.hostId = acting.id;
 };
 
@@ -332,7 +344,9 @@ const snapshotRoundDeck = game => {
 
 // Players are no longer removed when they drop, so a game everyone has walked away from
 // has nobody left to clean it up and would sit in the map for the life of the process.
-const ABANDON_GRACE_MS = 10 * 60 * 1000;
+// Overridable so a bots-only table can be watched getting collected without sitting
+// through ten minutes, exactly as TURN_LIMIT_MS is.
+const ABANDON_GRACE_MS = Number(process.env.ABANDON_GRACE_MS) || 10 * 60 * 1000;
 const abandonTimers = new Map();
 
 const cancelAbandonTimer = gameId => {
@@ -348,7 +362,11 @@ const scheduleAbandonTimer = gameId => {
   const timer = setTimeout(() => {
     abandonTimers.delete(gameId);
     const game = games.get(gameId);
-    if (!game || game.players.some(p => p.connected)) return; // Somebody came back
+    // Bots do not count as somebody coming back. A table with nothing but bots left
+    // sitting at it has no one to clean it up, and would otherwise stay in the map for
+    // the life of the process.
+    if (!game || game.players.some(p => p.connected && !isBot(p))) return;
+    releaseBotSockets(game);
     games.delete(gameId);
     console.log(`Removed abandoned game ${gameId}`);
   }, ABANDON_GRACE_MS);
@@ -380,8 +398,13 @@ const logHistory = (game, entry) => {
 };
 
 // Game logic
-const handleSocketConnection = (io) => {
-  io.on('connection', socket => {
+//
+// The whole rule book, registered against one socket. This was the body of
+// io.on('connection', ...) and has not otherwise changed; it was lifted out so a bot
+// seat can be handed the same registrations against a puppet socket (createBotSocket
+// below) rather than a real connection. A bot therefore runs this exact code, and there
+// is no second copy of the rules for bots to drift away from.
+const registerHandlers = (io) => socket => {
     console.log(`New connection: ${socket.id}`);
 
     // Dropped rather than rejected: a legitimate client never reaches this rate, so
@@ -493,6 +516,8 @@ const handleSocketConnection = (io) => {
       const player = createPlayer(socket.id, name);
       game.players.push(player);
       socket.join(gameId);
+      // People take priority over bots, so the count is re-clamped to whatever is left.
+      syncBotSeats(game);
       broadcastGame(io, game);
       socket.emit('game-joined', { gameId, token: player.token });
     });
@@ -524,6 +549,10 @@ const handleSocketConnection = (io) => {
       if (game.settings.deckMode !== previous.deckMode) {
         game.deck = createDeck(game.settings.deckMode);
       }
+
+      // Bots are seats, so asking for a different number of them adds or removes
+      // players. This also clamps the setting back down to what the table has room for.
+      syncBotSeats(game);
 
       broadcastGame(io, game);
     });
@@ -763,6 +792,12 @@ const handleSocketConnection = (io) => {
 
       const index = game.players.findIndex(p => p.id === targetId);
       if (index === -1) return;
+
+      // A bot is never stuck and never coming back, so there is nothing here to rescue
+      // the table from. The number of them is a lobby setting, like the deck.
+      if (isBot(game.players[index])) {
+        return socket.emit('error', 'Bots are set in the lobby, not kicked.');
+      }
 
       // Only ever aimed at someone who has actually dropped. This is not a way to
       // remove a player who is sitting there playing.
@@ -1429,7 +1464,9 @@ const handleSocketConnection = (io) => {
           player.disconnectedAt = Date.now();
           logHistory(game, { player: player.name, action: 'disconnected' });
 
-          if (!game.players.some(p => p.connected)) scheduleAbandonTimer(gameId);
+          // Bots are marked connected, so this has to ask for a person specifically -
+          // otherwise a table of bots nobody is watching never gets collected.
+          if (!game.players.some(p => p.connected && !isBot(p))) scheduleAbandonTimer(gameId);
 
           broadcastGame(io, game);
           return;
@@ -1439,17 +1476,26 @@ const handleSocketConnection = (io) => {
         // the seat is freed exactly as it always was.
         const removed = removePlayerAt(game, index);
 
-        if (game.players.length === 0) {
+        // Bots do not keep a table alive. A lobby with nothing but bots left in it has
+        // nobody to start it and nobody coming back for it, so it goes.
+        if (humansIn(game).length === 0) {
           cancelAbandonTimer(gameId);
+          releaseBotSockets(game);
           games.delete(gameId);
           return;
         }
+
+        // A human leaving frees a seat the host may now want to fill with a bot.
+        syncBotSeats(game);
 
         logHistory(game, { player: removed.name, action: 'left' });
         broadcastGame(io, game);
       });
     });
-  });
+};
+
+const handleSocketConnection = (io) => {
+  io.on('connection', registerHandlers(io));
 };
 
 // Helper functions
@@ -1471,6 +1517,254 @@ const createPlayer = (id, name) => ({
   pendingTarget: null,  // Targeting card awaiting a pick, re-sent on reconnect
   stats: freshStats()
 });
+
+// ---------------------------------------------------------------------------
+// Bot seats
+//
+// A bot is an ordinary player in game.players. It has a hand, a score, stats and a
+// turn, and every rule that applies to a person applies to it, because it goes through
+// the same handlers. The only things that know a bot is a bot are: the places that mean
+// "is a person still here" (syncHost, the abandon timer, the lobby cleanup), the
+// scheduler at the bottom of this section, and the badge the client draws.
+//
+// Bots are marked connected. That is deliberate, and it is the reason isPaused did not
+// have to change: an unconnected seat pauses the whole table forever. The cost is that
+// "somebody is connected" stops meaning "somebody is here", which is why the places
+// that relied on it now ask for a human specifically.
+// ---------------------------------------------------------------------------
+
+const isBot = player => Boolean(player && player.isBot);
+const humansIn = game => game.players.filter(p => !isBot(p));
+
+const createBot = (game, personalityKey) => {
+  const traits = botPersonality(personalityKey);
+  const taken = new Set(game.players.map(p => p.name.trim().toLowerCase()));
+  const name = traits.names.find(n => !taken.has(n.toLowerCase()))
+    || `${traits.label} ${game.players.length + 1}`;
+
+  return {
+    ...createPlayer(`bot:${uuidv4()}`, name),
+    // No token, ever. findByToken only matches a non-empty string, so there is no way
+    // for any client to rejoin into a bot's seat or to be handed its identity.
+    token: null,
+    isBot: true,
+    bot: { personality: traits.key, label: traits.label },
+    connected: true
+  };
+};
+
+// The setting says how many bots there should be; this is what makes game.players
+// agree. Reconciling rather than storing the count twice means a rematch, a reset or a
+// player leaving can never leave the two out of step.
+const syncBotSeats = game => {
+  if (game.status !== 'lobby') return;
+
+  const humans = humansIn(game).length;
+  // A table always keeps room for the people already sitting at it.
+  const wanted = Math.min(
+    Math.max(0, botCountOf(game)),
+    Math.max(0, MAX_PLAYERS - humans)
+  );
+  game.settings = { ...settingsOf(game), botCount: wanted };
+
+  const bots = game.players.filter(isBot);
+
+  // Newest out first, so turning the number down takes back the seat last added.
+  while (bots.length > wanted) {
+    const doomed = bots.pop();
+    const index = game.players.indexOf(doomed);
+    if (index !== -1) game.players.splice(index, 1);
+    botSockets.delete(doomed.id);
+  }
+
+  // Spread across the personalities rather than four of the same one, so a table of
+  // bots plays like four different people.
+  while (bots.length < wanted) {
+    const bot = createBot(game, PERSONALITY_KEYS[bots.length % PERSONALITY_KEYS.length]);
+    game.players.push(bot);
+    bots.push(bot);
+  }
+};
+
+// A bot has no connection, but every rule in registerHandlers is written against a
+// socket. So a bot seat gets one of these: exactly enough of the shape for those
+// handlers to run untouched, and nothing else.
+//
+// The one thing it must never do is act on an emit. handleSpecialCard emits the target
+// popup from inside the flip-card handler, so answering there would re-enter a handler
+// that has not finished - half-applied state, and an advanceTurn inside an advanceTurn.
+// Every emit is therefore swallowed. The server has already recorded pendingTarget by
+// that point, and the scheduler picks it up on a later tick.
+const botSockets = new Map();
+
+const createBotSocket = (io, botId) => {
+  const handlers = new Map();
+
+  const socket = {
+    id: botId,
+    data: {},
+    rooms: new Set(),
+    on: (event, handler) => { handlers.set(event, handler); },
+    // Rate limiting exists for a tab holding a key down. A bot acts once every second
+    // or two, so there is nothing here to limit.
+    use: () => {},
+    join: () => {},
+    leave: () => {},
+    to: () => ({ emit: () => {} }),
+    emit: (event, ...args) => {
+      // Worth seeing in the log: it means the bot picked a move the rules refused, and
+      // the scheduler is about to retry or fall back.
+      if (event === 'error') console.log(`Bot ${botId} was told: ${args[0]}`);
+    },
+    // The only way anything ever reaches those handlers.
+    fire: (event, ...args) => {
+      const handler = handlers.get(event);
+      if (handler) handler(...args);
+    }
+  };
+
+  registerHandlers(io)(socket);
+  return socket;
+};
+
+const botSocketFor = (io, botId) => {
+  let socket = botSockets.get(botId);
+  if (!socket) {
+    socket = createBotSocket(io, botId);
+    botSockets.set(botId, socket);
+  }
+  return socket;
+};
+
+const releaseBotSockets = game => {
+  game.players.filter(isBot).forEach(p => botSockets.delete(p.id));
+};
+
+// ---------------------------------------------------------------------------
+// Bot turns
+//
+// Driven from one interval rather than a timer per turn, so no code path can leave a
+// stale timer behind or fire one twice. turnStateKey already changes on everything that
+// counts as the turn moving on - the seat, the round, each card still owed from a Draw
+// Three, and a target popup opening - so it doubles as "this is a new decision to make".
+// ---------------------------------------------------------------------------
+
+const BOT_TICK_MS = 250;
+// How long before a move the rules refused is tried again.
+const BOT_RETRY_MS = 700;
+// A bot the rules keep refusing would otherwise sit there until the 120 second turn
+// timer busted it. Well before that, it plays something guaranteed legal instead.
+const BOT_STUCK_MS = 5000;
+
+// Everything lib/bot.js is allowed to see. game.deck is in here because a Select
+// genuinely shows its holder the whole pile; lib/bot.js reads it for that one decision
+// and for nothing else.
+const botView = game => ({
+  players: game.players,
+  currentPlayer: game.currentPlayer,
+  deckMode: deckModeOf(game),
+  winningScore: winningScoreOf(game),
+  maxRegularCards: MAX_REGULAR_CARDS,
+  roundNumber: game.roundNumber,
+  deck: game.deck
+});
+
+// Each move lib/bot.js can return, and the socket event that performs it. gameId is
+// prepended by the caller, because every one of these handlers takes it first.
+const BOT_MOVE_EVENTS = {
+  flip: () => ['flip-card'],
+  stand: () => ['stand'],
+  freeze: move => ['freeze-player', move.targetId],
+  'draw-three': move => ['draw-three-select', move.targetId],
+  'remove-card': move => ['remove-card', move.targetId, move.cardIndex, move.isSpecial],
+  'steal-card': move => ['steal-card', move.targetId, move.cardIndex, move.isSpecial],
+  'swap-cards': move => ['swap-cards', move.card1, move.card2],
+  'select-card': move => ['select-card-choice', move.card]
+};
+
+// Last resort for a bot the rules will not let move - a state lib/bot.js has no answer
+// for, or one where it keeps picking something that gets refused. Puts the table back
+// into a position somebody can play from rather than leaving it to time out, and
+// deliberately takes the dullest legal option rather than a scoring one.
+const botFailSafe = (game, bot, io) => {
+  logHistory(game, { player: bot.name, action: 'bot-skip' });
+  console.log(`Bot ${bot.name} could not move; falling back.`);
+
+  // A card waiting on a target it is never going to get goes to the discard pile,
+  // exactly as handleSpecialCard does when there is no valid target to aim it at.
+  const pending = bot.pendingTarget;
+  if (pending) {
+    bot.pendingTarget = null;
+    if (removeOneCard(bot.specialCards, pending)) game.discardPile.push(pending);
+  }
+
+  bot.pendingSpecialCard = null;
+  bot.drawThreeRemaining = 0;
+  if (bot.status === 'active') bot.status = 'stood';
+
+  advanceTurn(game);
+  checkGameStatus(game, io);
+  broadcastGame(io, game);
+};
+
+const runBotTurns = io => {
+  const now = Date.now();
+
+  games.forEach(game => {
+
+    // The same conditions refreshTurnDeadline uses. A paused table, a round being
+    // scored and a finished game are all times when nobody may act, bots included.
+    if (game.status !== 'playing' || game.roundEnding || isPaused(game)) {
+      game.botClock = null;
+      return;
+    }
+
+    const seat = game.players[game.currentPlayer];
+    const key = turnStateKey(game);
+    if (!isBot(seat) || !key) {
+      game.botClock = null;
+      return;
+    }
+
+    // A new decision earns a fresh pause, sized by how close a call it is - so a bot
+    // hesitates in the places a person would. The same key coming round again means the
+    // last move changed nothing, and the stuck clock keeps running.
+    if (!game.botClock || game.botClock.key !== key) {
+      const preview = decideBotMove(botView(game));
+      game.botClock = {
+        key,
+        since: now,
+        actAt: now + botThinkDelay(seat.bot && seat.bot.personality, preview.confidence)
+      };
+      return;
+    }
+
+    const clock = game.botClock;
+    if (now < clock.actAt) return;
+
+    if (now - clock.since > BOT_STUCK_MS) {
+      game.botClock = null;
+      return botFailSafe(game, seat, io);
+    }
+
+    // Decided again at the moment of acting rather than reusing the one that sized the
+    // pause, so a move the rules refused gets a genuinely different try next time.
+    const move = decideBotMove(botView(game));
+    const toEvent = BOT_MOVE_EVENTS[move.type];
+
+    // 'skip', or a move type this file has not been taught: nothing legal here.
+    if (!toEvent) {
+      game.botClock = null;
+      return botFailSafe(game, seat, io);
+    }
+
+    // Set before firing, so a refused move waits rather than spinning.
+    clock.actAt = now + BOT_RETRY_MS;
+
+    const [event, ...args] = toEvent(move);
+    botSocketFor(io, seat.id).fire(event, game.id, ...args);
+  });
+};
 
 // currentPlayer is an index rather than an id, so splicing the array silently moves the
 // turn to somebody else unless it is re-pinned to whoever actually held it.
@@ -1966,6 +2260,16 @@ setInterval(() => {
   games.forEach((game, id) => {
     if (game.players.length === 0) games.delete(id);
   });
+
+  // A puppet socket outlives nothing. Anything whose seat has gone is dropped, so a
+  // long-running process does not accumulate one per bot ever created.
+  const live = new Set();
+  games.forEach(game => game.players.forEach(p => {
+    if (isBot(p)) live.add(p.id);
+  }));
+  [...botSockets.keys()].forEach(id => {
+    if (!live.has(id)) botSockets.delete(id);
+  });
 }, 60000);
 
 // One clock for every game. Re-deriving the deadline here each second rather than
@@ -1981,3 +2285,7 @@ setInterval(() => {
     }
   });
 }, 1000);
+
+// Bot turns run on their own faster clock, so a thinking pause can be a decent
+// fraction of a second rather than rounded to the nearest one.
+setInterval(() => runBotTurns(io), BOT_TICK_MS);
