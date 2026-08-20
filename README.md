@@ -55,6 +55,15 @@ The full **Extreme** deck. **Normal** leaves out every card marked ⚡ below.
 
 ## 🎲 Gameplay Rules
 
+### The deck
+One deck lasts the whole game. It is **not** re-dealt between rounds - the cards from
+everyone's hands go onto the discard pile and the draw pile just keeps going down.
+
+When the draw pile actually runs out, the discard pile is shuffled and becomes the new
+draw pile. Whatever is in somebody's hand at that moment stays in their hand, so it is
+not part of what gets shuffled - which is what stops the same card ever being in play
+twice. Exactly like real cards on a real table.
+
 ### Basic Rules
 1. Players take turns drawing cards
 2. Maximum of 7 regular cards per player

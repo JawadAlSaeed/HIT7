@@ -142,3 +142,80 @@ test('repeated reshuffles inside a round still cannot duplicate a card', () => {
     }
   }
 });
+
+// The rule the server plays by, modelled end to end: one deck for the whole game.
+// A round ending sweeps the hands into the discards and touches nothing else; the pile
+// is only ever shuffled at the moment it runs dry, and whatever is in a hand at that
+// moment is not part of what gets shuffled.
+test('one deck lasts the whole game and never duplicates a card', () => {
+  const limits = expectedCounts();
+  const game = { deck: createDeck(), discardPile: [] };
+  const hands = [[], [], [], []];
+  let reshuffles = 0;
+
+  const everyCardInPlay = () => [...game.deck, ...game.discardPile, ...hands.flat()];
+
+  const assertIntact = where => {
+    assert.strictEqual(everyCardInPlay().length, DECK_SIZE, `card count changed ${where}`);
+    for (const [card, count] of countCards(everyCardInPlay())) {
+      assert.ok(count <= limits.get(card), `${card} duplicated ${where}`);
+    }
+  };
+
+  const draw = hand => {
+    if (game.deck.length === 0) {
+      // Cards in hands are not in the discard pile, so they cannot come back out of it.
+      if (!reshuffleFromDiscard(game)) return false;
+      reshuffles++;
+      for (const held of hands.flat()) {
+        assert.ok(!game.deck.includes(held) || countCards(game.deck).get(held) <
+          limits.get(held), 'a held card came back out of the reshuffle');
+      }
+    }
+    hand.push(game.deck.pop());
+    return true;
+  };
+
+  for (let round = 0; round < 12; round++) {
+    for (let turn = 0; turn < 7; turn++) {
+      for (const hand of hands) {
+        if (!draw(hand)) break;
+        assertIntact(`mid-round ${round}`);
+      }
+    }
+
+    // End of round: the table goes onto the discard pile. Nothing else moves.
+    for (const hand of hands) {
+      game.discardPile.push(...hand.splice(0, hand.length));
+    }
+    assertIntact(`at the end of round ${round}`);
+  }
+
+  // Twelve rounds of four players taking seven cards is well past 108, so the pile must
+  // have run dry and come back at least once - otherwise this test proves nothing.
+  assert.ok(reshuffles > 0, 'the deck never actually ran out');
+});
+
+test('a card in a hand is never in the discard pile at the same time', () => {
+  // The server keeps these disjoint on purpose: a number card joins the hand OR the
+  // discards, never both. This is the property a reshuffle depends on.
+  const game = { deck: createDeck(), discardPile: [] };
+  const hand = [];
+
+  while (game.deck.length > 60) {
+    const card = game.deck.pop();
+    if (hand.includes(card)) game.discardPile.push(card); // a duplicate leaves play
+    else hand.push(card);
+  }
+
+  const discarded = countCards(game.discardPile);
+  const held = countCards(hand);
+  const limits = expectedCounts();
+
+  for (const [card, count] of held) {
+    assert.ok(
+      count + (discarded.get(card) || 0) <= limits.get(card),
+      `${card} is in a hand and the discards at once`
+    );
+  }
+});

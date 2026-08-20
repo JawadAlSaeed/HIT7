@@ -179,7 +179,7 @@ const publicPlayers = players => players.map(({ token, ...player }) => player);
 const publicGame = game => {
   // The clock is deliberately not sent: the turn limit is a backstop against an absent
   // player, not a countdown to play against.
-  const { roundStartDeck, turnDeadline, turnStateKey, ...rest } = game;
+  const { roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, ...rest } = game;
   return {
     ...rest,
     deck: sortDeckForDisplay(game.deck),
@@ -299,8 +299,7 @@ const bustOnTimeout = (game, io) => {
   // A card waiting on a target it will never get goes to the discard pile, exactly as
   // it would if there had been no valid target to aim it at.
   const pending = player.pendingTarget;
-  if (pending && removeOneCard(player.specialCards, pending) && pending !== 'Select') {
-    // handleSelectCard already discarded the Select when it opened the popup.
+  if (pending && removeOneCard(player.specialCards, pending)) {
     game.discardPile.push(pending);
   }
 
@@ -322,10 +321,13 @@ const bustOnTimeout = (game, io) => {
   broadcastGame(io, game);
 };
 
-// Taken whenever a round begins so a restart can put the deck back exactly as it was,
-// rather than reshuffling and changing what everyone has been counting.
+// Taken whenever a round begins so a restart can put both piles back exactly as they
+// were, rather than reshuffling and changing what everyone has been counting. The
+// discards matter as much as the draw pile now: they are what the next reshuffle is
+// made of, so a restart that dropped them would quietly delete cards from the game.
 const snapshotRoundDeck = game => {
   game.roundStartDeck = [...game.deck];
+  game.roundStartDiscard = [...game.discardPile];
 };
 
 // Players are no longer removed when they drop, so a game everyone has walked away from
@@ -610,8 +612,7 @@ const handleSocketConnection = (io) => {
       // Handle number cards
       if (typeof card === 'number') {
           handleNumberCard(game, player, card, io);
-          game.discardPile.push(card);
-          
+
           if (player.status === 'busted') {
               player.drawThreeRemaining = 0;
               player.pendingSpecialCard = null; // Clear any pending special cards
@@ -1145,6 +1146,7 @@ const handleSocketConnection = (io) => {
             const removeIndex = targetPlayer.regularCards.findIndex(v => v === swappedValue);
             if (removeIndex !== -1) {
               targetPlayer.regularCards.splice(removeIndex, 1);
+              game.discardPile.push(swappedValue);
             }
           }
           return;
@@ -1218,6 +1220,7 @@ const handleSocketConnection = (io) => {
       // pendingTarget again.
       player.pendingTarget = null;
       removeOneCard(player.specialCards, 'Select');
+      game.discardPile.push('Select');
 
       // Track the last card drawn (selected)
       bump(player, 'cardsDrawn');
@@ -1227,8 +1230,7 @@ const handleSocketConnection = (io) => {
       // Process the selected card
       if (typeof selectedCard === 'number') {
         handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
+
         if (player.status === 'busted') {
           player.drawThreeRemaining = 0;
           player.pendingSpecialCard = null;
@@ -1517,6 +1519,11 @@ const advanceTurn = game => {
 const handleNumberCard = (game, player, card, io) => {
   // 0 is a number card like any other: a second one is still a duplicate.
   if (player.regularCards.includes(card)) {
+    // A duplicate never joins the hand, so this is the one path where the card leaves
+    // play. Anything that does join a hand must NOT be discarded here - it is still on
+    // the table, and the next reshuffle has to be able to tell the difference.
+    game.discardPile.push(card);
+
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
@@ -1700,7 +1707,6 @@ const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDec
     sortDeckForDisplay(popupDeck),
     fullDeck ? sortDeckForDisplay(fullDeck) : fullDeck
   );
-  game.discardPile.push('Select');
 };
 
 // Binds a live socket to a seat that already exists. Both ways back into a game - the
@@ -1749,8 +1755,7 @@ const resendPendingTarget = (game, player, socket, io) => {
   if (!card) return;
 
   if (card === 'Select') {
-    // Not handleSelectCard: that also puts the Select into the discard pile, which
-    // already happened when the popup was first opened.
+    // Rebuilt rather than remembered: the pile may have reshuffled while they were away.
     if (game.deck.length === 0) reshuffleFromDiscard(game);
     socket.emit('select-card-from-pile', game.id, sortDeckForDisplay(game.deck), null);
     return;
@@ -1834,6 +1839,15 @@ const endGame = (game, winner, io) => {
   });
 };
 
+// Sweeps the table into the discard pile at the end of a round. Deliberately separate
+// from resetPlayersForRound, because a round restart throws its hands away rather than
+// discarding them - those cards go back into the pile the restart is rewinding to.
+const discardAllHands = game => {
+  game.players.forEach(player => {
+    game.discardPile.push(...player.regularCards, ...player.specialCards);
+  });
+};
+
 // Everything a round begins with, shared by a fresh round and a replayed one.
 const resetPlayersForRound = players => {
   players.forEach(player => {
@@ -1853,11 +1867,12 @@ const startNewRound = (game, io) => {
   game.roundEpoch = (game.roundEpoch || 0) + 1;
   logHistory(game, { action: 'round-start' });
 
-  // A new round is a fresh deal: every card - hands, discards, whatever was left in the
-  // pile - comes back together and is shuffled. Within a round the pile only ever
-  // reshuffles from the discards (see reshuffleFromDiscard), so no card is duplicated.
-  game.deck = createDeck(deckModeOf(game));
-  game.discardPile = [];
+  // One deck lasts the whole game. A new round does not deal a new one - the hands that
+  // were on the table go onto the discard pile, where they wait for the next time the
+  // draw pile actually runs out. That is the only moment anything is shuffled, and at
+  // that moment whatever is in a hand is not in the pile being shuffled, which is what
+  // stops a card existing twice. See reshuffleFromDiscard.
+  discardAllHands(game);
 
   // Reset player states, but keep total scores and lastCardDrawn
   resetPlayersForRound(game.players);
@@ -1884,7 +1899,9 @@ const restartRound = (game, io) => {
   game.deck = Array.isArray(game.roundStartDeck)
     ? [...game.roundStartDeck]
     : createDeck(deckModeOf(game));
-  game.discardPile = [];
+  game.discardPile = Array.isArray(game.roundStartDiscard)
+    ? [...game.roundStartDiscard]
+    : [];
   game.lastCardDrawn = null;
   snapshotRoundDeck(game);
 
