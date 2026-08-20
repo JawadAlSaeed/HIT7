@@ -4,6 +4,12 @@ const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const helmet = require('helmet');
 const cors = require('cors');
+const {
+  createDeck,
+  reshuffleFromDiscard: reshuffleDeck,
+  isDeckMode,
+  DEFAULT_DECK_MODE
+} = require('./lib/deck');
 require('dotenv').config();
 
 const app = express();
@@ -57,13 +63,73 @@ app.use(express.static('public'));
 
 // Game state
 const games = new Map();
-const WINNING_SCORE = 200;
+// The score a game runs to, and the choices a host may set it to. A fixed list rather
+// than a free number: it is one tap on a phone, and there is nothing to validate beyond
+// membership.
+const DEFAULT_WINNING_SCORE = 200;
+const WIN_SCORE_OPTIONS = [100, 150, 200, 300];
 const MAX_REGULAR_CARDS = 7;
 const MAX_PLAYERS = 6;
 const MIN_NAME_LENGTH = 3;
 const MAX_NAME_LENGTH = 20;
 const SEVEN_CARD_BONUS = 15;
 const MAX_HISTORY_ENTRIES = 200;
+
+// Everything the host picks in the lobby. Kept in one object so a rematch and a reset
+// carry the choices over by spreading the game, without either having to list them.
+const createSettings = () => ({
+  deckMode: DEFAULT_DECK_MODE,
+  winningScore: DEFAULT_WINNING_SCORE
+});
+
+// Settings arrive from a client, so nothing here trusts them: anything unrecognised
+// falls back to the current value rather than being rejected, because a host fumbling
+// a setting should not be an error they have to read and dismiss.
+const sanitizeSettings = (current, incoming) => {
+  const settings = { ...createSettings(), ...current };
+  if (!incoming || typeof incoming !== 'object') return settings;
+
+  if (isDeckMode(incoming.deckMode)) settings.deckMode = incoming.deckMode;
+  if (WIN_SCORE_OPTIONS.includes(incoming.winningScore)) {
+    settings.winningScore = incoming.winningScore;
+  }
+  return settings;
+};
+
+// Games created before a setting existed, and any game object that has been through a
+// spread, still have to answer these.
+const settingsOf = game => ({ ...createSettings(), ...game.settings });
+const deckModeOf = game => settingsOf(game).deckMode;
+const winningScoreOf = game => settingsOf(game).winningScore;
+// A whole turn's worth of thinking. Past this the table is stuck waiting on somebody
+// who has walked away, so the server resolves the turn for them.
+// Overridable so the timeout can be exercised without sitting through two minutes.
+const TURN_LIMIT_MS = Number(process.env.TURN_LIMIT_MS) || 120 * 1000;
+// Nothing a client can spam corrupts a game - every handler re-checks whose turn it is -
+// but one tab holding down an action should not make the server do that checking
+// thousands of times a second.
+const RATE_LIMIT_WINDOW_MS = 1000;
+const RATE_LIMIT_MAX_EVENTS = 30;
+
+// Counted for the whole game rather than the round, so the end-of-game screen reads as
+// a record of how somebody played rather than how their last hand went. A round reset
+// deliberately leaves these alone; only a rematch clears them.
+const freshStats = () => ({
+  cardsDrawn: 0,
+  busts: 0,
+  timeouts: 0,
+  stands: 0,
+  bestRound: 0,
+  sevens: 0,
+  secondChances: 0,
+  powerPlays: 0,
+  timesTargeted: 0
+});
+
+const bump = (player, key, by = 1) => {
+  if (!player.stats) player.stats = freshStats();
+  player.stats[key] += by;
+};
 
 // Every non-number card the deck can contain, used to validate anything a client
 // claims to have picked out of the deck.
@@ -75,49 +141,13 @@ const SPECIAL_CARD_TYPES = [
 ];
 
 // Helper functions
-const createDeck = () => {
-  const deck = [];
-  
-  // Zero card (1 card)
-  deck.push(0);
-  
-  // Regular cards (1-12) = 78 cards
-  for (let number = 1; number <= 12; number++) {
-    for (let i = 0; i < number; i++) {
-      deck.push(number); // Add missing line to actually push the cards to the deck
-    }
-  }
-
-  // Special cards = 29 cards (total 108 cards)
-  const specialCards = [
-    '2+', '4+', '6+', '8+', '10+',      // 5 adder cards
-    '2-', '4-', '6-', '8-', '10-',      // 5 minus cards
-    '2÷',                               // 1 divide card
-    '2x',                               // 1 multiplier card
-    'SC', 'SC', 'SC',                   // 3 second chance cards
-    'Freeze', 'Freeze', 'Freeze',       // 3 freeze cards
-    'D3', 'D3', 'D3',                   // 3 draw three cards
-    'RC', 'RC', 'RC',                   // 3 remove card cards
-    'ST', 'ST',                         // 2 steal card cards
-    'Swap', 'Swap',                     // 2 swap cards
-    'Select'                            // 1 select card
-  ];
-  deck.push(...specialCards);
-  
-  // Verify deck size
-  if (deck.length !== 108) {
-    console.error(`Invalid deck size: ${deck.length}. Expected 108 cards.`);
-  }
-  
-  return shuffle(deck);
-};
-
-const shuffle = array => {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
+// Wraps the pure reshuffle so the rest of the server keeps getting a history entry
+// without lib/deck.js needing to know the log exists.
+const reshuffleFromDiscard = game => {
+  if (!reshuffleDeck(game)) return false;
+  logHistory(game, { action: 'reshuffle' });
+  console.log(`Deck reshuffled from discards. New size: ${game.deck.length}`);
+  return true;
 };
 
 const isValidCard = card =>
@@ -147,7 +177,9 @@ const publicPlayers = players => players.map(({ token, ...player }) => player);
 // roundStartDeck is the pre-round deck kept for round restarts. Sending it would hand
 // out the draw order in the exact order the deck sorting below exists to hide.
 const publicGame = game => {
-  const { roundStartDeck, ...rest } = game;
+  // The clock is deliberately not sent: the turn limit is a backstop against an absent
+  // player, not a countdown to play against.
+  const { roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, ...rest } = game;
   return {
     ...rest,
     deck: sortDeckForDisplay(game.deck),
@@ -223,10 +255,79 @@ const broadcastGame = (io, game) => {
   io.to(game.id).emit('game-update', publicGame(game));
 };
 
-// Taken whenever a round begins so a restart can put the deck back exactly as it was,
-// rather than reshuffling and changing what everyone has been counting.
+// Identifies the turn currently on the clock. It deliberately changes on more than the
+// seat: a new round, a target popup opening, and each card still owed from a Draw Three
+// all count as the turn moving on, and each earns a fresh 120 seconds.
+const turnStateKey = game => {
+  const player = game.players[game.currentPlayer];
+  if (!player || player.status !== 'active') return null;
+  return [
+    game.roundEpoch || 0,
+    game.currentPlayer,
+    player.drawThreeRemaining || 0,
+    player.pendingTarget || '-'
+  ].join('|');
+};
+
+// Started and restarted from the one-second sweeper rather than from every place that
+// changes a turn, so no code path can forget to wind the clock.
+const refreshTurnDeadline = game => {
+  const key = (game.status === 'playing' && !game.roundEnding && !isPaused(game))
+    ? turnStateKey(game)
+    : null;
+
+  if (!key) {
+    // A paused game clears the key as well as the deadline, so whoever is on the clock
+    // gets the full time again once everybody is back rather than the remains of it.
+    game.turnStateKey = null;
+    game.turnDeadline = null;
+    return;
+  }
+
+  if (key !== game.turnStateKey) {
+    game.turnStateKey = key;
+    game.turnDeadline = Date.now() + TURN_LIMIT_MS;
+  }
+};
+
+// Resolving a run-down clock as a bust is the one outcome that cannot be played for:
+// standing would bank points for doing nothing, and skipping would make stalling free.
+const bustOnTimeout = (game, io) => {
+  const player = game.players[game.currentPlayer];
+  if (!player || player.status !== 'active') return;
+
+  // A card waiting on a target it will never get goes to the discard pile, exactly as
+  // it would if there had been no valid target to aim it at.
+  const pending = player.pendingTarget;
+  if (pending && removeOneCard(player.specialCards, pending)) {
+    game.discardPile.push(pending);
+  }
+
+  player.status = 'busted';
+  player.bustedCard = null;
+  player.roundScore = 0;
+  player.drawThreeRemaining = 0;
+  player.pendingSpecialCard = null;
+  player.pendingTarget = null;
+
+  bump(player, 'busts');
+  bump(player, 'timeouts');
+  logHistory(game, { player: player.name, action: 'timeout' });
+  io.to(game.id).emit('turn-timeout', { playerId: player.id, playerName: player.name });
+  io.to(game.id).emit('play-sound', 'bustSound');
+
+  advanceTurn(game);
+  checkGameStatus(game, io);
+  broadcastGame(io, game);
+};
+
+// Taken whenever a round begins so a restart can put both piles back exactly as they
+// were, rather than reshuffling and changing what everyone has been counting. The
+// discards matter as much as the draw pile now: they are what the next reshuffle is
+// made of, so a restart that dropped them would quietly delete cards from the game.
 const snapshotRoundDeck = game => {
   game.roundStartDeck = [...game.deck];
+  game.roundStartDiscard = [...game.discardPile];
 };
 
 // Players are no longer removed when they drop, so a game everyone has walked away from
@@ -283,6 +384,19 @@ const handleSocketConnection = (io) => {
   io.on('connection', socket => {
     console.log(`New connection: ${socket.id}`);
 
+    // Dropped rather than rejected: a legitimate client never reaches this rate, so
+    // there is nobody to report an error to.
+    socket.use((packet, next) => {
+      const now = Date.now();
+      if (!socket.data.rateWindowStart || now - socket.data.rateWindowStart >= RATE_LIMIT_WINDOW_MS) {
+        socket.data.rateWindowStart = now;
+        socket.data.rateCount = 0;
+      }
+      socket.data.rateCount = (socket.data.rateCount || 0) + 1;
+      if (socket.data.rateCount > RATE_LIMIT_MAX_EVENTS) return;
+      next();
+    });
+
     // Use the module-level BASE_URL (calculated at startup) instead of hardcoding here
 
     // Update game creation to include full URL
@@ -304,7 +418,9 @@ const handleSocketConnection = (io) => {
       const gameId = uuidv4().substr(0, 5).toUpperCase();
       const gameUrl = `${BASE_URL}/join/${gameId}`;
       const host = createPlayer(socket.id, name);
+      const settings = createSettings();
       const newGame = {
+        settings,
         id: gameId,
         url: gameUrl,
         hostId: socket.id,
@@ -312,7 +428,7 @@ const handleSocketConnection = (io) => {
         // instead of losing them to whoever happened to be standing in.
         hostToken: host.token,
         players: [host],
-        deck: createDeck(),
+        deck: createDeck(settings.deckMode),
         discardPile: [],
         currentPlayer: 0,
         status: 'lobby',
@@ -393,6 +509,25 @@ const handleSocketConnection = (io) => {
       attachToSeat(game, player, socket, io);
     });
 
+    // Lobby only. Once cards are on the table the deck and the target score are part of
+    // the game everybody agreed to play, and changing either mid-game would rewrite it.
+    socket.on('update-settings', (gameId, incoming) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'lobby') return;
+      syncHost(game);
+      if (socket.id !== game.hostId) return;
+
+      const previous = settingsOf(game);
+      game.settings = sanitizeSettings(previous, incoming);
+
+      // The lobby shows the deck size, so the pile has to actually be that deck.
+      if (game.settings.deckMode !== previous.deckMode) {
+        game.deck = createDeck(game.settings.deckMode);
+      }
+
+      broadcastGame(io, game);
+    });
+
     socket.on('start-game', gameId => {
       const game = games.get(gameId);
       if (!game || game.status !== 'lobby' || socket.id !== game.hostId) return;
@@ -424,19 +559,20 @@ const handleSocketConnection = (io) => {
         
         // If the last card is Select, we need special handling
         if (lastCard === 'Select') {
-          // Create a new full deck for the popup only
-          const fullDeck = createDeck();
-          
           // Pop the Select card from the current deck
           game.deck.pop();
-          
+
+          // Taking it empties the draw pile, so the choices have to come from the
+          // reshuffled discards - the cards that genuinely still exist.
+          reshuffleFromDiscard(game);
+
           // Track the last card drawn
           game.lastCardDrawn = 'Select';
           logHistory(game, { player: player.name, action: 'draw', cards: ['Select'] });
 
           player.specialCards.push('Select');
 
-          handleSelectCard(game, player, socket, io, [], fullDeck);
+          handleSelectCard(game, player, socket, io);
 
           updatePlayerScore(player);
           checkGameStatus(game, io);
@@ -448,15 +584,22 @@ const handleSocketConnection = (io) => {
       }
       
       // Regular empty deck handling
-      if (game.deck.length === 0) {
-        console.log('Reshuffling deck...');
-        game.deck = createDeck();
-        game.discardPile = [];
-        logHistory(game, { action: 'reshuffle' });
-        console.log(`Deck reshuffled. New size: ${game.deck.length}`);
+      if (game.deck.length === 0 && !reshuffleFromDiscard(game)) {
+        // Draw pile and discards are both empty, so every remaining card is in
+        // somebody's hand. There is nothing to draw and the turn has to end.
+        player.status = 'stood';
+        player.drawThreeRemaining = 0;
+        player.pendingSpecialCard = null;
+        logHistory(game, { player: player.name, action: 'deck-empty' });
+        advanceTurn(game);
+        updatePlayerScore(player);
+        checkGameStatus(game, io);
+        broadcastGame(io, game);
+        return;
       }
 
       const card = game.deck.pop();
+      bump(player, 'cardsDrawn');
 
       // Track the last card drawn
       game.lastCardDrawn = card;
@@ -469,8 +612,7 @@ const handleSocketConnection = (io) => {
       // Handle number cards
       if (typeof card === 'number') {
           handleNumberCard(game, player, card, io);
-          game.discardPile.push(card);
-          
+
           if (player.status === 'busted') {
               player.drawThreeRemaining = 0;
               player.pendingSpecialCard = null; // Clear any pending special cards
@@ -553,6 +695,7 @@ const handleSocketConnection = (io) => {
       if (player.pendingTarget) return;
 
       player.status = 'stood';
+      bump(player, 'stands');
       logHistory(game, { player: player.name, action: 'stand' });
       io.to(gameId).emit('play-sound', 'standSound'); // Broadcast stand sound
       advanceTurn(game);
@@ -570,7 +713,7 @@ const handleSocketConnection = (io) => {
         // Reset the game state but keep players
         const resetGame = {
           ...game,
-          deck: createDeck(),
+          deck: createDeck(deckModeOf(game)),
           discardPile: [],
           currentPlayer: 0,
           status: 'playing',
@@ -593,7 +736,8 @@ const handleSocketConnection = (io) => {
           bustedCard: null,
           drawThreeRemaining: 0,
           pendingSpecialCard: null,
-          pendingTarget: null
+          pendingTarget: null,
+          stats: freshStats()
         }));
 
         // Update the game in the map
@@ -668,6 +812,8 @@ const handleSocketConnection = (io) => {
       target.status = 'stood';
       // Add Freeze to discard only when used
       game.discardPile.push('Freeze');
+      bump(player, 'powerPlays');
+      if (target.id !== player.id) bump(target, 'timesTargeted');
       logHistory(game, { player: player.name, action: 'freeze', target: target.name });
 
       advanceTurn(game);
@@ -701,6 +847,8 @@ const handleSocketConnection = (io) => {
 
       // Set draw three remaining on target
       target.drawThreeRemaining = 3;
+      bump(player, 'powerPlays');
+      if (target.id !== player.id) bump(target, 'timesTargeted');
       logHistory(game, { player: player.name, action: 'draw-three', target: target.name });
 
       // Set current player to target
@@ -718,7 +866,7 @@ const handleSocketConnection = (io) => {
       // Reset the game state but keep players
       const rematchGame = {
           ...game,
-          deck: createDeck(),
+          deck: createDeck(deckModeOf(game)),
           discardPile: [],
           currentPlayer: 0,
           status: 'playing',
@@ -741,7 +889,8 @@ const handleSocketConnection = (io) => {
           bustedCard: null,
           drawThreeRemaining: 0,
           pendingSpecialCard: null,
-          pendingTarget: null
+          pendingTarget: null,
+          stats: freshStats()
       }));
 
       // Update the game in the map
@@ -796,6 +945,8 @@ const handleSocketConnection = (io) => {
       player.pendingTarget = null;
       removeOneCard(player.specialCards, 'RC');
       game.discardPile.push('RC');
+      bump(player, 'powerPlays');
+      if (target.id !== player.id) bump(target, 'timesTargeted');
       logHistory(game, {
         player: player.name,
         action: 'remove',
@@ -847,6 +998,8 @@ const handleSocketConnection = (io) => {
 
       // Logged before the card is applied, so a bust from the stolen number reads
       // as the next entry rather than jumping ahead of the steal that caused it.
+      bump(player, 'powerPlays');
+      bump(target, 'timesTargeted');
       logHistory(game, {
         player: player.name,
         action: 'steal',
@@ -948,6 +1101,11 @@ const handleSocketConnection = (io) => {
         player2.specialCards.push(card1Value);
       }
 
+      bump(player, 'powerPlays');
+      [player1, player2].forEach(side => {
+        if (side.id !== player.id) bump(side, 'timesTargeted');
+      });
+
       // Logged before the duplicate check below, so a bust caused by the swap reads
       // as a consequence of it.
       logHistory(game, {
@@ -988,6 +1146,7 @@ const handleSocketConnection = (io) => {
             const removeIndex = targetPlayer.regularCards.findIndex(v => v === swappedValue);
             if (removeIndex !== -1) {
               targetPlayer.regularCards.splice(removeIndex, 1);
+              game.discardPile.push(swappedValue);
             }
           }
           return;
@@ -1051,14 +1210,9 @@ const handleSocketConnection = (io) => {
       if (cardIndex !== -1) {
         // Card found in the regular deck
         game.deck.splice(cardIndex, 1);
-      } else if (game.deck.length === 0) {
-        // Select was the last card in the deck, so the popup offered a fresh one
-        const newDeck = createDeck();
-        removeOneCard(newDeck, selectedCard);
-        game.deck = newDeck;
       } else {
-        // The card is not available - the deck the popup was built from is still intact,
-        // so this can only be a client asking for a card the deck does not hold.
+        // The popup is always built from the real draw pile now, so a card missing from
+        // it is a client asking for something that does not exist.
         return socket.emit('error', 'That card is no longer in the deck.');
       }
 
@@ -1066,16 +1220,17 @@ const handleSocketConnection = (io) => {
       // pendingTarget again.
       player.pendingTarget = null;
       removeOneCard(player.specialCards, 'Select');
+      game.discardPile.push('Select');
 
       // Track the last card drawn (selected)
+      bump(player, 'cardsDrawn');
       game.lastCardDrawn = selectedCard;
       logHistory(game, { player: player.name, action: 'select', cards: [selectedCard] });
       console.log('Last card drawn (via Select) set to:', selectedCard);
       // Process the selected card
       if (typeof selectedCard === 'number') {
         handleNumberCard(game, player, selectedCard, io);
-        game.discardPile.push(selectedCard);
-        
+
         if (player.status === 'busted') {
           player.drawThreeRemaining = 0;
           player.pendingSpecialCard = null;
@@ -1313,7 +1468,8 @@ const createPlayer = (id, name) => ({
   bustedCard: null,
   drawThreeRemaining: 0,  // Track how many more cards player must draw
   pendingSpecialCard: null,  // Track pending special cards during D3 sequences
-  pendingTarget: null  // Targeting card awaiting a pick, re-sent on reconnect
+  pendingTarget: null,  // Targeting card awaiting a pick, re-sent on reconnect
+  stats: freshStats()
 });
 
 // currentPlayer is an index rather than an id, so splicing the array silently moves the
@@ -1363,16 +1519,23 @@ const advanceTurn = game => {
 const handleNumberCard = (game, player, card, io) => {
   // 0 is a number card like any other: a second one is still a duplicate.
   if (player.regularCards.includes(card)) {
+    // A duplicate never joins the hand, so this is the one path where the card leaves
+    // play. Anything that does join a hand must NOT be discarded here - it is still on
+    // the table, and the next reshuffle has to be able to tell the difference.
+    game.discardPile.push(card);
+
     const scIndex = player.specialCards.indexOf('SC');
     if (scIndex > -1) {
       player.specialCards.splice(scIndex, 1);
       game.discardPile.push('SC');
+      bump(player, 'secondChances');
       logHistory(game, { player: player.name, action: 'second-chance', cards: [card] });
       io.to(game.id).emit('play-sound', 'secondChanceSound');
     } else {
       player.status = 'busted';
       player.bustedCard = card;
       player.roundScore = 0;
+      bump(player, 'busts');
       logHistory(game, { player: player.name, action: 'bust', cards: [card] });
       io.to(game.id).emit('play-sound', 'bustCardSound');
     }
@@ -1385,6 +1548,7 @@ const handleNumberCard = (game, player, card, io) => {
   if (player.regularCards.length === MAX_REGULAR_CARDS) {
     player.status = 'stood';
     updatePlayerScore(player);
+    bump(player, 'sevens');
     logHistory(game, { player: player.name, action: 'seven-bonus' });
   }
 };
@@ -1543,7 +1707,6 @@ const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDec
     sortDeckForDisplay(popupDeck),
     fullDeck ? sortDeckForDisplay(fullDeck) : fullDeck
   );
-  game.discardPile.push('Select');
 };
 
 // Binds a live socket to a seat that already exists. Both ways back into a game - the
@@ -1592,15 +1755,9 @@ const resendPendingTarget = (game, player, socket, io) => {
   if (!card) return;
 
   if (card === 'Select') {
-    // Not handleSelectCard: that also puts the Select into the discard pile, which
-    // already happened when the popup was first opened.
-    const deckIsEmpty = game.deck.length === 0;
-    socket.emit(
-      'select-card-from-pile',
-      game.id,
-      deckIsEmpty ? [] : sortDeckForDisplay(game.deck),
-      deckIsEmpty ? sortDeckForDisplay(createDeck()) : null
-    );
+    // Rebuilt rather than remembered: the pile may have reshuffled while they were away.
+    if (game.deck.length === 0) reshuffleFromDiscard(game);
+    socket.emit('select-card-from-pile', game.id, sortDeckForDisplay(game.deck), null);
     return;
   }
 
@@ -1641,6 +1798,8 @@ const checkGameStatus = (game, io) => {
       game.players.forEach(player => {
         if (player.status !== 'busted') {
           player.totalScore += player.roundScore;
+          if (!player.stats) player.stats = freshStats();
+          player.stats.bestRound = Math.max(player.stats.bestRound, player.roundScore);
         }
       });
 
@@ -1653,7 +1812,7 @@ const checkGameStatus = (game, io) => {
         const winners = nonBustedPlayers.filter(p => p.totalScore === highestScore);
 
         // End game if any winner is at the winning score, otherwise start new round
-        if (highestScore >= WINNING_SCORE) {
+        if (highestScore >= winningScoreOf(game)) {
           // In case of a tie, winner is the one who reached it first
           endGame(game, winners[0], io);
         } else {
@@ -1680,6 +1839,15 @@ const endGame = (game, winner, io) => {
   });
 };
 
+// Sweeps the table into the discard pile at the end of a round. Deliberately separate
+// from resetPlayersForRound, because a round restart throws its hands away rather than
+// discarding them - those cards go back into the pile the restart is rewinding to.
+const discardAllHands = game => {
+  game.players.forEach(player => {
+    game.discardPile.push(...player.regularCards, ...player.specialCards);
+  });
+};
+
 // Everything a round begins with, shared by a fresh round and a replayed one.
 const resetPlayersForRound = players => {
   players.forEach(player => {
@@ -1699,11 +1867,14 @@ const startNewRound = (game, io) => {
   game.roundEpoch = (game.roundEpoch || 0) + 1;
   logHistory(game, { action: 'round-start' });
 
-  // Don't reset deck - it persists across rounds and reshuffles when empty during gameplay
-  // Only reset discard pile
-  game.discardPile = [];
+  // One deck lasts the whole game. A new round does not deal a new one - the hands that
+  // were on the table go onto the discard pile, where they wait for the next time the
+  // draw pile actually runs out. That is the only moment anything is shuffled, and at
+  // that moment whatever is in a hand is not in the pile being shuffled, which is what
+  // stops a card existing twice. See reshuffleFromDiscard.
+  discardAllHands(game);
 
-  // Reset player states, but keep total scores, lastCardDrawn, and deck
+  // Reset player states, but keep total scores and lastCardDrawn
   resetPlayersForRound(game.players);
 
   // Set starting player based on round number (cycling through players)
@@ -1725,8 +1896,12 @@ const restartRound = (game, io) => {
   game.roundEpoch = (game.roundEpoch || 0) + 1;
   game.roundEnding = false;
 
-  game.deck = Array.isArray(game.roundStartDeck) ? [...game.roundStartDeck] : createDeck();
-  game.discardPile = [];
+  game.deck = Array.isArray(game.roundStartDeck)
+    ? [...game.roundStartDeck]
+    : createDeck(deckModeOf(game));
+  game.discardPile = Array.isArray(game.roundStartDiscard)
+    ? [...game.roundStartDiscard]
+    : [];
   game.lastCardDrawn = null;
   snapshotRoundDeck(game);
 
@@ -1792,3 +1967,17 @@ setInterval(() => {
     if (game.players.length === 0) games.delete(id);
   });
 }, 60000);
+
+// One clock for every game. Re-deriving the deadline here each second rather than
+// setting a timer at each turn change means no handler can leave a stale timer behind
+// or forget to start one.
+setInterval(() => {
+  const now = Date.now();
+  games.forEach(game => {
+    refreshTurnDeadline(game);
+    if (game.turnDeadline && now >= game.turnDeadline) {
+      game.turnDeadline = null;
+      bustOnTimeout(game, io);
+    }
+  });
+}, 1000);

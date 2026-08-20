@@ -85,6 +85,7 @@
                 <div class="header-right">
                     <div class="game-code-display">
                         <span class="share-link" id="shareLink"></span>
+                        <span class="mode-badge" id="modeBadge" hidden></span>
                     </div>
                     <!-- Phone-only: opens the remaining-deck sheet. Hidden on desktop, where the
                          full pile is on the board already. -->
@@ -119,6 +120,10 @@
                             <div class="deck-stat-item">
                                 <span class="stat-label">LAST CARD DRAWN:</span>
                                 <div id="lastCardDrawn" class="last-card-container"></div>
+                            </div>
+                            <div class="deck-stat-item">
+                                <span class="stat-label">PLAYING TO:</span>
+                                <span class="stat-value" id="targetScore">200</span>
                             </div>
                         </div>
                         <div class="remaining-pile" id="discard"></div>  <!-- Changed id kept for compatibility -->

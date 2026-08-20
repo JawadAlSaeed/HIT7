@@ -6189,3 +6189,209 @@ h3 span.emoji {
         --cols: 7;
     }
 }
+
+/* ==========================================================================
+   Lobby settings, and the end-of-game highlights
+   ========================================================================== */
+
+/* Both panels grew taller than the screen once they had content in them, and
+   neither had anywhere to put the overflow. */
+.waiting-screen {
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+}
+
+/* The overlay centres its child, which clips the top of anything taller than the
+   viewport. auto margins centre it without doing that. */
+.winner-popup .popup-content {
+    margin: auto;
+}
+
+.lobby-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    background: rgba(0, 0, 0, 0.2);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    margin: var(--space-4) 0;
+    text-align: left;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.setting-label {
+    color: var(--highlight);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.setting-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+/* One rule for both, because the non-host copy has to read as the same control,
+   just not pressable. */
+.setting-option {
+    flex: 1 1 auto;
+    min-width: 72px;
+    /* Thumb-sized, because the score row is four small buttons on a phone. */
+    min-height: 44px;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 2px solid rgba(233, 69, 96, 0.25);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+}
+
+button.setting-option {
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                background var(--dur-fast) var(--ease-out),
+                transform var(--dur-tap) var(--ease-out);
+}
+
+button.setting-option:hover {
+    border-color: rgba(233, 69, 96, 0.6);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+button.setting-option:active {
+    transform: scale(0.97);
+}
+
+.setting-option.selected {
+    border-color: var(--highlight);
+    background: rgba(233, 69, 96, 0.18);
+}
+
+.setting-sub {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.setting-blurb {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Says what game you are in without costing a row of its own. */
+.mode-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(233, 69, 96, 0.35);
+    background: rgba(233, 69, 96, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.awards {
+    margin: 2rem 0 0;
+    text-align: left;
+}
+
+.awards h3 {
+    color: var(--highlight);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.awards-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.award-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: rgba(22, 33, 62, 0.9);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    border-radius: var(--radius-sm);
+}
+
+.award-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.award-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.award-title {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.award-holder {
+    color: var(--text-light);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.award-value {
+    flex: 0 0 auto;
+    max-width: 40%;
+    text-align: right;
+}
+
+.award-value strong {
+    display: block;
+    color: var(--success);
+    font-size: 1.25rem;
+    line-height: 1.1;
+}
+
+.award-value span {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.68rem;
+    line-height: 1.2;
+}
+
+@media screen and (max-width: 430px) {
+    .setting-option {
+        min-width: 64px;
+        font-size: 0.85rem;
+    }
+
+    .award-row {
+        gap: var(--space-2);
+        padding: var(--space-2);
+    }
+
+    .award-value span {
+        display: none;
+    }
+}

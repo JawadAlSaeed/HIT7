@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test",
     "postinstall": "npm run build",
     "build": "echo 'No build step required'",
     "dev": "cross-env NODE_ENV=development node server.js",
