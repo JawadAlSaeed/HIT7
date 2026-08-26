@@ -945,7 +945,8 @@ const HISTORY_ICONS = {
     'left': '🚪',
     'disconnected': '🔌',
     'reconnected': '🔗',
-    'kicked': '🥾'
+    'kicked': '🥾',
+    'botified': '🤖'
 };
 
 function renderHistoryCard(card) {
@@ -992,6 +993,7 @@ function formatHistoryEntry(entry) {
         case 'disconnected':  return `${player} <span class="history-bad">lost connection</span> — round paused`;
         case 'reconnected':   return `${player} <span class="history-good">is back</span>`;
         case 'kicked':        return `${player} was removed by the host`;
+        case 'botified':      return `${player} dropped — a bot took over their seat`;
         default:              return `${player} ${escapeHtml(entry.action || '')}`;
     }
 }
@@ -1108,6 +1110,9 @@ function renderDisconnectRows(popup, game) {
                 <span class="disconnect-name">${escapeHtml(player.name)}</span>
                 <span class="disconnect-elapsed">${elapsed ? `away ${elapsed}` : 'away'}</span>
                 ${amHost ? `
+                    <button class="game-button green botify-button" data-id="${escapeHtml(player.id)}">
+                        Let a bot take over
+                    </button>
                     <button class="game-button red kick-button" data-id="${escapeHtml(player.id)}">
                         Remove &amp; restart round
                     </button>
@@ -1119,9 +1124,20 @@ function renderDisconnectRows(popup, game) {
     const hintEl = popup.querySelector('.disconnect-hint');
     if (hintEl) {
         hintEl.textContent = amHost
-            ? 'Removing a player replays this round from the start. Scores from earlier rounds are kept.'
-            : 'The host can remove them and restart the round.';
+            ? 'A bot can take their seat and keep their cards and score, and this round carries on. '
+              + 'Removing them instead replays the round from the start.'
+            : 'The host can wait, hand their seat to a bot, or remove them and restart the round.';
     }
+
+    listEl.querySelectorAll('.botify-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Nothing is lost by doing this, so it does not need a confirmation the way
+            // removing somebody does.
+            playSound('buttonClick');
+            btn.disabled = true;
+            socket.emit('replace-with-bot', currentGameId, btn.dataset.id);
+        });
+    });
 
     listEl.querySelectorAll('.kick-button').forEach(btn => {
         btn.addEventListener('click', () => {

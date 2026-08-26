@@ -21,6 +21,15 @@ The host picks all three of these in the waiting room, before the first card is 
 
 `100`, `150`, `200` (default) or `300`.
 
+### If somebody drops mid-game
+The round pauses so nobody loses their cards, and the host gets three choices:
+
+- **Wait** — do nothing. They can rejoin with their name and the game code.
+- **Let a bot take over** — a bot inherits the seat, keeping their cards, their score
+  and their turn. The round carries straight on. They cannot rejoin that seat afterwards.
+- **Remove & restart round** — frees the seat, but replays the round from the start.
+  Scores from earlier rounds are kept.
+
 ### Bots
 
 `0` to `5`. Bots take real seats at the table, so people plus bots have to fit in six.
@@ -128,6 +137,7 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 - Real-time multiplayer
 - Two decks and four target scores
 - Bots with four personalities, for filling a table or practising alone
+- A bot can take over the seat of anyone who drops mid-game
 - Sound effects and animations
 - Interactive tutorial
 - Special card effects
