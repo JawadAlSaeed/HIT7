@@ -4342,7 +4342,11 @@ h3 span.emoji {
 
     /* Game Container */
     .game-container {
-        padding: 0 !important;
+        /* Horizontal only. This used to be `padding: 0 !important`, which also beat the
+           phone layout's padding-bottom - the one reserving the height of the fixed
+           control bar - so the last row of the board sat underneath the buttons. */
+        padding-left: 0 !important;
+        padding-right: 0 !important;
         margin: 0 auto !important;
         width: 100% !important;
         box-sizing: border-box;
@@ -5663,6 +5667,12 @@ h3 span.emoji {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         width: 100%;
         box-sizing: border-box;
+        /* Not the 60px an older breakpoint still asks for. With border-box, a phone that
+           has a home indicator spends 44px of that on bottom padding and leaves 6px for
+           a 54px button - so the buttons hung above their own bar with the board showing
+           behind them. Sized by its contents, the bar is exactly the 74px + inset that
+           .game-container reserves below. */
+        height: auto;
     }
 
     /* The bar is fixed, so the shell has to reserve its height or it covers the
