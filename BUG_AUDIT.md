@@ -26,13 +26,6 @@ instant it is drawn and `pendingTarget` holds the turn until it is aimed, so no 
 player can act in the gap. Steal is the one way a copy can land in a hand that cannot
 use it.
 
-### The client reconstructs game state from the DOM
-**Severity**: MEDIUM
-`getCurrentGameState()` reads statuses, scores and card counts back out of rendered
-HTML, and `showWinnerPopup` parses player names out of `<h3>` text. Any change to the
-markup silently changes the parsed state. The server sends the full game object on
-every update - that should be cached and read instead.
-
 ### Round-end delay is a fixed 5s `setTimeout`
 **Severity**: LOW
 Nothing cancels it if every player leaves during the summary. The timer checks that its
@@ -66,6 +59,8 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 | Reshuffling built a brand new deck | The same card could exist twice inside a round |
 | A stalled turn hung the table | Nothing resolved the turn of a player who walked away |
 | No rate limiting on socket events | One socket could emit as fast as it liked |
+| The client rebuilt game state from the DOM | `getCurrentGameState()` is gone and the winner popup reads the server's payload |
+| A dropped player froze the table | The host can hand the seat to a bot instead of restarting the round |
 
 ---
 

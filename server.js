@@ -825,6 +825,39 @@ const registerHandlers = (io) => socket => {
       restartRound(game, io);
     });
 
+    // The third answer to somebody dropping, and usually the right one. Waiting keeps
+    // the round but stalls it; removing them frees the table but throws the round away.
+    // Handing the seat to a bot does neither - the cards, the score and the turn all
+    // stay exactly where they are and play carries straight on.
+    socket.on('replace-with-bot', (gameId, targetId) => {
+      const game = games.get(gameId);
+      if (!game) return;
+
+      syncHost(game);
+      if (socket.id !== game.hostId) return;
+
+      const index = game.players.findIndex(p => p.id === targetId);
+      if (index === -1) return;
+
+      const player = game.players[index];
+      if (isBot(player)) {
+        return socket.emit('error', 'That seat is already a bot.');
+      }
+
+      // Only ever aimed at someone who has actually dropped. This is not a way to hand
+      // somebody's hand to a bot while they are sitting there playing it.
+      if (player.connected) {
+        return socket.emit('error', 'You can only hand over a disconnected player.');
+      }
+
+      const bot = botifySeat(game, index);
+      logHistory(game, { player: bot.name, action: 'botified' });
+
+      // Nobody is missing any more, so isPaused goes false and the round picks up from
+      // wherever it stopped - including a turn that was half-taken.
+      broadcastGame(io, game);
+    });
+
     socket.on('freeze-player', (gameId, targetId) => {
       const game = games.get(gameId);
       if (!game || game.status !== 'playing' || isPaused(game)) return;
@@ -1551,6 +1584,46 @@ const createBot = (game, personalityKey) => {
     bot: { personality: traits.key, label: traits.label },
     connected: true
   };
+};
+
+// Turns a seat that has dropped into a bot without moving it.
+//
+// The index has to stay where it is - currentPlayer is an index, not an id - and
+// everything that belongs to the round stays with it: the cards on the table, the
+// banked score, the stats, and a target popup that was left open mid-turn. Only the
+// identity changes, so from the table's point of view the same player carries on, just
+// not under their own steam.
+const botifySeat = (game, index) => {
+  const player = game.players[index];
+  // Spread across the personalities the same way a lobby full of bots is.
+  const botsSoFar = game.players.filter(isBot).length;
+  const traits = botPersonality(PERSONALITY_KEYS[botsSoFar % PERSONALITY_KEYS.length]);
+
+  const bot = {
+    ...player,
+    // A fresh id: the old one is a socket that has gone, and the puppet socket is keyed
+    // by whatever this is.
+    id: `bot:${uuidv4()}`,
+    // No token, ever - the same rule createBot follows. findByToken only matches a
+    // non-empty string, so nulling it is what stops the person who dropped rejoining
+    // into a seat that is now being played for them.
+    token: null,
+    isBot: true,
+    bot: { personality: traits.key, label: traits.label },
+    connected: true,
+    disconnectedAt: null
+  };
+
+  game.players[index] = bot;
+
+  // botCount is what a rematch rebuilds the table from, so it has to agree with the
+  // table it is describing.
+  game.settings = {
+    ...settingsOf(game),
+    botCount: Math.min(MAX_PLAYERS - 1, game.players.filter(isBot).length)
+  };
+
+  return bot;
 };
 
 // The setting says how many bots there should be; this is what makes game.players
