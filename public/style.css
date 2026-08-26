@@ -56,7 +56,7 @@
    was removed. No !important is needed: an @supports block and its plain counterpart
    never both apply, so there is nothing here to out-rank. */
 @supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
-    .game-container,
+    /* .game-container is deliberately absent: it is the page, not a surface on it. */
     .game-header,
     .game-code-display,
     .controls,
@@ -127,7 +127,10 @@ body::before {
     padding: 2rem;
     max-width: 600px;
     width: 100%;
-    margin-top: 2rem;
+    /* max(), not a plain margin: this is the one top-level screen with nothing between
+       it and the top of the display, and its logo is the first thing a notch would eat.
+       Reads as the old 2rem whenever the inset is 0, which is every case today. */
+    margin-top: max(2rem, env(safe-area-inset-top));
 }
 
 /* Game Logo Styling */
@@ -297,9 +300,14 @@ body::before {
     box-sizing: border-box;
     margin: 0; /* remove negative margin to avoid layout shift */
     padding: 1rem;
-    background: rgba(22, 33, 62, 0.8);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    /* Not a frosted panel. This element IS the whole screen, so there is nothing behind
+       it to blur except the page background - a full-viewport backdrop-filter that
+       produces no picture and costs more than anything else on the page. Worse, the
+       translucent slab blended the board to a slightly different shade from the page
+       behind it, so every strip the container did not reach - the safe areas on a phone
+       - read as a band of the wrong colour. Transparent, and the body gradient runs
+       edge to edge with nothing to line up. */
+    background: transparent;
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -412,6 +420,10 @@ body::before {
 
 .game-header .game-code-display {
     background: transparent;
+    /* The base rule frosts this. With the background taken away that leaves a blurred
+       rectangle floating in the header, drawing nothing and hazing what is behind it. */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     padding: 0;
     margin: 0;
     border: none;
@@ -4330,7 +4342,11 @@ h3 span.emoji {
 
     /* Game Container */
     .game-container {
-        padding: 0 !important;
+        /* Horizontal only. This used to be `padding: 0 !important`, which also beat the
+           phone layout's padding-bottom - the one reserving the height of the fixed
+           control bar - so the last row of the board sat underneath the buttons. */
+        padding-left: 0 !important;
+        padding-right: 0 !important;
         margin: 0 auto !important;
         width: 100% !important;
         box-sizing: border-box;
@@ -5236,6 +5252,17 @@ h3 span.emoji {
         box-sizing: border-box;
     }
 
+    /* Both of these are opaque on a phone - the header takes var(--secondary) just
+       above, the control bar is 98% - so the frosted glass behind them draws nothing
+       whatsoever. All it does is ask the phone to composite two full-width blur layers
+       on every frame of every animation. The desktop bars stay frosted; they are
+       genuinely translucent. */
+    .game-header,
+    .controls {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
     .header-left {
         flex: 0 0 auto;
     }
@@ -5640,6 +5667,12 @@ h3 span.emoji {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         width: 100%;
         box-sizing: border-box;
+        /* Not the 60px an older breakpoint still asks for. With border-box, a phone that
+           has a home indicator spends 44px of that on bottom padding and leaves 6px for
+           a 54px button - so the buttons hung above their own bar with the board showing
+           behind them. Sized by its contents, the bar is exactly the 74px + inset that
+           .game-container reserves below. */
+        height: auto;
     }
 
     /* The bar is fixed, so the shell has to reserve its height or it covers the
@@ -6426,4 +6459,13 @@ button.setting-option:active {
     .award-value span {
         display: none;
     }
+}
+
+/* Small enough to ignore, findable enough to ask about. See BUILD in client.js. */
+.tutorial-build {
+    margin: var(--space-5) 0 0;
+    text-align: center;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.35);
 }

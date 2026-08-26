@@ -1,3 +1,9 @@
+// Bumped by hand whenever something ships that is worth being able to identify from a
+// phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
+// it, so "is this fixed" and "is this the old page" look identical from the outside.
+// It is printed at the bottom of How To Play, which is two taps away on any device.
+const BUILD = '2026-08-26.5';
+
 const socket = io();
 let currentGameId = null;
 let isHost = false;
@@ -3205,6 +3211,8 @@ function showTutorial() {
                         <li>📜 History shows every card played so far</li>
                     </ul>
                 </section>
+
+                <p class="tutorial-build">Build ${escapeHtml(BUILD)}</p>
             </div>
         </div>
     `;
