@@ -151,6 +151,16 @@ npm run dev    # http://localhost:3000
 npm test       # node:test, no extra dependencies
 ```
 
+## 📱 Install it on your phone
+
+Open [HIT7.click](https://hit7.click) and use **Add to Home Screen** (Share menu on
+iPhone, the ⋮ menu on Android). You get the logo as an app icon, full screen with no
+browser bars, and an instant start because the page is cached.
+
+It still needs a connection to play - it is a real-time multiplayer game, so there is no
+offline mode. Open it with no signal and it says so rather than sitting there looking
+like it works.
+
 ## 🚀 Quick Start
 1. Visit [HIT7.click](https://hit7.click)
 2. Create a new game
