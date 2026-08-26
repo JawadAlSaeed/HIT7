@@ -20,14 +20,17 @@
              got a blank icon. -->
         <link rel="manifest" href="/site.webmanifest">
 
-        <!-- Installed on a phone. theme-color paints the status bar; without it the bar
-             sits white above a dark navy game. black-translucent puts the page under the
-             bar, which works because viewport-fit=cover is set above and the stylesheet
-             already pads with env(safe-area-inset-*). -->
+        <!-- Installed on a phone. theme-color paints the status bar.
+             NOT black-translucent: that puts the page under the status bar, and while
+             the game board pads itself with env(safe-area-inset-top), the landing page
+             does not - so the logo ended up behind the Dynamic Island. "black" makes iOS
+             reserve the bar instead, which no screen can then collide with. It also
+             makes env(safe-area-inset-top) report 0, so the padding rules that do exist
+             quietly become no-ops rather than doubling up. -->
         <meta name="theme-color" content="#1a1a2e">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
         <meta name="apple-mobile-web-app-title" content="HIT 7">
         <!-- Add base tag to ensure relative paths work correctly -->
         <base href="/">

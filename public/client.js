@@ -109,7 +109,7 @@ const initializeButtons = () => {
     
     if (createGameBtn) createGameBtn.onclick = function(e) {
         e.preventDefault();
-        playSound('buttonClick');
+        // No playSound here: createGame() plays it. Doing both is two clicks for one tap.
         console.log('Create Game clicked');
         createGame();
     };
@@ -153,7 +153,8 @@ const initializeButtons = () => {
 
     if (flipCardBtn) flipCardBtn.onclick = function() {
         if (flipCardBtn.disabled) return;
-        playSound('cardFlip');
+        // Same again: flipCard() plays the flip. This was playing it a second time, which
+        // is the doubled sound on every hit.
         flipCard();
     };
     if (standBtn) standBtn.onclick = function() {
