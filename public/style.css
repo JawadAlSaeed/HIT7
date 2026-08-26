@@ -83,6 +83,15 @@ body {
     height: 100%;
 }
 
+/* Installed on a phone the page no longer fills every pixel of the screen: the safe
+   areas around the notch and the home indicator sit outside the body box, and whatever
+   is behind them is html, which is white by default. This is the only thing painting
+   those edges, so it has to match the top of the body gradient and the manifest's
+   background_color exactly. */
+html {
+    background-color: #1a1a2e;
+}
+
 body {
     font-family: 'Roboto', sans-serif;
     background: var(--gradient-bg);
