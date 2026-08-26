@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "HIT 7",
+  "short_name": "HIT7",
+  "description": "A fast-paced card game of risk and strategy. Draw, push your luck, and don't repeat a number.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -278,8 +278,18 @@ socket.on('turn-timeout', handleTurnTimeout);
 // just went through a tunnel.
 socket.on('connect', () => {
     hideConnectionLostOverlay();
+    hideOfflineNotice();
     const session = loadSession();
     if (session) socket.emit('rejoin-game', session.gameId, session.token);
+});
+
+// The page is served from the service worker's cache now, so somebody with no
+// connection gets a lobby that looks perfectly fine and quietly does nothing when they
+// tap it. The browser's own error page used to say so; this has to instead.
+socket.on('connect_error', () => {
+    // Anyone mid-game already gets the reconnecting overlay. This is for the person who
+    // opened a cached page with nothing behind it.
+    if (!loadSession()) showOfflineNotice();
 });
 
 // socket.io retries on its own; this only tells the player why the game stopped
@@ -389,6 +399,18 @@ socket.on('game-reset-with-players', (game) => {
         notification.remove();
     }, 2000);
 });
+
+// ---------------------------------------------------------------------------
+// Installability
+//
+// Registered from here rather than an inline <script> because the page is served under
+// script-src 'self'. A failure is not worth telling the player about: the service worker
+// only makes the game start faster and lets it be installed, and the game plays exactly
+// the same without one.
+// ---------------------------------------------------------------------------
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 // Add select-card-from-pile event listener with other socket listeners
 socket.on('select-card-from-pile', (gameId, deck, fullDeck) => {
@@ -1206,6 +1228,25 @@ function updateDisconnectNotice(game) {
 
 // This player's own connection, which is a different problem: there is no game state
 // arriving to drive a popup, so it is put up and taken down by the socket events.
+let offlineNotice = null;
+
+function showOfflineNotice() {
+    if (offlineNotice || socket.connected) return;
+
+    offlineNotice = document.createElement('div');
+    offlineNotice.className = 'restart-notice offline-notice';
+    offlineNotice.innerHTML = `
+        <strong>📡 No connection</strong>
+        <span>HIT 7 needs the internet to play. This clears itself the moment you are back.</span>
+    `;
+    document.body.appendChild(offlineNotice);
+}
+
+function hideOfflineNotice() {
+    if (offlineNotice) offlineNotice.remove();
+    offlineNotice = null;
+}
+
 function showConnectionLostOverlay() {
     if (document.querySelector('.connection-lost-popup')) return;
 
