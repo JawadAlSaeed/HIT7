@@ -822,52 +822,80 @@ const registerHandlers = (io) => socket => {
       broadcastGame(io, game);
     });
 
-    // Update reset-game event handling
-    socket.on('reset-game', gameId => {
+    // Called it a day. Ends the game where it stands and shows the normal end screen,
+    // so a table that has run out of time still gets a winner, the highlights and the
+    // rematch button rather than just evaporating.
+    //
+    // Whoever is ahead wins. A draw goes to the player already sitting higher up the
+    // table, which is arbitrary but has to be somebody - and the alternative, refusing
+    // to end a tied game, is worse than a coin toss nobody notices.
+    socket.on('end-game', gameId => {
       const game = games.get(gameId);
-      if (!game) return;
+      if (!game || game.status !== 'playing') return;
+
       // The acting host may be a stand-in while the original is away.
       syncHost(game);
-      if (socket.id === game.hostId) {
-        // Reset the game state but keep players
-        const resetGame = {
-          ...game,
-          deck: createDeck(deckModeOf(game)),
-          discardPile: [],
-          currentPlayer: 0,
-          status: 'playing',
-          roundNumber: 1,
-          lastCardDrawn: null,
-          roundEnding: false,
-          roundEpoch: (game.roundEpoch || 0) + 1,
-          history: [],
-          historySeq: 0
-        };
+      if (socket.id !== game.hostId) return;
 
-        // Reset all players
-        resetGame.players = resetGame.players.map(player => ({
-          ...player,
-          regularCards: [],
-          specialCards: [],
-          status: 'active',
-          roundScore: 0,
-          totalScore: 0,
-          bustedCard: null,
-          drawThreeRemaining: 0,
-          pendingSpecialCard: null,
-          pendingTarget: null,
-          stats: freshStats()
-        }));
+      const leader = game.players.reduce(
+        (best, player) => (player.totalScore > best.totalScore ? player : best),
+        game.players[0]
+      );
+      if (!leader) return;
 
-        // Update the game in the map
-        games.set(gameId, resetGame);
-        snapshotRoundDeck(resetGame);
-        logHistory(resetGame, { action: 'round-start' });
+      logHistory(game, { player: leader.name, action: 'ended-early' });
+      endGame(game, leader, io);
+      broadcastGame(io, game);
+    });
 
-        // Notify all players about the reset
-        syncHost(resetGame);
-        io.to(gameId).emit('game-reset-with-players', publicGame(resetGame));
-      }
+    // The other way out, and the one that was missing entirely: back to the waiting room
+    // with the scores wiped, where the deck, the target score and the number of bots can
+    // all be changed before starting again. Until now the only way to play a different
+    // deck was to abandon the game and make a new one, and everybody had to rejoin.
+    socket.on('return-to-lobby', gameId => {
+      const game = games.get(gameId);
+      if (!game || game.status === 'lobby') return;
+
+      syncHost(game);
+      if (socket.id !== game.hostId) return;
+
+      game.status = 'lobby';
+      game.deck = createDeck(deckModeOf(game));
+      game.discardPile = [];
+      game.currentPlayer = 0;
+      game.roundNumber = 1;
+      game.lastCardDrawn = null;
+      game.roundEnding = false;
+      // Bumped so any round-end timeout still pending from the game being left behind
+      // cannot score into the lobby it is coming back to.
+      game.roundEpoch = (game.roundEpoch || 0) + 1;
+      game.history = [];
+      game.historySeq = 0;
+      game.turnStateKey = null;
+      game.turnDeadline = null;
+
+      // 'waiting' rather than 'active': only startNewRound makes players active, and a
+      // lobby that already had everyone active would show a board with no cards on it.
+      game.players.forEach(player => {
+        player.regularCards = [];
+        player.specialCards = [];
+        player.status = 'waiting';
+        player.roundScore = 0;
+        player.totalScore = 0;
+        player.bustedCard = null;
+        player.drawThreeRemaining = 0;
+        player.pendingSpecialCard = null;
+        player.pendingTarget = null;
+        player.stats = freshStats();
+      });
+
+      // The bot seats are a lobby setting again, so they are reconciled the same way any
+      // other settings change reconciles them.
+      syncBotSeats(game);
+
+      syncHost(game);
+      io.to(gameId).emit('returned-to-lobby', publicGame(game));
+      broadcastGame(io, game);
     });
 
     // Host-only escape hatch for a player who is not coming back. The round they

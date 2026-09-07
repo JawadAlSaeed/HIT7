@@ -102,7 +102,6 @@
                 <div class="header-right">
                     <div class="game-code-display">
                         <span class="share-link" id="shareLink"></span>
-                        <span class="mode-badge" id="modeBadge" hidden></span>
                     </div>
                     <!-- Phone-only: opens the remaining-deck sheet. Hidden on desktop, where the
                          full pile is on the board already. -->
@@ -113,10 +112,65 @@
                         <span class="deck-button-label">left</span>
                         <span class="deck-button-last" id="deckButtonLast">—</span>
                     </button>
-                    <button id="soundToggle" class="game-button" title="Mute sound" aria-label="Mute sound" aria-pressed="false">🔊</button>
-                    <button id="resetButton" class="game-button red" title="Reset" aria-label="Reset game">⟲<span class="button-label">Reset</span></button>
-                    <button id="historyButton" class="game-button green" title="History" aria-label="History">📜<span class="button-label">History</span></button>
-                    <button id="headerTutorialBtn" class="game-button purple">How to Play</button>
+
+                    <!-- Everything that is not played with. Sound and the rules are here
+                         for everyone; the two that end or unwind the game are host-only
+                         and sit below a divider so neither is next to a harmless one.
+                         The dot on the gear is how a muted game says so with the menu
+                         shut, which the old standalone speaker button did by itself. -->
+                    <div class="settings-menu-wrap">
+                        <button id="settingsButton" class="game-button" title="Settings"
+                                aria-label="Settings" aria-haspopup="true" aria-expanded="false"
+                                aria-controls="settingsMenu">⚙️<span class="button-label">Settings</span></button>
+
+                        <div id="settingsMenu" class="settings-menu" role="menu"
+                             aria-labelledby="settingsButton" hidden>
+                            <!-- What everybody agreed to play. It sat in the header as a
+                                 badge, where it was read once and then took up room for
+                                 the rest of the game. It is not a control, so it is a
+                                 caption rather than a row you can press. -->
+                            <p class="settings-mode" id="settingsMode" hidden></p>
+
+                            <button class="settings-item" role="menuitemcheckbox" type="button"
+                                    id="settingsSound" aria-checked="true">
+                                <span class="settings-icon" id="settingsSoundIcon">🔊</span>
+                                <span class="settings-text">
+                                    <span class="settings-label">Sound</span>
+                                </span>
+                                <span class="settings-state" id="settingsSoundState">On</span>
+                            </button>
+
+                            <button class="settings-item" role="menuitem" type="button"
+                                    id="settingsTutorial">
+                                <span class="settings-icon">📖</span>
+                                <span class="settings-text">
+                                    <span class="settings-label">How to play</span>
+                                </span>
+                            </button>
+
+                            <div class="settings-group" id="settingsHostGroup" hidden>
+                                <p class="settings-group-title">Host</p>
+
+                                <button class="settings-item" role="menuitem" type="button"
+                                        id="settingsToLobby">
+                                    <span class="settings-icon">🔄</span>
+                                    <span class="settings-text">
+                                        <span class="settings-label">Return to lobby</span>
+                                        <span class="settings-hint">Change deck, score, bots</span>
+                                    </span>
+                                </button>
+
+                                <button class="settings-item is-danger" role="menuitem" type="button"
+                                        id="settingsEndGame">
+                                    <span class="settings-icon">🏁</span>
+                                    <span class="settings-text">
+                                        <span class="settings-label">End game</span>
+                                        <span class="settings-hint">Stop now, whoever leads wins</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -125,6 +179,17 @@
                 <span class="turn-pip"></span>
                 <span id="turnStripText">Waiting…</span>
             </div>
+
+            <!-- What just happened, on every screen. It is also the way into the full
+                 log: the History button that used to sit in the header was doing the
+                 same job from further away, so the strip took it over and the header
+                 lost a button. The chevron is what says the whole row is a button. -->
+            <button class="last-action" id="lastAction" type="button"
+                    aria-label="Last action — open the full history" aria-live="polite">
+                <span class="last-action-icon" id="lastActionIcon" aria-hidden="true">▶️</span>
+                <span class="last-action-text" id="lastActionText">Waiting for the first move…</span>
+                <span class="last-action-more" aria-hidden="true">›</span>
+            </button>
 
             <div class="game-board">
                 <div class="deck-area">
