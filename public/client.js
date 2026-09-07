@@ -304,6 +304,19 @@ socket.on('connect_error', () => {
 socket.on('disconnect', () => {
     if (loadSession()) showConnectionLostOverlay();
 });
+
+// A backgrounded phone has its socket killed and its timers frozen, so socket.io's own
+// retry does not fire until the page is awake again - and then only when its backoff
+// next comes round, which by then can be several seconds. Coming back to the app is the
+// one moment we know for certain the connection is worth trying, so it is tried at once.
+// The server holds the seat for a grace period; this is what gets back inside it.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (socket.connected) return;
+    // Clears any backoff still counting down, so this is an immediate attempt rather
+    // than one queued behind the wait socket.io had already scheduled.
+    socket.connect();
+});
 socket.on('cancel-freeze', () => {
   if (activeFreezePopup) {
     activeFreezePopup.remove();
@@ -351,9 +364,10 @@ socket.on('select-freeze-target', (gameId, targets) => {
 
 // draw-three popup handler (single instance kept earlier in file)
 
-// keep a single connect/disconnect handler
-socket.on('connect', () => console.log('Connected to server'));
-socket.on('disconnect', () => alert('Lost connection to server!'));
+// The connect and disconnect handlers that used to sit here were a leftover second set.
+// The disconnect one called alert(), which blocks the whole page until it is dismissed -
+// and a phone drops its socket every time you switch apps, so glancing at a message came
+// back to a modal browser popup. The real handlers are at the top of this file.
 
 // Add this with the other socket event listeners at the top
 socket.on('rematch-started', (game) => {
@@ -634,10 +648,15 @@ function botLabel(player) {
 // One row of the lobby list. Kept in one place because two different renderers
 // draw this list, and the badge has to be on both of them.
 function lobbyPlayerRow(player, hostId) {
+    // Their seat is held rather than freed now, so a lobby that just showed them present
+    // would have everyone waiting on somebody who has walked off. `connected` and not
+    // `away` on purpose: the popup needs the grace period, a quiet badge does not.
+    const isAway = player.connected === false;
     return `
-        <div class="player-item${player.isBot ? ' is-bot' : ''}">
+        <div class="player-item${player.isBot ? ' is-bot' : ''}${isAway ? ' is-away' : ''}">
             ${escapeHtml(player.name)}
             ${player.isBot ? `<span class="bot-badge">🤖 ${escapeHtml(botLabel(player))}</span>` : ''}
+            ${isAway ? '<span class="away-badge">📵 away</span>' : ''}
             ${player.id === hostId ? '<span class="host-badge">HOST</span>' : ''}
         </div>
     `;
@@ -803,8 +822,11 @@ function handleGameUpdate(game) {
         isHost = socket.id === game.hostId;
         const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
         // The server refuses every action while someone is missing, so the buttons have
-        // to say so rather than looking live and doing nothing.
-        const paused = game.players.some(p => !p.connected);
+        // to say so rather than looking live and doing nothing. `away` and not
+        // `!connected`: the server gives a dropped socket a few seconds to come back
+        // before it counts, and locking the table during those seconds is the thing this
+        // is here to avoid.
+        const paused = game.players.some(p => p.away);
         const canAct = isCurrentPlayer && game.status === 'playing' && !paused;
 
         updateGameDisplay(game);
@@ -1124,7 +1146,7 @@ function formatElapsed(ms) {
 }
 
 function renderDisconnectRows(popup, game) {
-    const missing = game.players.filter(p => !p.connected);
+    const missing = game.players.filter(p => p.away);
     const listEl = popup.querySelector('.disconnect-list');
     if (!listEl) return;
 
@@ -1182,7 +1204,9 @@ function renderDisconnectRows(popup, game) {
 }
 
 function updateDisconnectNotice(game) {
-    const missing = game.players.filter(p => !p.connected);
+    // `away`, not `!connected` - a socket that dropped a second ago is given a grace
+    // period by the server before the table stops, and this popup is the table stopping.
+    const missing = game.players.filter(p => p.away);
 
     // Stamp arrivals and forget anyone who came back or was removed.
     const missingIds = new Set(missing.map(p => p.id));

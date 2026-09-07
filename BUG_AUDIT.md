@@ -58,6 +58,9 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 | No reconnect after a refresh | A closed tab lost its seat; join was lobby-only |
 | Reshuffling built a brand new deck | The same card could exist twice inside a round |
 | A stalled turn hung the table | Nothing resolved the turn of a player who walked away |
+| A leftover `alert()` on every disconnect | A blocking browser popup fired on every connection blip, and a phone drops its socket every time you switch apps |
+| A lobby seat was freed the instant the socket dropped | Switching apps while waiting for players lost you your place, with a token pointing at a seat that no longer existed - and if you were the only human there, the game was deleted |
+| Any disconnect paused the table instantly | Glancing at a message stopped the round for everybody, with no grace period between a blip and an absence |
 | No rate limiting on socket events | One socket could emit as fast as it liked |
 | The client rebuilt game state from the DOM | `getCurrentGameState()` is gone and the winner popup reads the server's payload |
 | A dropped player froze the table | The host can hand the seat to a bot instead of restarting the round |
