@@ -4334,9 +4334,9 @@ h3 span.emoji {
         gap: 0.35rem;
     }
 
-    /* Three buttons plus the share link do not fit across a phone header, and a
-       wrapped row spills past the header background. The scroll icon carries the
-       meaning on its own, so the word is dropped here. */
+    /* The header is down to the deck count and the gear, but the word next to the
+       gear still costs more room than a phone has, and a wrapped row spills past
+       the header background. The glyph carries it on its own. */
     .header-right .game-button .button-label {
         display: none;
     }
@@ -5350,9 +5350,9 @@ h3 span.emoji {
         justify-content: center;
     }
 
-    /* History and Settings keep their glyph and drop their word. There is no
-       longer a third button to hide: the tutorial and the sound toggle both
-       moved inside the settings menu, which is why the row fits now. */
+    /* Settings keeps its glyph and drops its word. Nothing else is left to hide:
+       sound and the tutorial moved into the settings menu, and History moved on
+       to the last-action strip, which is why the row fits now. */
     .header-right .button-label {
         display: none;
     }
@@ -6367,17 +6367,6 @@ button.setting-option:active {
 }
 
 /* Says what game you are in without costing a row of its own. */
-.mode-badge {
-    padding: 0.2rem 0.6rem;
-    border-radius: var(--radius-pill);
-    border: 1px solid rgba(233, 69, 96, 0.35);
-    background: rgba(233, 69, 96, 0.12);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.75rem;
-    font-family: 'Roboto', sans-serif;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
 
 .awards {
     margin: 2rem 0 0;
@@ -6532,6 +6521,18 @@ button.setting-option:active {
     text-align: left;
 }
 
+/* The deck and target score, which used to be a badge in the header. A caption, not
+   a control: it is the one thing in this menu nobody can change mid-game. */
+.settings-mode {
+    margin: 0;
+    padding: 0.55rem 0.9rem;
+    background: rgba(233, 69, 96, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+}
+
 .settings-item {
     display: flex;
     align-items: center;
@@ -6614,4 +6615,88 @@ button.setting-option:active {
 
 .settings-item.is-danger .settings-label {
     color: #ff8a80;
+}
+
+/* ---------------------------------------------------------------------------
+   Last-action strip
+
+   What just happened, directly under the header, on every screen - unlike the turn
+   strip above it, which is phone-only. It is also the only way into the full log:
+   the History button that used to sit in the header did the same job from further
+   away, so this took it over and the header lost a button.
+   --------------------------------------------------------------------------- */
+
+.last-action {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.75);
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.last-action:hover,
+.last-action:focus-visible {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.last-action-icon {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+/* One line. A Swap names two players and two cards, which would otherwise wrap the
+   strip to three rows and push the board down every time somebody played one. */
+.last-action-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The whole row is the button; this is what says so. */
+.last-action-more {
+    flex: 0 0 auto;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.last-action:hover .last-action-more {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* A move you were not watching for should catch your eye once and then stop. */
+.last-action.is-new {
+    animation: last-action-flash var(--dur-slow, 320ms) var(--ease-out) 2;
+}
+
+@keyframes last-action-flash {
+    0%, 100% { background: rgba(255, 255, 255, 0.05); }
+    50%      { background: rgba(233, 69, 96, 0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .last-action.is-new {
+        animation: none;
+    }
+}
+
+@media screen and (max-width: 430px) {
+    .last-action {
+        padding: 7px 14px;
+        font-size: 0.76rem;
+        gap: 8px;
+    }
 }

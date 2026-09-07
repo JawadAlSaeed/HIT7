@@ -2,7 +2,7 @@
 // phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
 // it, so "is this fixed" and "is this the old page" look identical from the outside.
 // It is printed at the bottom of How To Play, which is two taps away on any device.
-const BUILD = '2026-09-07.2';
+const BUILD = '2026-09-07.3';
 
 const socket = io();
 let currentGameId = null;
@@ -170,12 +170,15 @@ const initializeButtons = () => {
 
     wireSettingsMenu();
 
-    const historyBtn = document.getElementById('historyButton');
-    if (historyBtn) historyBtn.onclick = function() {
+    // The last-action strip is the way into the log now. It replaced a header button
+    // that opened the same popup from further away, which is why the header lost one.
+    const lastAction = document.getElementById('lastAction');
+    if (lastAction) lastAction.onclick = function() {
         playSound('buttonClick');
         showHistory();
     };
-    
+
+
     console.log('Button initialization complete');
 };
 
@@ -642,11 +645,14 @@ function updateSettingsDisplay(game) {
     const target = document.getElementById('targetScore');
     if (target) target.textContent = settings.winningScore;
 
-    const badge = document.getElementById('modeBadge');
-    if (badge) {
+    // Lives at the top of the settings menu now rather than in the header. It says what
+    // everybody agreed to play, which is worth being able to check and not worth a
+    // permanent slot in a row that has to fit on a phone.
+    const mode = document.getElementById('settingsMode');
+    if (mode) {
         const info = DECK_MODE_INFO[settings.deckMode];
-        badge.textContent = `${info.label} · to ${settings.winningScore}`;
-        badge.hidden = false;
+        mode.textContent = `${info.label} deck · first to ${settings.winningScore}`;
+        mode.hidden = false;
     }
 }
 
@@ -1036,8 +1042,48 @@ function renderHistoryList(listEl) {
     }).join('');
 }
 
+// The strip under the header. Deliberately built from the same entry and the same
+// formatter the log popup uses, so the two can never word the same move differently -
+// and so a new action type only has to be taught to formatHistoryEntry once.
+let lastActionId = null;
+
+function updateLastAction(history) {
+    const strip = document.getElementById('lastAction');
+    const icon = document.getElementById('lastActionIcon');
+    const text = document.getElementById('lastActionText');
+    if (!strip || !icon || !text) return;
+
+    const entry = Array.isArray(history) && history.length ? history[history.length - 1] : null;
+    if (!entry) {
+        lastActionId = null;
+        icon.textContent = '▶️';
+        text.textContent = 'Waiting for the first move…';
+        return;
+    }
+
+    // Every broadcast carries the whole log, so this runs constantly with nothing new
+    // in it. Only an entry we have not shown before is worth redrawing or flashing.
+    if (entry.id === lastActionId) return;
+    const isFirst = lastActionId === null;
+    lastActionId = entry.id;
+
+    icon.textContent = HISTORY_ICONS[entry.action] || '•';
+    text.innerHTML = formatHistoryEntry(entry);
+
+    // Nothing to announce on the first paint - that is the state of the game, not a
+    // move somebody just made.
+    if (isFirst) return;
+
+    // Restarted rather than added: two moves in quick succession should flash twice,
+    // and a class that is already on the element will not replay its animation.
+    strip.classList.remove('is-new');
+    void strip.offsetWidth;
+    strip.classList.add('is-new');
+}
+
 function updateHistory(history) {
     gameHistory = Array.isArray(history) ? history : [];
+    updateLastAction(gameHistory);
 
     const openPopup = document.querySelector('.history-popup');
     if (!openPopup) return;
@@ -2395,11 +2441,19 @@ function placeSettingsMenu() {
 
     const anchor = button.getBoundingClientRect();
     const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
     const GAP = 8;
 
     // Right-aligned under the gear, but never off the left edge of a narrow phone.
     const left = Math.max(GAP, Math.min(anchor.right - width, window.innerWidth - width - GAP));
-    menu.style.top = `${Math.round(anchor.bottom + GAP)}px`;
+
+    // Clamped on both edges as well. The anchor is only ever read from a live layout,
+    // and a rect measured mid-reflow - rotating a phone, the address bar sliding away -
+    // can put the menu above the top of the screen or off the bottom of it, where there
+    // is no scrolling to it and no way to tell it is even open.
+    const top = Math.max(GAP, Math.min(anchor.bottom + GAP, window.innerHeight - height - GAP));
+
+    menu.style.top = `${Math.round(top)}px`;
     menu.style.left = `${Math.round(left)}px`;
 }
 
