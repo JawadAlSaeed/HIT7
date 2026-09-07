@@ -2,7 +2,7 @@
 // phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
 // it, so "is this fixed" and "is this the old page" look identical from the outside.
 // It is printed at the bottom of How To Play, which is two taps away on any device.
-const BUILD = '2026-08-26.5';
+const BUILD = '2026-09-07.1';
 
 const socket = io();
 let currentGameId = null;
