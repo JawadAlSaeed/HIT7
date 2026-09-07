@@ -113,10 +113,60 @@
                         <span class="deck-button-label">left</span>
                         <span class="deck-button-last" id="deckButtonLast">—</span>
                     </button>
-                    <button id="soundToggle" class="game-button" title="Mute sound" aria-label="Mute sound" aria-pressed="false">🔊</button>
-                    <button id="resetButton" class="game-button red" title="Reset" aria-label="Reset game">⟲<span class="button-label">Reset</span></button>
                     <button id="historyButton" class="game-button green" title="History" aria-label="History">📜<span class="button-label">History</span></button>
-                    <button id="headerTutorialBtn" class="game-button purple">How to Play</button>
+
+                    <!-- Everything that is not played with. Sound and the rules are here
+                         for everyone; the two that end or unwind the game are host-only
+                         and sit below a divider so neither is next to a harmless one.
+                         The dot on the gear is how a muted game says so with the menu
+                         shut, which the old standalone speaker button did by itself. -->
+                    <div class="settings-menu-wrap">
+                        <button id="settingsButton" class="game-button" title="Settings"
+                                aria-label="Settings" aria-haspopup="true" aria-expanded="false"
+                                aria-controls="settingsMenu">⚙️<span class="button-label">Settings</span></button>
+
+                        <div id="settingsMenu" class="settings-menu" role="menu"
+                             aria-labelledby="settingsButton" hidden>
+                            <button class="settings-item" role="menuitemcheckbox" type="button"
+                                    id="settingsSound" aria-checked="true">
+                                <span class="settings-icon" id="settingsSoundIcon">🔊</span>
+                                <span class="settings-text">
+                                    <span class="settings-label">Sound</span>
+                                </span>
+                                <span class="settings-state" id="settingsSoundState">On</span>
+                            </button>
+
+                            <button class="settings-item" role="menuitem" type="button"
+                                    id="settingsTutorial">
+                                <span class="settings-icon">📖</span>
+                                <span class="settings-text">
+                                    <span class="settings-label">How to play</span>
+                                </span>
+                            </button>
+
+                            <div class="settings-group" id="settingsHostGroup" hidden>
+                                <p class="settings-group-title">Host</p>
+
+                                <button class="settings-item" role="menuitem" type="button"
+                                        id="settingsToLobby">
+                                    <span class="settings-icon">🔄</span>
+                                    <span class="settings-text">
+                                        <span class="settings-label">Return to lobby</span>
+                                        <span class="settings-hint">Change deck, score, bots</span>
+                                    </span>
+                                </button>
+
+                                <button class="settings-item is-danger" role="menuitem" type="button"
+                                        id="settingsEndGame">
+                                    <span class="settings-icon">🏁</span>
+                                    <span class="settings-text">
+                                        <span class="settings-label">End game</span>
+                                        <span class="settings-hint">Stop now, whoever leads wins</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

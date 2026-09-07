@@ -1048,7 +1048,7 @@ body::before {
 }
 
 /* Reset Confirmation Popup */
-.reset-confirmation-popup {
+.settings-confirm-popup {
     position: fixed;
     top: 0;
     left: 0;
@@ -1067,7 +1067,7 @@ body::before {
     box-sizing: border-box;
 }
 
-.reset-confirmation-popup .popup-content {
+.settings-confirm-popup .popup-content {
     background: var(--secondary);
     padding: 2rem;
     border-radius: 15px;
@@ -1078,17 +1078,17 @@ body::before {
     text-align: center;
 }
 
-.reset-confirmation-popup h2 {
+.settings-confirm-popup h2 {
     color: var(--highlight);
     margin-top: 0;
 }
 
-.reset-confirmation-popup p {
+.settings-confirm-popup p {
     color: var(--text-light);
     margin-bottom: 2rem;
 }
 
-.reset-confirmation-popup .button-group {
+.settings-confirm-popup .button-group {
     display: flex;
     gap: 1rem;
     justify-content: center;
@@ -5036,7 +5036,7 @@ h3 span.emoji {
    themselves, so they need the variant that preserves translate(-50%,-50%). */
 .winner-popup,
 .info-popup,
-.reset-confirmation-popup,
+.settings-confirm-popup,
 .round-summary-popup,
 .freeze-popup,
 .draw-three-popup,
@@ -5053,7 +5053,7 @@ h3 span.emoji {
 
 .winner-popup .popup-content,
 .info-popup .popup-content,
-.reset-confirmation-popup .popup-content,
+.settings-confirm-popup .popup-content,
 .round-summary-popup .popup-content,
 .freeze-popup .popup-content,
 .draw-three-popup .popup-content,
@@ -5071,7 +5071,7 @@ h3 span.emoji {
 /* Shells that position their own content with translate(-50%, -50%) would
    have it clobbered by the plain sheet-in transform. */
 .info-popup .popup-content,
-.reset-confirmation-popup .popup-content,
+.settings-confirm-popup .popup-content,
 .round-summary-popup .popup-content {
     animation-name: sheet-in-centered;
 }
@@ -5090,7 +5090,7 @@ h3 span.emoji {
 }
 
 .info-popup.popup-closing .popup-content,
-.reset-confirmation-popup.popup-closing .popup-content,
+.settings-confirm-popup.popup-closing .popup-content,
 .round-summary-popup.popup-closing .popup-content {
     transform: translate(-50%, -50%) scale(.97);
 }
@@ -5350,24 +5350,11 @@ h3 span.emoji {
         justify-content: center;
     }
 
-    /* Reset and History keep their glyph and drop their word; the tutorial
-       button has no glyph, so it goes entirely. */
+    /* History and Settings keep their glyph and drop their word. There is no
+       longer a third button to hide: the tutorial and the sound toggle both
+       moved inside the settings menu, which is why the row fits now. */
     .header-right .button-label {
         display: none;
-    }
-
-    /* `.header-right .game-button { display: inline-flex !important }` in the
-       <=430px block outranks even an ID selector, so this needs !important too
-       — otherwise a fifth header item appears and the row overflows. */
-    #headerTutorialBtn {
-        display: none !important;
-    }
-
-    /* client.js writes `display: block` straight onto this element for the
-       host, and only !important outranks an inline style. Sized, not hidden —
-       the host still needs Reset. */
-    #resetButton {
-        display: inline-flex !important;
     }
 
     /* ----------------------------------------------------------- deck button */
@@ -6485,4 +6472,146 @@ button.setting-option:active {
     font-size: 0.7rem;
     letter-spacing: 0.06em;
     color: rgba(255, 255, 255, 0.35);
+}
+
+/* ---------------------------------------------------------------------------
+   Settings menu
+
+   Replaces the Reset, Sound and How to Play buttons that used to sit across the
+   header. Three buttons became one, which is most of the reason the phone header
+   stopped being a scrum.
+   --------------------------------------------------------------------------- */
+
+.settings-menu-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+/* The gear is chrome, not an action, so it does not wear the pink the play
+   buttons use. */
+#settingsButton {
+    background: var(--accent);
+    box-shadow: none;
+}
+
+#settingsButton:hover:not(:disabled),
+#settingsButton.is-open {
+    background: #14487f;
+}
+
+/* With the menu shut there is nothing else to say the game is muted - the
+   speaker that used to say it is inside the menu now. */
+#settingsButton.is-muted::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+    border: 2px solid var(--secondary);
+    box-sizing: content-box;
+}
+
+/* Fixed, not absolute, and placed by placeSettingsMenu(). `.game-header` is
+   `overflow: hidden` and only as tall as one button, so an absolutely positioned
+   dropdown inside it is clipped to nothing - it measures the right size and paints
+   none of it. A fixed descendant escapes an ancestor's overflow, which is the whole
+   reason for the JS placement. */
+.settings-menu {
+    position: fixed;
+    z-index: var(--z-popup);
+    width: 266px;
+    max-width: calc(100vw - 24px);
+    background: var(--secondary);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius-md, 12px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    text-align: left;
+}
+
+.settings-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.settings-menu > .settings-item:last-child,
+.settings-group .settings-item:last-child {
+    border-bottom: none;
+}
+
+.settings-item:hover,
+.settings-item:focus-visible {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.settings-icon {
+    font-size: 1rem;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.settings-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-label {
+    line-height: 1.2;
+}
+
+.settings-hint {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.3;
+}
+
+.settings-state {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--success);
+    color: var(--text-light);
+}
+
+.settings-state.is-off {
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* The two that end or unwind the game. Kept behind a labelled divider so neither
+   is ever the neighbour of a harmless one. */
+.settings-group {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.settings-group-title {
+    margin: 0;
+    padding: 0.4rem 0.9rem;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.settings-item.is-danger .settings-label {
+    color: #ff8a80;
 }

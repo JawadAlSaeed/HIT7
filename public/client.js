@@ -2,7 +2,7 @@
 // phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
 // it, so "is this fixed" and "is this the old page" look identical from the outside.
 // It is printed at the bottom of How To Play, which is two taps away on any device.
-const BUILD = '2026-08-26.5';
+const BUILD = '2026-09-07.2';
 
 const socket = io();
 let currentGameId = null;
@@ -155,7 +155,6 @@ const initializeButtons = () => {
     // Game Control Buttons - removed startGame button
     const flipCardBtn = document.getElementById('flipCard');
     const standBtn = document.getElementById('standButton');
-    const resetBtn = document.getElementById('resetButton');
 
     if (flipCardBtn) flipCardBtn.onclick = function() {
         if (flipCardBtn.disabled) return;
@@ -168,15 +167,8 @@ const initializeButtons = () => {
         playSound('buttonClick');
         stand();
     };
-    if (resetBtn) resetBtn.onclick = function() {
-        showResetConfirmation();
-    };
-    
-    const headerTutorialBtn = document.getElementById('headerTutorialBtn');
-    if (headerTutorialBtn) headerTutorialBtn.onclick = function() {
-        playSound('buttonClick');
-        showTutorial();
-    };
+
+    wireSettingsMenu();
 
     const historyBtn = document.getElementById('historyButton');
     if (historyBtn) historyBtn.onclick = function() {
@@ -272,13 +264,13 @@ socket.on('game-started', handleGameStarted);
 socket.on('new-round', handleNewRound);
 socket.on('game-over', handleGameOver);
 socket.on('all-busted', handleAllBusted);
-socket.on('game-reset', handleGameReset);
 socket.on('error', handleError);
 socket.on('round-summary', handleRoundSummary);
 socket.on('rejoined', handleRejoined);
 socket.on('rejoin-failed', handleRejoinFailed);
 socket.on('round-restarted', handleRoundRestarted);
 socket.on('turn-timeout', handleTurnTimeout);
+socket.on('returned-to-lobby', handleReturnedToLobby);
 
 // Fires on the first connection and again after every reconnect, so it is the one place
 // that can put a returning player back in their seat - whether they reloaded the page or
@@ -390,36 +382,6 @@ socket.on('play-sound', (soundId) => {
     playSound(soundId);
 });
 
-// Add this new event listener with the other socket listeners
-socket.on('game-reset-with-players', (game) => {
-    // Clear any existing popups
-    const popups = document.querySelectorAll('.winner-popup, .round-summary-popup, .info-popup');
-    popups.forEach(popup => popup.remove());
-    
-    // Clear the board for new game
-    clearPlayersBoard();
-    
-    // Update game display
-    updateGameDisplay(game);
-    
-    // Check if it's the current player's turn
-    const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
-    toggleActionButtons(isCurrentPlayer && game.status === 'playing');
-    
-    // Show a notification
-    const notification = document.createElement('div');
-    notification.className = 'info-popup';
-    notification.innerHTML = `
-        <h2>⇄ Game Reset!</h2>
-        <p class="popup-countdown">Starting new game...</p>
-    `;
-    document.body.appendChild(notification);
-    
-    // Remove notification after 2 seconds
-    setTimeout(() => {
-        notification.remove();
-    }, 2000);
-});
 
 // ---------------------------------------------------------------------------
 // Installability
@@ -535,12 +497,6 @@ function flipCard() {
 // Modify stand function to let server handle sound
 function stand() { 
     socket.emit('stand', currentGameId); 
-}
-
-// Modify resetGame function to remove the confirmation
-function resetGame() {
-    playSound('buttonClick');
-    socket.emit('reset-game', currentGameId);
 }
 
 // ---------------------------------------------------------------------------
@@ -775,12 +731,17 @@ function showCopyConfirmationInButton() {
 function handleGameUpdate(game) {
     latestGame = game;
     const waitingScreen = document.getElementById('waitingScreen');
-    const resetButton = document.getElementById('resetButton');
 
-    // Show/hide reset button based on host status
-    if (resetButton) {
-        resetButton.style.display = socket.id === game.hostId ? 'block' : 'none';
-    }
+    // Was only assigned in the 'playing' branch below, so a lobby never recomputed it:
+    // the stand-in who takes over when a host drops kept seeing a non-host waiting room,
+    // and returning to the lobby carried whatever the last round happened to leave here.
+    // hostId is a live socket id the server re-derives on every connection change, so
+    // this is simply true wherever it is asked.
+    isHost = socket.id === game.hostId;
+
+    // Which is also why the host-only half of the settings menu is re-derived on every
+    // update rather than set once when the game starts.
+    syncSettingsHostItems(game);
 
     // Update deck count immediately
     document.getElementById('deckCount').textContent = game.deck.length;
@@ -819,7 +780,6 @@ function handleGameUpdate(game) {
             waitingScreen.remove();
         }
         // Update game display as before
-        isHost = socket.id === game.hostId;
         const isCurrentPlayer = game.players[game.currentPlayer]?.id === socket.id;
         // The server refuses every action while someone is missing, so the buttons have
         // to say so rather than looking live and doing nothing. `away` and not
@@ -993,6 +953,7 @@ const HISTORY_ICONS = {
     'round-end': '🏁',
     'round-restart': '🔄',
     'game-over': '🏆',
+    'ended-early': '🏁',
     'left': '🚪',
     'disconnected': '🔌',
     'reconnected': '🔗',
@@ -1040,6 +1001,7 @@ function formatHistoryEntry(entry) {
         case 'round-end':     return `Round ${entry.round} ended`;
         case 'round-restart': return `Round ${entry.round} <span class="history-bad">restarted</span> from the beginning`;
         case 'game-over':     return `${player} <span class="history-good">won the game!</span>`;
+        case 'ended-early':  return `the host <span class="history-bad">ended the game early</span> — ${player} was ahead`;
         case 'left':          return `${player} left the game`;
         case 'disconnected':  return `${player} <span class="history-bad">lost connection</span> — round paused`;
         case 'reconnected':   return `${player} <span class="history-good">is back</span>`;
@@ -2393,11 +2355,6 @@ function handleGameOver({ players, winner }) {
     showWinnerPopup(winner, isHost, players);
 }
 
-function handleGameReset() {
-    alert('Game has been reset by the host!');
-    window.location.reload();
-}
-
 function handleError(message) {
     // On the landing page an alert() covers the field the player has to fix, and errors
     // there are all about the form anyway.
@@ -2410,55 +2367,200 @@ function handleError(message) {
     alert(message);
 }
 
-function showResetConfirmation() {
-  const existingPopup = document.querySelector('.reset-confirmation-popup');
-  if (existingPopup) existingPopup.remove();
+// ---------------------------------------------------------------------------
+// Settings menu
+//
+// Replaces the standalone Reset, Sound and How to Play buttons that used to sit in the
+// header. Reset itself is gone: "Return to lobby" does everything it did and lets the
+// deck, the target score and the bots be changed on the way past, which nothing could
+// do before without abandoning the game and making everybody rejoin.
+//
+// The two host-only items are the ones that end or unwind the game, and they live below
+// a divider so that neither is ever the neighbour of a harmless one. Non-hosts do not
+// see them at all rather than seeing them greyed out - there is nothing to explain and
+// nothing to poke at.
+// ---------------------------------------------------------------------------
+
+function settingsMenuIsOpen() {
+    const menu = document.getElementById('settingsMenu');
+    return Boolean(menu) && !menu.hidden;
+}
+
+// The menu is position: fixed, so it has to be told where to go. See the note on
+// .settings-menu in style.css for why it cannot simply hang off the button.
+function placeSettingsMenu() {
+    const menu = document.getElementById('settingsMenu');
+    const button = document.getElementById('settingsButton');
+    if (!menu || !button || menu.hidden) return;
+
+    const anchor = button.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const GAP = 8;
+
+    // Right-aligned under the gear, but never off the left edge of a narrow phone.
+    const left = Math.max(GAP, Math.min(anchor.right - width, window.innerWidth - width - GAP));
+    menu.style.top = `${Math.round(anchor.bottom + GAP)}px`;
+    menu.style.left = `${Math.round(left)}px`;
+}
+
+function setSettingsMenuOpen(open) {
+    const menu = document.getElementById('settingsMenu');
+    const button = document.getElementById('settingsButton');
+    if (!menu || !button) return;
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    button.classList.toggle('is-open', open);
+    // After unhiding, or offsetWidth is 0 and the menu lands in the wrong place.
+    if (open) placeSettingsMenu();
+}
+
+function closeSettingsMenu() {
+    setSettingsMenuOpen(false);
+}
+
+// Called on every game update, because who is host can change mid-game: the original
+// host dropping hands the powers to a stand-in, and getting them back moves them again.
+function syncSettingsHostItems(game) {
+    const group = document.getElementById('settingsHostGroup');
+    if (!group) return;
+    group.hidden = !game || socket.id !== game.hostId;
+}
+
+function wireSettingsMenu() {
+    const button = document.getElementById('settingsButton');
+    const menu = document.getElementById('settingsMenu');
+    if (!button || !menu) return;
+
+    button.onclick = event => {
+        event.stopPropagation();
+        playSound('buttonClick');
+        setSettingsMenuOpen(!settingsMenuIsOpen());
+    };
+
+    // A menu that only closes by its own button is a menu people leave open. Clicking
+    // the board, or Escape, is what everybody tries first.
+    document.addEventListener('click', event => {
+        if (!settingsMenuIsOpen()) return;
+        if (event.target.closest('.settings-menu-wrap')) return;
+        closeSettingsMenu();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && settingsMenuIsOpen()) closeSettingsMenu();
+    });
+
+    // Rotating a phone with the menu open moves the button out from under it.
+    window.addEventListener('resize', placeSettingsMenu);
+    window.addEventListener('orientationchange', placeSettingsMenu);
+
+    const sound = document.getElementById('settingsSound');
+    if (sound) sound.onclick = () => {
+        setSoundEnabled(!soundEnabled);
+        // Played after the flip, so unmuting confirms itself audibly.
+        if (soundEnabled) playSound('buttonClick');
+    };
+
+    const tutorial = document.getElementById('settingsTutorial');
+    if (tutorial) tutorial.onclick = () => {
+        playSound('buttonClick');
+        closeSettingsMenu();
+        showTutorial();
+    };
+
+    const toLobby = document.getElementById('settingsToLobby');
+    if (toLobby) toLobby.onclick = () => {
+        playSound('buttonClick');
+        closeSettingsMenu();
+        confirmSettingsAction({
+            title: 'Back to the lobby?',
+            body: 'Everyone goes back to the waiting room and the scores are wiped. You can change the deck, the target score and the bots before starting again.',
+            confirmLabel: 'Yes, back to lobby',
+            confirmClass: 'blue',
+            onConfirm: () => socket.emit('return-to-lobby', currentGameId)
+        });
+    };
+
+    const endGame = document.getElementById('settingsEndGame');
+    if (endGame) endGame.onclick = () => {
+        playSound('buttonClick');
+        closeSettingsMenu();
+
+        const leader = leadingPlayerName();
+        confirmSettingsAction({
+            title: 'End the game now?',
+            body: leader
+                ? `The game stops here and ${leader} wins on points. Everyone sees the end screen.`
+                : 'The game stops here and whoever is ahead on points wins.',
+            confirmLabel: 'Yes, end it',
+            confirmClass: 'red',
+            onConfirm: () => socket.emit('end-game', currentGameId)
+        });
+    };
+}
+
+// Named in the confirmation so nobody ends a game without seeing who it hands it to.
+// Undecided when nothing has been scored yet, which is exactly when it is worth saying
+// nothing rather than naming whoever happens to be sitting first.
+function leadingPlayerName() {
+    const players = latestGame && latestGame.players;
+    if (!players || !players.length) return null;
+
+    const best = players.reduce((a, b) => (b.totalScore > a.totalScore ? b : a), players[0]);
+    const tied = players.filter(p => p.totalScore === best.totalScore);
+    return tied.length === 1 ? best.name : null;
+}
+
+// Both of these throw away a game in progress, so neither happens on one tap.
+function confirmSettingsAction({ title, body, confirmLabel, confirmClass, onConfirm }) {
+    document.querySelectorAll('.settings-confirm-popup').forEach(p => p.remove());
 
     const popup = document.createElement('div');
-    popup.className = 'reset-confirmation-popup';
+    popup.className = 'settings-confirm-popup';
     popup.innerHTML = `
         <div class="popup-content">
-            <h2>Reset Game?</h2>
-            <p>Start a new round with all players?</p>
+            <h2>${escapeHtml(title)}</h2>
+            <p>${escapeHtml(body)}</p>
             <div class="button-group">
-        <button id="confirmResetBtn" class="game-button red" type="button">
-                    Yes, Reset
+                <button class="game-button ${confirmClass}" type="button" data-role="confirm">
+                    ${escapeHtml(confirmLabel)}
                 </button>
-        <button id="cancelResetBtn" class="game-button blue" type="button">
-                    Cancel
-                </button>
+                <button class="game-button" type="button" data-role="cancel">Cancel</button>
             </div>
         </div>
     `;
+
+    popup.querySelector('[data-role="confirm"]').addEventListener('click', () => {
+        popup.remove();
+        onConfirm();
+    });
+    popup.querySelector('[data-role="cancel"]').addEventListener('click', () => popup.remove());
+
     document.body.appendChild(popup);
-
-  const confirmBtn = popup.querySelector('#confirmResetBtn');
-  const cancelBtn = popup.querySelector('#cancelResetBtn');
-
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      confirmReset();
-    });
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      cancelReset();
-    });
-  }
 }
 
-function confirmReset() {
-    const popup = document.querySelector('.reset-confirmation-popup');
-    if (popup) popup.remove();
-    resetGame();
-}
+// The host has taken everyone back to the waiting room. The board is torn down rather
+// than left underneath, because showWaitingScreen draws over the top of it and a stale
+// board would still be sitting there when the next game starts.
+function handleReturnedToLobby(game) {
+    document.querySelectorAll(
+        '.winner-popup, .round-summary-popup, .info-popup, .disconnect-popup, .settings-confirm-popup'
+    ).forEach(popup => popup.remove());
 
-function cancelReset() {
-    const popup = document.querySelector('.reset-confirmation-popup');
-    if (popup) popup.remove();
+    closeSettingsMenu();
+    clearPlayersBoard();
+    toggleActionButtons(false);
+
+    document.getElementById('gameArea').style.display = 'none';
+    const controls = document.querySelector('.controls');
+    if (controls) controls.style.display = 'none';
+
+    // showWaitingScreen appends a fresh element every time it is called and dedupes
+    // nothing, so a stale one has to go before handleGameUpdate puts the new one up.
+    document.getElementById('waitingScreen')?.remove();
+
+    // Draws the waiting room itself, because that is what it already does for a game
+    // whose status is 'lobby' with no screen on the page.
+    handleGameUpdate(game);
 }
 
 function handleRoundSummary({ players, allBusted }) {
@@ -3329,13 +3431,29 @@ function setSoundEnabled(enabled) {
     syncSoundButton();
 }
 
+// The speaker used to be its own header button, where its icon said whether the game was
+// muted. It lives inside the settings menu now, so with the menu shut the gear carries a
+// dot instead - otherwise a muted game looks exactly like a working one.
 function syncSoundButton() {
-    const btn = document.getElementById('soundToggle');
-    if (!btn) return;
-    btn.textContent = soundEnabled ? '🔊' : '🔇';
-    btn.title = soundEnabled ? 'Mute sound' : 'Unmute sound';
-    btn.setAttribute('aria-label', btn.title);
-    btn.setAttribute('aria-pressed', String(!soundEnabled));
+    const item = document.getElementById('settingsSound');
+    if (item) {
+        const label = soundEnabled ? 'Sound on' : 'Sound off';
+        item.setAttribute('aria-checked', String(soundEnabled));
+        item.title = soundEnabled ? 'Mute sound' : 'Unmute sound';
+        item.setAttribute('aria-label', label);
+
+        const icon = document.getElementById('settingsSoundIcon');
+        if (icon) icon.textContent = soundEnabled ? '🔊' : '🔇';
+
+        const state = document.getElementById('settingsSoundState');
+        if (state) {
+            state.textContent = soundEnabled ? 'On' : 'Off';
+            state.classList.toggle('is-off', !soundEnabled);
+        }
+    }
+
+    const button = document.getElementById('settingsButton');
+    if (button) button.classList.toggle('is-muted', !soundEnabled);
 }
 
 function initSound() {
@@ -3345,14 +3463,7 @@ function initSound() {
         soundEnabled = true;
     }
 
-    const btn = document.getElementById('soundToggle');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            setSoundEnabled(!soundEnabled);
-            // Play after the flip so unmuting confirms itself audibly.
-            if (soundEnabled) playSound('buttonClick');
-        });
-    }
+    // The toggle itself is wired in wireSettingsMenu, with the rest of the menu.
     syncSoundButton();
 }
 
