@@ -2306,6 +2306,23 @@ body::before {
     font-size: 0.8rem;
 }
 
+/* A lobby seat is held for a few minutes after somebody's phone drops the connection,
+   so the row stays in the list. Dimmed and badged, or the rest of the table would sit
+   there waiting to start on a player who has wandered off. */
+.waiting-screen .player-item.is-away {
+    opacity: 0.55;
+}
+
+.waiting-screen .player-item .away-badge {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
 /* Nobody should have to guess which of these are people. The lobby badge names
    the personality as well, because it is the only place with room to say it. */
 .waiting-screen .player-item .bot-badge {

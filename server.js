@@ -17,6 +17,11 @@ const {
   decideMove: decideBotMove,
   thinkDelay: botThinkDelay
 } = require('./lib/bot');
+const {
+  DEFAULT_PAUSE_GRACE_MS,
+  isMissing: playerIsMissing,
+  isGamePaused
+} = require('./lib/presence');
 require('dotenv').config();
 
 const app = express();
@@ -186,17 +191,35 @@ const sortDeckForDisplay = deck => [...deck].sort((a, b) => {
   return String(a).localeCompare(String(b));
 });
 
+// The rule itself lives in lib/presence.js, where it can be tested against a clock this
+// file cannot hand it. Overridable so the behaviour can be watched without sitting
+// through the wait, exactly as TURN_LIMIT_MS is.
+const PAUSE_GRACE_MS = Number(process.env.PAUSE_GRACE_MS) || DEFAULT_PAUSE_GRACE_MS;
+
+// The difference between "their connection blipped" and "they are not there". Only the
+// second one stops the game.
+const isMissing = (player, now = Date.now()) =>
+  playerIsMissing(player, { now, graceMs: PAUSE_GRACE_MS });
+
 // A token is a player's proof of identity when they come back, so nothing sent to a
 // client may carry anyone else's - it would let any player claim any seat. Target lists
 // and round summaries go out as whole player objects too, so they all come through here.
-const publicPlayers = players => players.map(({ token, ...player }) => player);
+// `away` rides along because the grace period is the server's to judge: a client working
+// it out from `connected` would put the popup up in the gap the grace exists to cover.
+const publicPlayers = players => players.map(({ token, ...player }) => ({
+  ...player,
+  away: isMissing(player)
+}));
 
 // roundStartDeck is the pre-round deck kept for round restarts. Sending it would hand
 // out the draw order in the exact order the deck sorting below exists to hide.
 const publicGame = game => {
   // The clock is deliberately not sent: the turn limit is a backstop against an absent
   // player, not a countdown to play against.
-  const { roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, botClock, ...rest } = game;
+  const {
+    roundStartDeck, roundStartDiscard, turnDeadline, turnStateKey, botClock,
+    awaySignature, ...rest
+  } = game;
   return {
     ...rest,
     deck: sortDeckForDisplay(game.deck),
@@ -241,10 +264,9 @@ const namesMatch = (a, b) =>
 const findDisconnectedSeatByName = (game, name) =>
   game.players.find(p => !p.connected && namesMatch(p.name, name));
 
-// A round cannot be played on with someone missing: their hand, their banked score and
-// possibly the current turn are all still on the table. Everyone waits instead.
-const isPaused = game =>
-  game.status === 'playing' && game.players.some(p => !p.connected);
+// Everyone waits when somebody is missing - but not for a socket that dropped two
+// seconds ago and is already coming back. See lib/presence.js.
+const isPaused = game => isGamePaused(game, { graceMs: PAUSE_GRACE_MS });
 
 // hostId is a socket id because that is what clients compare against, so it has to be
 // re-derived whenever connections change. The original host gets their powers back when
@@ -375,6 +397,63 @@ const scheduleAbandonTimer = gameId => {
   abandonTimers.set(gameId, timer);
 };
 
+// A lobby seat used to be freed the instant the socket dropped, which on a phone is the
+// instant you switch apps. You came back to a game you were no longer in, holding a token
+// for a seat that no longer existed - and if you were the only human in the lobby, the
+// game had been deleted out from under you. The seat is held now, exactly as it is
+// mid-round, just not forever: somebody who closed the tab for good would otherwise sit
+// in the lobby taking up a place nobody can use.
+const LOBBY_HOLD_MS = Number(process.env.LOBBY_HOLD_MS) || 3 * 60 * 1000;
+const lobbyHoldTimers = new Map();
+
+// Keyed by token rather than socket id, because the whole point is to outlive the socket.
+const lobbyHoldKey = (gameId, token) => `${gameId}:${token}`;
+
+const cancelLobbyHold = (gameId, token) => {
+  if (!token) return;
+  const key = lobbyHoldKey(gameId, token);
+  const timer = lobbyHoldTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    lobbyHoldTimers.delete(key);
+  }
+};
+
+const scheduleLobbyRelease = (io, gameId, token) => {
+  // Bots have no token and are never held: their seats are a lobby setting, not people.
+  if (!token) return;
+  cancelLobbyHold(gameId, token);
+
+  const timer = setTimeout(() => {
+    lobbyHoldTimers.delete(lobbyHoldKey(gameId, token));
+    const game = games.get(gameId);
+    if (!game) return;
+
+    const index = game.players.findIndex(p => p.token && p.token === token);
+    if (index === -1) return;
+
+    // They came back, or the game started around them. Either way the seat is theirs and
+    // the mid-round rules have it from here.
+    if (game.players[index].connected || game.status === 'playing') return;
+
+    const removed = removePlayerAt(game, index);
+
+    if (humansIn(game).length === 0) {
+      cancelAbandonTimer(gameId);
+      releaseBotSockets(game);
+      games.delete(gameId);
+      return;
+    }
+
+    syncBotSeats(game);
+    logHistory(game, { player: removed.name, action: 'left' });
+    broadcastGame(io, game);
+  }, LOBBY_HOLD_MS);
+
+  if (typeof timer.unref === 'function') timer.unref();
+  lobbyHoldTimers.set(lobbyHoldKey(gameId, token), timer);
+};
+
 // The action log lives on the game object, so it rides along on every game-update
 // broadcast. Clients never have to reconstruct it from events they missed while a
 // popup was covering the board, and a late joiner sees the same log as everyone else.
@@ -496,6 +575,17 @@ const registerHandlers = (io) => socket => {
         return socket.emit('error', waiting.length
           ? `No seat here for "${name}". Waiting on: ${waiting.join(', ')}. Type that name exactly to take the seat back.`
           : 'That game is already under way and nobody has dropped out, so there is no seat free.');
+      }
+
+      // The lobby holds a dropped player's seat now instead of freeing it, so their name
+      // is still in the list when they come back. Checked before the full-lobby and
+      // duplicate-name rules below, or retyping their own name would be refused as a
+      // clash with themselves and there would be no way back into their own game.
+      const heldSeat = findDisconnectedSeatByName(game, name);
+      if (heldSeat) {
+        // Whoever held the old token may still have it on another device, so it stops
+        // working the moment the seat is taken back here.
+        return attachToSeat(game, heldSeat, socket, io, { rotateToken: true });
       }
 
       if (game.players.length >= MAX_PLAYERS) {
@@ -805,12 +895,22 @@ const registerHandlers = (io) => socket => {
         return socket.emit('error', 'You can only remove a disconnected player.');
       }
 
+      const wasPlaying = game.status === 'playing';
+      cancelLobbyHold(gameId, game.players[index].token);
       const removed = removePlayerAt(game, index);
       logHistory(game, { player: removed.name, action: 'kicked' });
 
       if (game.players.length === 0) {
         cancelAbandonTimer(gameId);
         games.delete(gameId);
+        return;
+      }
+
+      // Held lobby seats made this reachable before a game has started, where there is
+      // no round to end and none to restart - just a shorter waiting list.
+      if (!wasPlaying) {
+        syncBotSeats(game);
+        broadcastGame(io, game);
         return;
       }
 
@@ -1495,7 +1595,8 @@ const registerHandlers = (io) => socket => {
         if (game.status === 'playing') {
           player.connected = false;
           player.disconnectedAt = Date.now();
-          logHistory(game, { player: player.name, action: 'disconnected' });
+          // Not logged here: the one-second sweeper logs it if and when the grace period
+          // runs out, so a two-second blip leaves no trace in the action log.
 
           // Bots are marked connected, so this has to ask for a person specifically -
           // otherwise a table of bots nobody is watching never gets collected.
@@ -1505,23 +1606,18 @@ const registerHandlers = (io) => socket => {
           return;
         }
 
-        // In the lobby or once the game is finished there is nothing to hold onto, so
-        // the seat is freed exactly as it always was.
-        const removed = removePlayerAt(game, index);
+        // In the lobby and on the end screen the seat is held too, just on a shorter
+        // clock than a round: there is no hand to protect, but there is a place in a
+        // game that people are standing around waiting to start. See scheduleLobbyRelease.
+        player.connected = false;
+        player.disconnectedAt = Date.now();
+        scheduleLobbyRelease(io, gameId, player.token);
 
-        // Bots do not keep a table alive. A lobby with nothing but bots left in it has
-        // nobody to start it and nobody coming back for it, so it goes.
-        if (humansIn(game).length === 0) {
-          cancelAbandonTimer(gameId);
-          releaseBotSockets(game);
-          games.delete(gameId);
-          return;
-        }
+        // Bots do not keep a table alive, and neither does a held seat on its own. A
+        // lobby whose only human walked away is collected on the usual abandon clock
+        // rather than the instant their socket dropped.
+        if (!game.players.some(p => p.connected && !isBot(p))) scheduleAbandonTimer(gameId);
 
-        // A human leaving frees a seat the host may now want to fill with a bot.
-        syncBotSeats(game);
-
-        logHistory(game, { player: removed.name, action: 'left' });
         broadcastGame(io, game);
       });
     });
@@ -2080,6 +2176,10 @@ const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDec
 // stored token and reclaiming from the landing page - come through here, so a reconnect
 // behaves identically however it was triggered.
 const attachToSeat = (game, player, socket, io, { rotateToken = false } = {}) => {
+  // Before the rotation below, or the timer would be left keyed to a token nobody holds
+  // any more and would free this seat out from under the person now sitting in it.
+  cancelLobbyHold(game.id, player.token);
+
   if (rotateToken) {
     const wasOriginalHost = game.hostToken === player.token;
     player.token = uuidv4();
@@ -2091,6 +2191,9 @@ const attachToSeat = (game, player, socket, io, { rotateToken = false } = {}) =>
   // Two live sockets on one seat would both be able to act. The newest wins: on a dropped
   // connection the server may not have noticed the old socket is gone yet.
   const previousId = player.id;
+  // Read before the flags below clear it. Only somebody the table was actually waiting on
+  // is worth announcing - a blip inside the grace period was never announced as leaving.
+  const wasMissing = isMissing(player);
   player.id = socket.id;
   player.connected = true;
   player.disconnectedAt = null;
@@ -2098,7 +2201,7 @@ const attachToSeat = (game, player, socket, io, { rotateToken = false } = {}) =>
 
   cancelAbandonTimer(game.id);
 
-  if (previousId !== socket.id) {
+  if (wasMissing && previousId !== socket.id) {
     logHistory(game, { player: player.name, action: 'reconnected' });
   }
 
@@ -2351,6 +2454,25 @@ setInterval(() => {
 setInterval(() => {
   const now = Date.now();
   games.forEach(game => {
+    // Somebody crossing from "blipped" to "gone" is a change nothing else broadcasts:
+    // it happens on the clock rather than on a socket event, so without this the table
+    // would stay unpaused on every screen while the server had already stopped it.
+    const previous = game.awaySignature ? game.awaySignature.split(',') : [];
+    const missing = game.players.filter(p => isMissing(p, now));
+    const signature = missing.map(p => p.id).join(',');
+
+    if (signature !== (game.awaySignature || '')) {
+      // Logged here rather than on the socket event, so a flaky phone that drops and
+      // recovers inside the grace period does not fill the action log with noise about
+      // a pause that never happened.
+      missing
+        .filter(p => !previous.includes(p.id))
+        .forEach(p => logHistory(game, { player: p.name, action: 'disconnected' }));
+
+      game.awaySignature = signature;
+      broadcastGame(io, game);
+    }
+
     refreshTurnDeadline(game);
     if (game.turnDeadline && now >= game.turnDeadline) {
       game.turnDeadline = null;
