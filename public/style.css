@@ -157,7 +157,7 @@ body::before {
     margin: 2rem 0;
     text-transform: uppercase;
     position: relative;
-    letter-spacing: 2px;
+    letter-spacing: -0.03em;
     transition: transform 0.3s ease;
     text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
 }
@@ -230,7 +230,7 @@ body::before {
     font-weight: 500;
     height: 50px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.06em;
 }
 
 .lobby-button:hover {
@@ -270,8 +270,8 @@ body::before {
     font-size: 1.4rem;
     animation: slideIn 0.3s ease;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thin);
+    backdrop-filter: var(--material-thin);
     font-family: 'Cairo Play', sans-serif;
     display: flex;
     align-items: center;
@@ -335,8 +335,8 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-regular);
+    backdrop-filter: var(--material-regular);
     min-height: 72px; /* allow flexible height on small screens */
     width: 100%;
     box-sizing: border-box;
@@ -573,6 +573,11 @@ body::before {
 .scores {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    /* One label row and one value row shared by all three boxes. Without this a
+       label that wraps to two lines makes its own box taller and leaves the
+       numbers beside it sitting higher - which is exactly what CARDS vs
+       ROUND SCORE / TOTAL SCORE used to do. */
+    grid-template-rows: auto auto;
     gap: 0.5rem;
     background: rgba(15, 52, 96, 0.5);
     padding: var(--space-2);
@@ -582,6 +587,14 @@ body::before {
 }
 
 .score-box {
+    /* Spans both rows of .scores and borrows them, so every label bottom and
+       every value top lines up across the row. In .player-summary the parent is
+       a flex container, where subgrid resolves to none and this stays a plain
+       two-row grid. */
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    align-content: start;
     text-align: center;
     padding: var(--space-2);
     background: rgba(255, 255, 255, 0.05);
@@ -624,13 +637,12 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: float 3s ease-in-out infinite;
 }
 
 .status-text {
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     font-size: 0.9rem;
     color: var(--highlight);
 }
@@ -776,8 +788,8 @@ body::before {
     align-items: center;
     gap: 1.2rem;
     z-index: var(--z-controls);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-regular);
+    backdrop-filter: var(--material-regular);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -801,7 +813,7 @@ body::before {
     font-family: 'Roboto', sans-serif;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.06em;
 }
 
 .game-button:hover:not(:disabled) {
@@ -926,7 +938,7 @@ body::before {
     font-size: 2.5rem;
     margin: 0 0 1.5rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: -0.02em;
 }
 
 .winner-name {
@@ -1141,8 +1153,8 @@ body::before {
     background: rgba(22, 33, 62, 0.8);
     border-radius: 12px;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-regular);
+    backdrop-filter: var(--material-regular);
     margin-bottom: 1.5rem;
 }
 
@@ -1219,8 +1231,8 @@ body::before {
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-regular);
+    backdrop-filter: var(--material-regular);
 }
 
 /* Special Cards Section */
@@ -1233,8 +1245,8 @@ body::before {
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-regular);
+    backdrop-filter: var(--material-regular);
 }
 
 /* Individual Remaining Cards */
@@ -1271,8 +1283,8 @@ body::before {
     line-height: 1;
     font-weight: bold;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thin);
+    backdrop-filter: var(--material-thin);
 }
 
 /* Regular Cards Section */
@@ -1427,7 +1439,7 @@ body::before {
     font-size: 0.8rem;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.04em;
     min-width: 80px;
     text-align: center;
 }
@@ -1721,8 +1733,8 @@ body::before {
     margin: 2rem auto;
     max-width: 400px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
     border: 1px solid rgba(233, 69, 96, 0.2);
 }
 
@@ -1790,8 +1802,8 @@ body::before {
     border-radius: 0;
     padding: 0;
     position: relative;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
 }
 
 .tutorial-popup .close-button {
@@ -1827,7 +1839,7 @@ body::before {
     margin: 1rem 0;
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: -0.015em;
     background: var(--card-gradient);
     -webkit-background-clip: text;
     background-clip: text;
@@ -1857,7 +1869,7 @@ body::before {
     color: var(--highlight);
     margin: 0.8rem 0 0.5rem 0;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.01em;
 }
 
 .tutorial-popup .tutorial-section p {
@@ -2121,8 +2133,8 @@ body::before {
 /* Enhanced Tutorial Popup Styling */
 .tutorial-popup {
     background: rgba(22, 33, 62, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
     border: 1px solid rgba(233, 69, 96, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
@@ -2156,8 +2168,8 @@ body::before {
 .tab-button {
     background: rgba(15, 52, 96, 0.3);
     border: 1px solid rgba(233, 69, 96, 0.1);
-    -webkit-backdrop-filter: blur(5px);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: var(--material-thin);
+    backdrop-filter: var(--material-thin);
     margin-bottom: 1.5rem;
 }
 
@@ -2165,7 +2177,7 @@ body::before {
     color: var(--highlight);
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.03em;
     text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
 }
 
@@ -2178,8 +2190,8 @@ body::before {
 .card-example {
     background: rgba(22, 33, 62, 0.8);
     border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(5px);
-    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: var(--material-thin);
+    backdrop-filter: var(--material-thin);
     transition: transform 0.3s ease;
 }
 
@@ -2270,8 +2282,8 @@ body::before {
     max-width: 500px;
     text-align: center;
     border: 3px solid var(--highlight);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
 }
 
 .waiting-screen h2 {
@@ -2758,7 +2770,7 @@ body::before {
     font-size: 0.9rem;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     padding: var(--space-2);
     background: rgba(15, 52, 96, 0.5);
     border-radius: var(--radius-md);
@@ -2836,8 +2848,8 @@ body::before {
     max-width: 600px;
     width: 90%;
     margin: 20px;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
     padding-bottom: 80px; /* Increase bottom padding for button space */
     position: relative; /* Ensure proper positioning of absolute elements */
 }
@@ -2853,7 +2865,7 @@ body::before {
     margin: 0 0 1.5rem 0;
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: -0.01em;
 }
 
 /* Popup Targets Container */
@@ -2881,7 +2893,7 @@ body::before {
     font-family: 'Roboto', sans-serif;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.01em;
     cursor: pointer;
     transition: all 0.3s ease;
     background: var(--highlight);
@@ -2998,7 +3010,7 @@ draw-three-target.self-target:hover {
     font-weight: bold;
     font-size: 1.2rem;
     z-index: 1;
-    letter-spacing: 2px;
+    letter-spacing: 0.01em;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
@@ -3023,8 +3035,8 @@ draw-three-target.self-target:hover {
     width: 95%;
     border: 3px solid var(--highlight);
     box-shadow: 0 0 50px rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
 }
 
 .round-summary-popup h2 {
@@ -3035,7 +3047,7 @@ draw-three-target.self-target:hover {
     font-weight: 700;
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: -0.02em;
     text-shadow: 0 2px 10px rgba(233, 69, 96, 0.5);
     background: var(--card-gradient);
     -webkit-background-clip: text;
@@ -3054,7 +3066,7 @@ draw-three-target.self-target:hover {
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     color: var(--text-light);
     font-weight: 600;
     align-items: center;
@@ -3091,7 +3103,7 @@ draw-three-target.self-target:hover {
     text-transform: uppercase;
     color: var(--text-light);
     opacity: 0.7;
-    letter-spacing: 1px;
+    letter-spacing: 0.06em;
 }
 
 .points {
@@ -3148,7 +3160,7 @@ draw-three-target.self-target:hover {
     text-align: center;
     margin-bottom: 1rem;
     font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
+    letter-spacing: -0.01em;
 }
 
 .status-info {
@@ -3165,7 +3177,7 @@ draw-three-target.self-target:hover {
     font-size: 0.9rem;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     min-width: 100px;
     text-align: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -3216,7 +3228,7 @@ draw-three-target.self-target:hover {
     color: var(--text-light);
     font-size: 0.9rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     opacity: 0.8;
 }
 
@@ -3235,9 +3247,8 @@ draw-three-target.self-target:hover {
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: bold;
-    animation: glow 2s infinite;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     margin-top: 0.5rem;
     box-shadow: 0 2px 10px rgba(155, 89, 182, 0.3);
 }
@@ -3253,7 +3264,7 @@ draw-three-target.self-target:hover {
     border-radius: 12px;
     border: 1px solid rgba(233, 69, 96, 0.2);
     font-family: 'Cairo Play', sans-serif;
-    letter-spacing: 1px;
+    letter-spacing: 0;
 }
 
 .countdown span {
@@ -3271,7 +3282,7 @@ draw-three-target.self-target:hover {
     font-size: 0.9rem;
     font-weight: bold;
     margin: 0.5rem 0;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
     box-shadow: 0 2px 10px rgba(231, 76, 60, 0.2);
 }
 
@@ -3334,7 +3345,7 @@ draw-three-target.self-target:hover {
   font-weight: 700;
   font-family: 'Cairo Play', sans-serif;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: -0.015em;
   background: linear-gradient(to right, #e74c3c, #9b59b6, #3498db);
   -webkit-background-clip: text;
   background-clip: text;
@@ -3514,7 +3525,7 @@ draw-three-target.self-target:hover {
     text-transform: uppercase;
     font-weight: bold;
     font-size: 0.9rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
 }
 
 /* Override any styles using -webkit-background-clip for emoji elements */
@@ -3590,8 +3601,8 @@ h3 span.emoji {
   line-height: 1;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: var(--material-thin);
+  backdrop-filter: var(--material-thin);
 }
 
 /* HOLD TO VIEW GAME button styling - updated position */
@@ -3608,7 +3619,7 @@ h3 span.emoji {
     font-size: 1rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.02em;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Roboto', sans-serif;
@@ -3716,8 +3727,8 @@ h3 span.emoji {
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: var(--material-thick);
+    backdrop-filter: var(--material-thick);
 }
 
 .history-popup .close-button {
@@ -3753,7 +3764,7 @@ h3 span.emoji {
     margin: 1.1rem 3rem 0.8rem 3rem;
     font-family: 'Cairo Play', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: -0.01em;
     background: var(--card-gradient);
     -webkit-background-clip: text;
     background-clip: text;
@@ -3783,7 +3794,7 @@ h3 span.emoji {
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.06em;
     padding: 0.6rem 0 0.4rem 0;
     border-bottom: 1px solid rgba(233, 69, 96, 0.3);
     margin-bottom: 0.4rem;
@@ -3912,7 +3923,7 @@ h3 span.emoji {
     color: var(--highlight);
     margin: 0.75rem 0 0.5rem;
     font-size: 1.4rem;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.01em;
 }
 
 .disconnect-popup .loading-spinner,
@@ -3992,7 +4003,7 @@ h3 span.emoji {
     color: var(--text-light);
     font-size: 0.65rem;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
     padding: 0.2rem 0.45rem;
     border-radius: 6px;
     white-space: nowrap;
@@ -4051,7 +4062,7 @@ h3 span.emoji {
 .lobby-form label {
     font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.6);
 }
 
@@ -4121,7 +4132,7 @@ h3 span.emoji {
     margin: 0.25rem 0;
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.75rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
 }
 
@@ -4909,6 +4920,21 @@ h3 span.emoji {
     }
 }
 /* ==================================================================== */
+/* MATERIALS                                                            */
+/* Blur alone drains the colour out of whatever is behind the glass and */
+/* leaves grey haze. saturate() puts it back, which is what makes a     */
+/* translucent surface read as glass instead of fog.                    */
+/* Three weights, because a full-screen sheet should feel thicker than  */
+/* a small chip - same material, different amount of it.                */
+/* ==================================================================== */
+
+:root {
+    --material-thin: blur(8px) saturate(160%);
+    --material-regular: blur(16px) saturate(180%);
+    --material-thick: blur(28px) saturate(180%);
+}
+
+/* ==================================================================== */
 /* MOTION SYSTEM                                                        */
 /* Appended last on purpose: these rules must win over the older        */
 /* scattered transitions above without needing !important.              */
@@ -5023,6 +5049,8 @@ h3 span.emoji {
 
 .score-value {
     font-variant-numeric: tabular-nums;
+    /* 1.8rem is display size - letters read too far apart as they grow. */
+    letter-spacing: -0.015em;
     transition: color var(--dur-base) var(--ease-out);
 }
 
@@ -5120,14 +5148,82 @@ h3 span.emoji {
 
 /* ---------- accessibility ---------- */
 
+/* Reduced motion is not "no feedback" - it is feedback that does not move you.
+   Sliding, scaling, spinning and looping all go; opacity and colour stay, so a
+   card still announces itself as new and a button still answers a press. */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
-        animation-duration: .01ms !important;
+        /* No travel, no overshoot, no bounce - whatever the rule above asked for. */
+        transform: none !important;
         animation-iteration-count: 1 !important;
-        transition-duration: .01ms !important;
         scroll-behavior: auto !important;
+        transition-property: opacity, color, background-color, border-color, box-shadow !important;
+        transition-duration: var(--dur-fast) !important;
+        transition-timing-function: var(--ease-out) !important;
+    }
+
+    /* Entrances and exits become plain cross-fades rather than vanishing. */
+    .card.is-new,
+    .card.special.is-new,
+    .last-card.is-new,
+    .restart-notice {
+        animation: scrim-in var(--dur-fast) var(--ease-out) backwards !important;
+    }
+
+    .card.is-leaving,
+    .last-card.is-leaving {
+        animation: none !important;
+        opacity: 0;
+        transition: opacity var(--dur-fast) var(--ease-in) !important;
+    }
+
+    /* Ambient loops carry no information, so they simply stop. */
+    .status-icon,
+    .player.current-turn,
+    [class*="pulse"],
+    .last-action.is-new {
+        animation: none !important;
+    }
+}
+
+/* Some people turn transparency off because blurred backgrounds make text hard
+   to read. Frost the glass solid rather than leaving them squinting at it. */
+@media (prefers-reduced-transparency: reduce) {
+    :root {
+        --material-thin: none;
+        --material-regular: none;
+        --material-thick: none;
+    }
+
+    .game-header,
+    .controls,
+    .menu-container,
+    .deck-stats-container,
+    .waiting-screen,
+    .popup-content {
+        background: var(--secondary);
+    }
+}
+
+/* Higher contrast means a defined edge, not a hint of one. */
+@media (prefers-contrast: more) {
+    :root {
+        --material-thin: none;
+        --material-regular: none;
+        --material-thick: none;
+    }
+
+    .game-header,
+    .controls,
+    .menu-container,
+    .deck-stats-container,
+    .popup-content,
+    .score-box,
+    .card {
+        background: var(--secondary);
+        border-color: currentColor;
     }
 }
 
@@ -6298,7 +6394,7 @@ h3 span.emoji {
     color: var(--highlight);
     font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
 }
 
@@ -6409,7 +6505,7 @@ button.setting-option:active {
 .award-title {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.72rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
 }
 
