@@ -1,0 +1,32 @@
+name: Tests
+
+# Every pull request and every push to main. Heroku deploys straight off main, so a
+# push that goes red here is a push that is already live - which is the whole reason
+# the pull-request run matters more than this one.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The version Heroku runs, from the engines field in package.json.
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Some of these start a real server on a free port and play against it, so the
+      # suite is a couple of minutes at worst, not seconds. Timed out rather than left
+      # to hang if a socket test ever stops resolving.
+      - name: Test
+        run: npm test
+        timeout-minutes: 5
