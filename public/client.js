@@ -199,7 +199,11 @@ function dismissPopup(popup) {
     popup.classList.add('popup-closing');
     popup.style.pointerEvents = 'none';
 
-    const done = () => popup.remove();
+    const wasTargeting = popup.matches(TARGET_POPUPS);
+    const done = () => {
+        popup.remove();
+        if (wasTargeting) toggleActionButtons(lastActionButtonsActive);
+    };
     const content = popup.querySelector('.popup-content');
 
     if (content) {
@@ -2009,18 +2013,38 @@ function getStatusText(status) {
     }[status];
 }
 
+// Every popup that holds the turn until it is aimed at somebody.
+const TARGET_POPUPS =
+    '.freeze-popup, .draw-three-popup, .remove-card-popup, ' +
+    '.steal-card-popup, .swap-card-popup, .select-card-popup';
+
+// The last state handleGameUpdate asked for, so the buttons can be recomputed
+// when a picker closes without a fresh update arriving behind it.
+let lastActionButtonsActive = false;
+
 // UI controls
 function toggleActionButtons(active) {
+    lastActionButtonsActive = active;
     const flipCardBtn = document.getElementById('flipCard');
     const standButton = document.getElementById('standButton');
-    
+
+    // A targeting card that has not been aimed yet still owns the turn: the
+    // server drops `flip-card` and `stand` outright while pendingTarget is set
+    // (server.js). Without this the buttons stay lit underneath the picker, and
+    // stay lit while peeking at the board with it - so they look live, take the
+    // tap, and do nothing. Same reasoning as the paused-table check in
+    // handleGameUpdate: a button that cannot act has to say so.
+    const aiming = [...document.querySelectorAll(TARGET_POPUPS)]
+        .some(popup => !popup.classList.contains('popup-closing'));
+    const enabled = active && !aiming;
+
     // Always show buttons but disable them when not active
     if (flipCardBtn) {
-        flipCardBtn.disabled = !active;
+        flipCardBtn.disabled = !enabled;
         flipCardBtn.style.display = 'block';
     }
     if (standButton) {
-        standButton.disabled = !active;
+        standButton.disabled = !enabled;
         standButton.style.display = 'block';
     }
 }
@@ -2078,10 +2102,7 @@ function handleRejoinFailed(message) {
 // down a popup that is now aimed at nothing, and tell the table why the turn jumped.
 function handleTurnTimeout({ playerId, playerName }) {
     if (playerId === socket.id) {
-        document.querySelectorAll(
-            '.freeze-popup, .draw-three-popup, .remove-card-popup, ' +
-            '.steal-card-popup, .swap-card-popup, .select-card-popup'
-        ).forEach(p => p.remove());
+        document.querySelectorAll(TARGET_POPUPS).forEach(p => p.remove());
         activeFreezePopup = null;
         activeDrawThreePopup = null;
         document.body.style.overflow = 'auto';
