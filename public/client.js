@@ -1665,8 +1665,8 @@ function buildPlayerPanel(player) {
         </div>
 
         <div class="scores">
-            ${scoreBox('ROUND SCORE', 0)}
-            ${scoreBox('TOTAL SCORE', 0)}
+            ${scoreBox('ROUND', 0)}
+            ${scoreBox('TOTAL', 0)}
             ${scoreBox('CARDS', `0/${MAX_REGULAR_CARDS}`)}
         </div>
 
@@ -1941,7 +1941,7 @@ function prefersReducedMotion() {
 function scoreBox(label, value) {
     return `
         <div class="score-box">
-            <div>${label}</div>
+            <div class="score-label">${label}</div>
             <div class="score-value">${value}</div>
         </div>
     `;
