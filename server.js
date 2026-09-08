@@ -27,7 +27,6 @@ const {
 const {
   MAX_REGULAR_CARDS,
   MAX_PLAYERS,
-  MIN_NAME_LENGTH,
   MAX_NAME_LENGTH,
   DEFAULT_WINNING_SCORE,
   WIN_SCORE_OPTIONS,
@@ -43,6 +42,8 @@ const {
   advanceTurn,
   removePlayerAt,
   eligibleTargets,
+  removeCardRefusal,
+  stealCardRefusal,
   isRoundOver,
   allBusted: everyoneBusted,
   bankRoundScores,
@@ -50,6 +51,19 @@ const {
   discardAllHands,
   resetPlayersForRound
 } = require('./lib/rules');
+// Seats, and who is allowed to sit in one. See lib/seats.js.
+const {
+  isBot,
+  humansIn,
+  findByToken,
+  namesMatch,
+  findDisconnectedSeatByName,
+  actingHost,
+  lobbyJoinRefusal,
+  nameRefusal,
+  wantedBotCount,
+  pickBotName
+} = require('./lib/seats');
 require('dotenv').config();
 
 const app = express();
@@ -226,38 +240,15 @@ const publicGame = game => {
 const isCurrentTurn = (game, socketId) =>
   game.players[game.currentPlayer] && game.players[game.currentPlayer].id === socketId;
 
-// Socket ids change on every reconnect, so anything that has to outlive a dropped
-// connection is keyed by token instead.
-const findByToken = (game, token) =>
-  typeof token === 'string' && token
-    ? game.players.find(p => p.token === token)
-    : undefined;
-
-// Forgiving on purpose: somebody retyping their name from memory should not be locked out
-// of their own seat by capitalisation or a stray space.
-const namesMatch = (a, b) =>
-  String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
-
-// The seat a returning player is asking for. Only ever one nobody is sitting in - a
-// connected player's seat can never be taken from them.
-const findDisconnectedSeatByName = (game, name) =>
-  game.players.find(p => !p.connected && namesMatch(p.name, name));
-
 // Everyone waits when somebody is missing - but not for a socket that dropped two
 // seconds ago and is already coming back. See lib/presence.js.
 const isPaused = game => isGamePaused(game, { graceMs: PAUSE_GRACE_MS });
 
 // hostId is a socket id because that is what clients compare against, so it has to be
-// re-derived whenever connections change. The original host gets their powers back when
-// they return; until then the first connected player stands in, so there is always
-// somebody able to kick a player who is never coming back.
+// re-derived whenever connections change. Who should hold it is actingHost, in
+// lib/seats.js; this is the assignment.
 const syncHost = game => {
-  const original = findByToken(game, game.hostToken);
-  const acting = (original && original.connected)
-    ? original
-    // Never a bot. A bot would never kick the player everyone is waiting on, and a
-    // table would look hosted when there is nobody there at all.
-    : game.players.find(p => p.connected && !isBot(p));
+  const acting = actingHost(game);
   if (acting) game.hostId = acting.id;
 };
 
@@ -483,9 +474,8 @@ const registerHandlers = (io) => socket => {
     // Update game creation to include full URL
     socket.on('create-game', playerName => {
       const name = sanitizeName(playerName);
-      if (name.length < MIN_NAME_LENGTH) {
-        return socket.emit('error', `Name must be at least ${MIN_NAME_LENGTH} characters!`);
-      }
+      const tooShort = nameRefusal(name);
+      if (tooShort) return socket.emit('error', tooShort);
 
       // Leave any existing game room first
       if (socket.rooms) {
@@ -531,9 +521,8 @@ const registerHandlers = (io) => socket => {
       if (!game) return socket.emit('error', `Game ${gameId} not found!`);
 
       const name = sanitizeName(playerName);
-      if (name.length < MIN_NAME_LENGTH) {
-        return socket.emit('error', `Name must be at least ${MIN_NAME_LENGTH} characters!`);
-      }
+      const tooShort = nameRefusal(name);
+      if (tooShort) return socket.emit('error', tooShort);
 
       if (game.status === 'finished') {
         return socket.emit('error', 'That game has already finished.');
@@ -567,20 +556,9 @@ const registerHandlers = (io) => socket => {
         return attachToSeat(game, heldSeat, socket, io, { rotateToken: true });
       }
 
-      if (game.players.length >= MAX_PLAYERS) {
-        return socket.emit('error', `Game is full (${MAX_PLAYERS} players max)!`);
-      }
-
-      if (game.players.some(p => p.id === socket.id)) {
-        return socket.emit('error', 'You are already in this game!');
-      }
-
-      // Names are how a returning player proves which seat is theirs, so two players
-      // sharing one would make that ambiguous - and two identical names on the board are
-      // confusing regardless.
-      if (game.players.some(p => namesMatch(p.name, name))) {
-        return socket.emit('error', `Somebody in this game is already called "${name}".`);
-      }
+      // Full table, already seated, name already taken. See lib/seats.js.
+      const refusal = lobbyJoinRefusal(game, name, socket.id);
+      if (refusal) return socket.emit('error', refusal);
 
       const player = createPlayer(socket.id, name);
       game.players.push(player);
@@ -1092,24 +1070,11 @@ const registerHandlers = (io) => socket => {
       // Check if both player and target exist and player has RC card
       if (!player || !target || !player.specialCards.includes('RC')) return;
       
-      // Check if target is in active status - only allow removing cards from active players
-      if (target.status !== 'active') {
-        socket.emit('error', 'You can only remove cards from active players.');
-        return;
-      }
-      
-      // Validate card index bounds
-      const cardArray = isSpecial ? target.specialCards : target.regularCards;
-      if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= cardArray.length) {
-        socket.emit('error', 'Invalid card index.');
-        return;
-      }
+      // Active target, an index that exists, and never an RC. See lib/rules.js.
+      const refusal = removeCardRefusal(target, cardIndex, isSpecial);
+      if (refusal) return socket.emit('error', refusal);
 
-      // Disallow removing the remove-card (RC) itself
-      if (isSpecial && target.specialCards[cardIndex] === 'RC') {
-        socket.emit('error', 'You cannot remove a Remove Card.');
-        return;
-      }
+      const cardArray = isSpecial ? target.specialCards : target.regularCards;
 
       // Take the chosen card out first: when a player aims RC at their own hand,
       // discarding the RC first would shift every index after it.
@@ -1148,22 +1113,11 @@ const registerHandlers = (io) => socket => {
 
       if (!player || !target || !player.specialCards.includes('ST')) return;
 
-      if (target.id === player.id) {
-        socket.emit('error', 'You cannot steal from yourself.');
-        return;
-      }
-
-      if (target.status === 'busted') {
-        socket.emit('error', 'You cannot steal from busted players.');
-        return;
-      }
+      // Never yourself, never a busted hand, and an index that exists. See lib/rules.js.
+      const refusal = stealCardRefusal(player, target, cardIndex, isSpecial);
+      if (refusal) return socket.emit('error', refusal);
 
       const cardArray = isSpecial ? target.specialCards : target.regularCards;
-      if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= cardArray.length) {
-        socket.emit('error', 'Invalid card index.');
-        return;
-      }
-
       const stolenCard = cardArray.splice(cardIndex, 1)[0];
 
       // Consume Steal Card
@@ -1670,14 +1624,9 @@ const createPlayer = (id, name) => ({
 // that relied on it now ask for a human specifically.
 // ---------------------------------------------------------------------------
 
-const isBot = player => Boolean(player && player.isBot);
-const humansIn = game => game.players.filter(p => !isBot(p));
-
 const createBot = (game, personalityKey) => {
   const traits = botPersonality(personalityKey);
-  const taken = new Set(game.players.map(p => p.name.trim().toLowerCase()));
-  const name = traits.names.find(n => !taken.has(n.toLowerCase()))
-    || `${traits.label} ${game.players.length + 1}`;
+  const name = pickBotName(traits, game.players.map(p => p.name), game.players.length + 1);
 
   return {
     ...createPlayer(`bot:${uuidv4()}`, name),
@@ -1736,12 +1685,8 @@ const botifySeat = (game, index) => {
 const syncBotSeats = game => {
   if (game.status !== 'lobby') return;
 
-  const humans = humansIn(game).length;
-  // A table always keeps room for the people already sitting at it.
-  const wanted = Math.min(
-    Math.max(0, botCountOf(game)),
-    Math.max(0, MAX_PLAYERS - humans)
-  );
+  // People take priority over bots, so the count is re-clamped to whatever is left.
+  const wanted = wantedBotCount(botCountOf(game), humansIn(game).length);
   game.settings = { ...settingsOf(game), botCount: wanted };
 
   const bots = game.players.filter(isBot);

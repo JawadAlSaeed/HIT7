@@ -17,6 +17,8 @@ const {
   advanceTurn,
   removePlayerAt,
   eligibleTargets,
+  removeCardRefusal,
+  stealCardRefusal,
   isRoundOver,
   allBusted,
   bankRoundScores,
@@ -312,6 +314,70 @@ test('a hand of nothing but targeting cards has nothing to swap', () => {
   const targetsOnly = player({ id: 'b', specialCards: ['Freeze', 'D3'] });
   assert.strictEqual(countSwappableCards(targetsOnly), 0);
   assert.deepStrictEqual(eligibleTargets('Swap', table([me, targetsOnly]), me), []);
+});
+
+// -------------------------------------------------- Remove Card and Steal validation
+
+// Card indices come from a client, so every one of these is a rule about a number
+// somebody else chose. An index past the end takes `undefined` and puts a card that
+// does not exist into the discard pile.
+test('Remove Card only reaches into an active hand', () => {
+  const stood = player({ id: 'b', regularCards: [4], status: 'stood' });
+  assert.match(removeCardRefusal(stood, 0, false), /only remove cards from active/i);
+
+  const busted = player({ id: 'c', regularCards: [4], status: 'busted' });
+  assert.match(removeCardRefusal(busted, 0, false), /only remove cards from active/i);
+
+  const active = player({ id: 'd', regularCards: [4] });
+  assert.strictEqual(removeCardRefusal(active, 0, false), null);
+});
+
+test('Remove Card refuses an index that is not there', () => {
+  const target = player({ regularCards: [4, 9], specialCards: ['2x'] });
+  for (const index of [-1, 2, 1.5, '0', null, undefined, NaN]) {
+    assert.match(
+      removeCardRefusal(target, index, false), /invalid card index/i,
+      `${String(index)} should be refused`
+    );
+  }
+  assert.strictEqual(removeCardRefusal(target, 1, false), null);
+  // The special and regular hands are indexed separately.
+  assert.strictEqual(removeCardRefusal(target, 0, true), null);
+  assert.match(removeCardRefusal(target, 1, true), /invalid card index/i);
+});
+
+// Otherwise the card is spent taking one of its own kind, which is not a move.
+test('a Remove Card cannot remove a Remove Card', () => {
+  const target = player({ specialCards: ['RC', '2x'] });
+  assert.match(removeCardRefusal(target, 0, true), /cannot remove a Remove Card/i);
+  assert.strictEqual(removeCardRefusal(target, 1, true), null);
+});
+
+test('Steal never reaches your own hand', () => {
+  const me = player({ id: 'a', regularCards: [4] });
+  assert.match(stealCardRefusal(me, me, 0, false), /from yourself/i);
+});
+
+// Unlike Remove Card, a stood player is fair game - their cards still score.
+test('Steal takes from a stood hand but never a busted one', () => {
+  const me = player({ id: 'a' });
+  const stood = player({ id: 'b', regularCards: [9], status: 'stood' });
+  const busted = player({ id: 'c', regularCards: [9], status: 'busted' });
+
+  assert.strictEqual(stealCardRefusal(me, stood, 0, false), null);
+  assert.match(stealCardRefusal(me, busted, 0, false), /busted/i);
+});
+
+test('Steal refuses an index that is not there', () => {
+  const me = player({ id: 'a' });
+  const target = player({ id: 'b', regularCards: [9], specialCards: [] });
+
+  for (const index of [-1, 1, 'x', null]) {
+    assert.match(stealCardRefusal(me, target, index, false), /invalid card index/i);
+  }
+  // An empty special hand has no index at all, not even 0.
+  assert.match(stealCardRefusal(me, target, 0, true), /invalid card index/i);
+  assert.strictEqual(stealCardRefusal(me, target, 0, false), null);
 });
 
 // ---------------------------------------------------------------- end of round
