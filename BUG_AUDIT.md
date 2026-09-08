@@ -64,6 +64,7 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 | No rate limiting on socket events | One socket could emit as fast as it liked |
 | The client rebuilt game state from the DOM | `getCurrentGameState()` is gone and the winner popup reads the server's payload |
 | A dropped player froze the table | The host can hand the seat to a bot instead of restarting the round |
+| `request-rematch` had no guard at all | The one host action with neither a host check nor a status check, so anybody who knew the game code could wipe the table's scores back to zero in the middle of a round. The client only ever offered the button to the host on the end screen, but that was not the client's to enforce |
 | A table of bots locked friends out | The lobby counted seats, so a host who filled the spare chairs with bots had a "Game is full" waiting for anybody who clicked the link - even though a bot gives its seat up the moment a person arrives. Counted in people now |
 
 ---
@@ -97,11 +98,24 @@ worth automating are now covered there:
 4. Every player busting in the same round.
 5. A turn timing out while a target popup is open.
 
-`test/lobby.test.js`, `test/reconnect.test.js` and `test/cards.test.js` cover the rest of
-the same way: the lobby (names, a full table, bot seats yielding to people, host-only
-settings), coming back (token rejoin, reclaiming a seat by name, token rotation, host
-migration, the grace period, a target popup restored on reconnect), and Remove Card and
-Steal played for real.
+Four more suites cover the rest the same way:
 
-Still untested: the bot puppet-socket loop and scheduler, `return-to-lobby` / `end-game`
-/ rematch, and `kick-player` / `replace-with-bot`.
+- `test/lobby.test.js` - names, a full table, bot seats yielding to people, host-only
+  settings, settings locked once the game is under way.
+- `test/reconnect.test.js` - token rejoin, reclaiming a seat by name, token rotation,
+  host migration, the grace period, a target popup restored on reconnect.
+- `test/cards.test.js` - Remove Card and Steal, including a stolen number that busts you.
+- `test/host-actions.test.js` - end-game, return-to-lobby, rematch, kick-player and
+  replace-with-bot, each with the guard that stops anybody but the host using it.
+- `test/bots.test.js` - the scheduler and puppet socket: a bot plays its own turn, never
+  moves on somebody else's, never plays while the table is paused, picks up a seat handed
+  to it mid-turn, and a table of bots finishes a round with nobody watching.
+
+Two notes for anybody adding to these. Register a `waitForState` *before* emitting the
+event that satisfies it - a broadcast goes out in the same tick as the actor's
+acknowledgement, so a listener added afterwards misses it. And avoid `lib/bot.js`'s names
+(Nina, Zed, Rae, Milo, Opal, Kit …) for test players, or the join is correctly refused as
+a name clash.
+
+Still untested: the abandon and lobby-release timers, and the reshuffle-mid-round path
+end to end.

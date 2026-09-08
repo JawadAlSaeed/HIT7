@@ -18,7 +18,13 @@ const ROOT = path.join(__dirname, '..', '..');
 
 // Nothing here should ever hang a test run. A missed event fails with the event it was
 // waiting for rather than a timeout with no name on it.
-const DEFAULT_WAIT_MS = 5000;
+//
+// Generous on purpose. node --test runs the files concurrently, so eight servers can be
+// starting at once on one machine and a round trip that normally takes milliseconds can
+// take seconds under that load. A tight limit here does not catch anything a loose one
+// misses - a genuinely missed event never arrives - it only turns a busy machine into a
+// failing build.
+const DEFAULT_WAIT_MS = 15000;
 
 const startServer = async ({ env = {} } = {}) => {
   const child = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
