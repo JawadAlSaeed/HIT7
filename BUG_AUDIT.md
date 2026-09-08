@@ -69,22 +69,30 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 
 ## Testing
 
-`npm test` runs the suite in `test/`, built on `node:test` - no extra dependencies.
-It currently covers `lib/deck.js`: deck composition, and the invariant that a reshuffle
-can never put a card back in play while a copy is sitting in somebody's hand.
+`npm test` runs the suite in `test/`, built on `node:test`. Every pull request runs it on
+GitHub Actions.
 
-Everything still living in `server.js` is untested, because requiring it starts a
-server. Extracting more of the rules the way `lib/deck.js` was extracted is the way in.
+The rules now live in `lib/`, so they can be tested by calling a function rather than by
+playing a game:
 
-Earlier fixes were verified by driving a
-real server with scripted socket.io clients - full games to 200 points asserting
-per-update invariants (hand size, no duplicate cards, busted players at 0, deck never
-in draw order, totals growing by exactly one round score), plus targeted checks for
-validation, out-of-turn actions, disconnects and host migration.
+- `lib/deck.js` - deck composition, and the invariant that a reshuffle can never put a
+  card back in play while a copy is sitting in somebody's hand.
+- `lib/bot.js` - every personality, on both decks, in every position.
+- `lib/presence.js` - the difference between a dropped socket and an absent player.
+- `lib/rules.js` - scoring, busts, Second Chances, turn order, who a targeting card may
+  be aimed at, and what ends a round or a game.
 
-Worth automating next, as they are the paths hardest to reason about:
+`test/game-flow.test.js` covers what none of those can: sequences that span several
+socket handlers. It starts a real `server.js` on a free port and drives it with socket.io
+clients, stacking the deck through test-only events that exist only when
+`HIT7_TEST_HOOKS=1` is set. All five paths the previous version of this file listed as
+worth automating are now covered there:
+
 1. A Draw Three sequence that itself draws a targeting card.
 2. Select as the last card in the deck.
 3. Second Chance consumed by a Swap-induced duplicate.
 4. Every player busting in the same round.
 5. A turn timing out while a target popup is open.
+
+Still untested: the lobby, reconnects and host migration, the bot puppet-socket loop, and
+the Remove Card and Steal handlers. Those are the next ones to extract.

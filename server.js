@@ -22,6 +22,34 @@ const {
   isMissing: playerIsMissing,
   isGamePaused
 } = require('./lib/presence');
+// The rules themselves. Everything that decides who wins lives in here, so it can be
+// tested without standing up a socket server. See lib/rules.js.
+const {
+  MAX_REGULAR_CARDS,
+  MAX_PLAYERS,
+  MIN_NAME_LENGTH,
+  MAX_NAME_LENGTH,
+  DEFAULT_WINNING_SCORE,
+  WIN_SCORE_OPTIONS,
+  TARGETING_CARDS,
+  isValidCard,
+  sanitizeName,
+  removeOneCard,
+  countSwappableCards,
+  sortDeckForDisplay,
+  updatePlayerScore,
+  applyNumberCard,
+  resolveSwapDuplicate,
+  advanceTurn,
+  removePlayerAt,
+  eligibleTargets,
+  isRoundOver,
+  allBusted: everyoneBusted,
+  bankRoundScores,
+  decideRoundEnd,
+  discardAllHands,
+  resetPlayersForRound
+} = require('./lib/rules');
 require('dotenv').config();
 
 const app = express();
@@ -75,16 +103,8 @@ app.use(express.static('public'));
 
 // Game state
 const games = new Map();
-// The score a game runs to, and the choices a host may set it to. A fixed list rather
-// than a free number: it is one tap on a phone, and there is nothing to validate beyond
-// membership.
-const DEFAULT_WINNING_SCORE = 200;
-const WIN_SCORE_OPTIONS = [100, 150, 200, 300];
-const MAX_REGULAR_CARDS = 7;
-const MAX_PLAYERS = 6;
-const MIN_NAME_LENGTH = 3;
-const MAX_NAME_LENGTH = 20;
-const SEVEN_CARD_BONUS = 15;
+// The rest of the limits - hand size, table size, name length, the target score and
+// what a host may set it to - live in lib/rules.js and are imported above.
 const MAX_HISTORY_ENTRIES = 200;
 
 // Everything the host picks in the lobby. Kept in one object so a rematch and a reset
@@ -127,6 +147,10 @@ const botCountOf = game => settingsOf(game).botCount;
 // who has walked away, so the server resolves the turn for them.
 // Overridable so the timeout can be exercised without sitting through two minutes.
 const TURN_LIMIT_MS = Number(process.env.TURN_LIMIT_MS) || 120 * 1000;
+// How long the round summary stays up before the scores are banked and the next round
+// is dealt. Overridable for the same reason as the two above: a test should not have to
+// sit through it.
+const ROUND_SUMMARY_MS = Number(process.env.ROUND_SUMMARY_MS) || 5000;
 // Nothing a client can spam corrupts a game - every handler re-checks whose turn it is -
 // but one tab holding down an action should not make the server do that checking
 // thousands of times a second.
@@ -153,15 +177,6 @@ const bump = (player, key, by = 1) => {
   player.stats[key] += by;
 };
 
-// Every non-number card the deck can contain, used to validate anything a client
-// claims to have picked out of the deck.
-const SPECIAL_CARD_TYPES = [
-  '2+', '4+', '6+', '8+', '10+',
-  '2-', '4-', '6-', '8-', '10-',
-  '2÷', '2x',
-  'SC', 'Freeze', 'D3', 'RC', 'ST', 'Swap', 'Select'
-];
-
 // Helper functions
 // Wraps the pure reshuffle so the rest of the server keeps getting a history entry
 // without lib/deck.js needing to know the log exists.
@@ -171,25 +186,6 @@ const reshuffleFromDiscard = game => {
   console.log(`Deck reshuffled from discards. New size: ${game.deck.length}`);
   return true;
 };
-
-const isValidCard = card =>
-  (typeof card === 'number' && Number.isInteger(card) && card >= 0 && card <= 12) ||
-  SPECIAL_CARD_TYPES.includes(card);
-
-const sanitizeName = name =>
-  typeof name === 'string' ? name.trim().replace(/\s+/g, ' ').slice(0, MAX_NAME_LENGTH) : '';
-
-// Clients render the remaining-pile display straight from the deck, so they need to
-// know what is left in it - but never the draw order. Sorting the copy that goes out
-// over a broadcast keeps that display working while hiding the next card.
-const sortDeckForDisplay = deck => [...deck].sort((a, b) => {
-  const aIsNumber = typeof a === 'number';
-  const bIsNumber = typeof b === 'number';
-  if (aIsNumber && bIsNumber) return a - b;
-  if (aIsNumber) return -1;
-  if (bIsNumber) return 1;
-  return String(a).localeCompare(String(b));
-});
 
 // The rule itself lives in lib/presence.js, where it can be tested against a clock this
 // file cannot hand it. Overridable so the behaviour can be watched without sitting
@@ -227,25 +223,8 @@ const publicGame = game => {
   };
 };
 
-// A hand can legitimately hold two copies of the same special card, because Steal and
-// Swap move them between players. Playing one card must only ever discard that one.
-const removeOneCard = (cards, card) => {
-  const index = cards.indexOf(card);
-  if (index === -1) return false;
-  cards.splice(index, 1);
-  return true;
-};
-
 const isCurrentTurn = (game, socketId) =>
   game.players[game.currentPlayer] && game.players[game.currentPlayer].id === socketId;
-
-const countSwappableCards = player =>
-  player.regularCards.length + player.specialCards.filter(isSwappableSpecial).length;
-
-// Cards that open a popup and stay in hand until the holder picks a target. The pick
-// has to survive a reconnect, so the server remembers which one is outstanding rather
-// than trusting the popup to still be on someone's screen.
-const TARGETING_CARDS = ['D3', 'Freeze', 'RC', 'ST', 'Swap', 'Select'];
 
 // Socket ids change on every reconnect, so anything that has to outlive a dropped
 // connection is keyed by token instead.
@@ -1312,59 +1291,23 @@ const registerHandlers = (io) => socket => {
         target2: player2.name
       });
 
-      const findDuplicateValue = (regularCards) => {
-        const seen = new Set();
-        for (const value of regularCards) {
-          if (seen.has(value)) {
-            return value;
-          }
-          seen.add(value);
-        }
-        return null;
-      };
+      // The rule is resolveSwapDuplicate in lib/rules.js; this announces what it did.
+      const announceSwapDuplicate = (targetPlayer, swappedValue) => {
+        const { outcome, card } = resolveSwapDuplicate(game, targetPlayer, swappedValue);
+        if (outcome === 'none') return;
 
-      const resolveSwapDuplicate = (targetPlayer, swappedValue) => {
-        const duplicateValue = findDuplicateValue(targetPlayer.regularCards);
-        if (duplicateValue === null) return;
-
-        const scIndex = targetPlayer.specialCards.indexOf('SC');
-        if (scIndex > -1) {
-          targetPlayer.specialCards.splice(scIndex, 1);
-          game.discardPile.push('SC');
-          logHistory(game, {
-            player: targetPlayer.name,
-            action: 'second-chance',
-            cards: [duplicateValue]
-          });
-          io.to(game.id).emit('play-sound', 'secondChanceSound');
-
-          if (typeof swappedValue === 'number') {
-            const removeIndex = targetPlayer.regularCards.findIndex(v => v === swappedValue);
-            if (removeIndex !== -1) {
-              targetPlayer.regularCards.splice(removeIndex, 1);
-              game.discardPile.push(swappedValue);
-            }
-          }
-          return;
-        }
-
-        targetPlayer.status = 'busted';
-        targetPlayer.bustedCard = duplicateValue;
-        targetPlayer.roundScore = 0;
-        logHistory(game, {
-          player: targetPlayer.name,
-          action: 'bust',
-          cards: [duplicateValue]
-        });
-        io.to(game.id).emit('play-sound', 'bustCardSound');
+        const action = outcome === 'second-chance' ? 'second-chance' : 'bust';
+        const sound = outcome === 'second-chance' ? 'secondChanceSound' : 'bustCardSound';
+        logHistory(game, { player: targetPlayer.name, action, cards: [card] });
+        io.to(game.id).emit('play-sound', sound);
       };
 
       // Check for duplicates when a number was placed into regularCards
       if (typeof card2Value === 'number') {
-        resolveSwapDuplicate(player1, card2Value);
+        announceSwapDuplicate(player1, card2Value);
       }
       if (typeof card1Value === 'number') {
-        resolveSwapDuplicate(player2, card1Value);
+        announceSwapDuplicate(player2, card1Value);
       }
 
       // Update scores and check for busts
@@ -1606,6 +1549,43 @@ const registerHandlers = (io) => socket => {
       // Broadcast sound to all players in the game except sender
       socket.to(gameId).emit('play-sound', soundId);
     });
+
+    // Test hooks. Registered only when HIT7_TEST_HOOKS=1 is in the environment, which
+    // nothing but test/helpers/harness.js ever sets - a deployed server never has it,
+    // so these events do not exist in production and there is nothing to abuse.
+    //
+    // They exist because the paths worth testing most are the ones a shuffled deck
+    // almost never deals: a Draw Three that itself draws a targeting card, a Select as
+    // the very last card in the pile. Playing until they turn up is not a test, it is a
+    // coin toss. Stacking the deck makes them ordinary.
+    if (process.env.HIT7_TEST_HOOKS === '1') {
+      // Cards are given in the order they will be drawn. The deck is drawn from the end
+      // with pop(), so it is stored reversed.
+      socket.on('__test-stack-deck', (gameId, cards, discardPile) => {
+        const game = games.get(gameId);
+        if (!game || !Array.isArray(cards)) return;
+        game.deck = [...cards].reverse();
+        if (Array.isArray(discardPile)) game.discardPile = [...discardPile];
+        // The round snapshot is what a restart rewinds to, so it has to move with it.
+        snapshotRoundDeck(game);
+        broadcastGame(io, game);
+        socket.emit('__test-ready', game.deck.length);
+      });
+
+      // Deals a hand directly, so a test can start from the position it cares about
+      // rather than the twenty draws it would take to reach it.
+      socket.on('__test-set-hand', (gameId, playerId, hand) => {
+        const game = games.get(gameId);
+        const player = game && game.players.find(p => p.id === playerId);
+        if (!player || !hand) return;
+        if (Array.isArray(hand.regularCards)) player.regularCards = [...hand.regularCards];
+        if (Array.isArray(hand.specialCards)) player.specialCards = [...hand.specialCards];
+        if (typeof hand.totalScore === 'number') player.totalScore = hand.totalScore;
+        updatePlayerScore(player);
+        broadcastGame(io, game);
+        socket.emit('__test-ready', player.regularCards.length);
+      });
+    }
 
     socket.on('disconnect', () => {
       console.log(`Disconnected: ${socket.id}`);
@@ -1963,128 +1943,23 @@ const runBotTurns = io => {
   });
 };
 
-// currentPlayer is an index rather than an id, so splicing the array silently moves the
-// turn to somebody else unless it is re-pinned to whoever actually held it.
-const removePlayerAt = (game, index) => {
-  const hadTurn = game.currentPlayer === index;
-  const currentPlayerId = game.players[game.currentPlayer]
-    ? game.players[game.currentPlayer].id
-    : null;
-
-  const [removed] = game.players.splice(index, 1);
-  if (game.players.length === 0) return removed;
-
-  if (hadTurn) {
-    game.currentPlayer = index % game.players.length;
-    if (game.status === 'playing' &&
-        game.players[game.currentPlayer].status !== 'active') {
-      advanceTurn(game);
-    }
-  } else {
-    const currentIndex = game.players.findIndex(p => p.id === currentPlayerId);
-    game.currentPlayer = currentIndex === -1 ? 0 : currentIndex;
-  }
-
-  return removed;
-};
-
-const advanceTurn = game => {
-  let nextPlayer = game.currentPlayer;
-  let attempts = 0;
-  const playerCount = game.players.length;
-  
-  do {
-    nextPlayer = (nextPlayer + 1) % playerCount;
-    attempts++;
-    
-    // If we've checked all players and found no active ones, break
-    if (attempts >= playerCount) {
-      nextPlayer = game.currentPlayer; // Keep current player if no active players found
-      break;
-    }
-  } while (game.players[nextPlayer].status !== 'active');
-  
-  game.currentPlayer = nextPlayer;
-};
-
+// The rule is applyNumberCard in lib/rules.js; this is the announcement of it. Keeping
+// the two apart is what lets every duplicate/bust/seven case be tested without a socket.
 const handleNumberCard = (game, player, card, io) => {
-  // 0 is a number card like any other: a second one is still a duplicate.
-  if (player.regularCards.includes(card)) {
-    // A duplicate never joins the hand, so this is the one path where the card leaves
-    // play. Anything that does join a hand must NOT be discarded here - it is still on
-    // the table, and the next reshuffle has to be able to tell the difference.
-    game.discardPile.push(card);
+  const { outcome } = applyNumberCard(game, player, card);
 
-    const scIndex = player.specialCards.indexOf('SC');
-    if (scIndex > -1) {
-      player.specialCards.splice(scIndex, 1);
-      game.discardPile.push('SC');
-      bump(player, 'secondChances');
-      logHistory(game, { player: player.name, action: 'second-chance', cards: [card] });
-      io.to(game.id).emit('play-sound', 'secondChanceSound');
-    } else {
-      player.status = 'busted';
-      player.bustedCard = card;
-      player.roundScore = 0;
-      bump(player, 'busts');
-      logHistory(game, { player: player.name, action: 'bust', cards: [card] });
-      io.to(game.id).emit('play-sound', 'bustCardSound');
-    }
-    return;
-  }
-
-  player.regularCards.push(card);
-  // A full set of 7 ends that player's round. The +15 bonus is part of the round
-  // score (see updatePlayerScore) so it is banked with the rest at round end.
-  if (player.regularCards.length === MAX_REGULAR_CARDS) {
-    player.status = 'stood';
-    updatePlayerScore(player);
+  if (outcome === 'second-chance') {
+    bump(player, 'secondChances');
+    logHistory(game, { player: player.name, action: 'second-chance', cards: [card] });
+    io.to(game.id).emit('play-sound', 'secondChanceSound');
+  } else if (outcome === 'bust') {
+    bump(player, 'busts');
+    logHistory(game, { player: player.name, action: 'bust', cards: [card] });
+    io.to(game.id).emit('play-sound', 'bustCardSound');
+  } else if (outcome === 'seven') {
     bump(player, 'sevens');
     logHistory(game, { player: player.name, action: 'seven-bonus' });
   }
-};
-
-const updatePlayerScore = player => {
-  // A bust scores nothing, and the cards stay in hand for the round summary.
-  if (player.status === 'busted') {
-    player.roundScore = 0;
-    return;
-  }
-
-  const uniqueRegularCards = [...new Set(player.regularCards)];
-  const base = uniqueRegularCards.reduce((a, b) => a + b, 0);
-  const add = player.specialCards
-    .filter(c => c.endsWith('+'))
-    .reduce((a, c) => a + parseInt(c), 0);
-  const minus = player.specialCards
-    .filter(c => c.endsWith('-'))
-    .reduce((a, c) => a + parseInt(c), 0);
-
-  // Handle divide card (2÷)
-  let divide = 1;
-  if (player.specialCards.includes('2÷')) {
-    divide = 2;
-  }
-
-  // Handle multiplier (2x)
-  let multiplier = 1;
-  if (player.specialCards.includes('2x'))
-    multiplier *= 2;
-
-  // Calculate: (base + add - minus) * multiplier / divide
-  let score = (base + add - minus) * multiplier;
-  if (divide > 1) {
-    score = Math.round(score / divide);
-  }
-
-  // Flat bonus for a full set of 7, applied after the modifiers so it is worth the
-  // same 15 points however the rest of the hand scores.
-  if (uniqueRegularCards.length === MAX_REGULAR_CARDS) {
-    score += SEVEN_CARD_BONUS;
-  }
-
-  // Keep score at 0 if it's already 0
-  player.roundScore = Math.max(0, score);
 };
 
 // Add these new helper functions
@@ -2121,71 +1996,30 @@ const handleSpecialCard = (game, player, card, socket, io) => {
     socket.emit(event, game.id, publicPlayers(targets));
   };
 
-  if (card === 'D3') {
-    // Allow targeting any active player (including self) with room for cards
-    const targets = game.players.filter(p =>
-      p.status === 'active' && // Only active players
-      p.regularCards.length < MAX_REGULAR_CARDS // Must have room for cards
-    );
+  // Who the card may legally be aimed at is a rule, and it lives in lib/rules.js. All
+  // that is left here is which popup to open and what to say when there is nobody.
+  const POPUPS = {
+    D3: ['select-draw-three-target', 'No one can draw three cards. Turn skipped.'],
+    Freeze: ['select-freeze-target', 'No one left to freeze. Turn skipped.'],
+    RC: ['select-remove-card-target', 'No cards to remove. Turn skipped.'],
+    ST: ['select-steal-card-target', 'No cards to steal. Turn skipped.'],
+    Swap: ['select-swap-cards', 'Not enough players with cards to swap. Turn skipped.']
+  };
 
-    if (targets.length > 0) {
-      awaitTarget('select-draw-three-target', targets);
-    } else {
-      discardUnplayable('No one can draw three cards. Turn skipped.');
-    }
-  }
-  else if (card === 'Freeze') {
-    // Allow targeting any active player (including self)
-    const targets = game.players.filter(p =>
-      p.status === 'active'
-    );
-    if (targets.length > 0) {
-      awaitTarget('select-freeze-target', targets);
-    } else {
-      discardUnplayable('No one left to freeze. Turn skipped.');
-    }
-  }
-  else if (card === 'RC') {
-    const hasRemovableCard = p =>
-      p.regularCards.length > 0 || p.specialCards.some(c => c !== 'RC');
-    const targets = game.players.filter(p =>
-      p.status === 'active' &&
-      hasRemovableCard(p)
-    );
+  const popup = POPUPS[card];
+  if (!popup) return;
 
-    if (targets.length > 0) {
-      awaitTarget('select-remove-card-target', targets);
-    } else {
-      discardUnplayable('No cards to remove. Turn skipped.');
-    }
-  }
-  else if (card === 'ST') {
-    const targets = game.players.filter(p =>
-      p.status !== 'busted' &&
-      p.id !== player.id &&
-      (p.regularCards.length > 0 || p.specialCards.length > 0)
-    );
+  const [event, noTargetMessage] = popup;
+  const targets = eligibleTargets(card, game, player);
 
-    if (targets.length > 0) {
-      awaitTarget('select-steal-card-target', targets);
-    } else {
-      discardUnplayable('No cards to steal. Turn skipped.');
-    }
+  if (targets.length === 0) {
+    discardUnplayable(noTargetMessage);
+    return;
   }
-  else if (card === 'Swap') {
-    // Check if there are at least 2 players with swappable cards
-    const playersWithCards = game.players.filter(p =>
-      p.status !== 'busted' && countSwappableCards(p) > 0
-    );
 
-    if (playersWithCards.length >= 2) {
-      // Emit game-update so clients see Swap in special cards before popup shows
-      broadcastGame(io, game);
-      awaitTarget('select-swap-cards', game.players);
-    } else {
-      discardUnplayable('Not enough players with cards to swap. Turn skipped.');
-    }
-  }
+  // Emit game-update so clients see Swap in special cards before the popup shows.
+  if (card === 'Swap') broadcastGame(io, game);
+  awaitTarget(event, targets);
 };
 
 const handleSelectCard = (game, player, socket, io, deckForPopup = null, fullDeck = null) => {
@@ -2269,10 +2103,9 @@ const checkGameStatus = (game, io) => {
   if (game.roundEnding) return;
 
   // Check if round should end (all players are either busted, stood, or frozen)
-  const activePlayers = game.players.filter(p => p.status === 'active');
-  const allBusted = game.players.every(p => p.status === 'busted');
+  const allBusted = everyoneBusted(game.players);
 
-  if (activePlayers.length === 0) {
+  if (isRoundOver(game.players)) {
     game.roundEnding = true;
     logHistory(game, { action: 'round-end' });
 
@@ -2292,35 +2125,23 @@ const checkGameStatus = (game, io) => {
       if (game.roundEpoch !== epoch) return;
       game.roundEnding = false;
 
-      // Update total scores for non-busted players
+      // bestRound is kept alongside the total, so every seat needs its stats object
+      // before the scores are banked.
       game.players.forEach(player => {
-        if (player.status !== 'busted') {
-          player.totalScore += player.roundScore;
-          if (!player.stats) player.stats = freshStats();
-          player.stats.bestRound = Math.max(player.stats.bestRound, player.roundScore);
-        }
+        if (!player.stats) player.stats = freshStats();
       });
+      bankRoundScores(game.players);
 
-      if (allBusted) {
-        startNewRound(game, io);
+      const { winner } = decideRoundEnd(game.players, winningScoreOf(game));
+      if (winner) {
+        endGame(game, winner, io);
       } else {
-        // Find highest scoring player among non-busted players
-        const nonBustedPlayers = game.players.filter(p => p.status !== 'busted');
-        const highestScore = Math.max(...nonBustedPlayers.map(p => p.totalScore));
-        const winners = nonBustedPlayers.filter(p => p.totalScore === highestScore);
-
-        // End game if any winner is at the winning score, otherwise start new round
-        if (highestScore >= winningScoreOf(game)) {
-          // In case of a tie, winner is the one who reached it first
-          endGame(game, winners[0], io);
-        } else {
-          startNewRound(game, io);
-        }
+        startNewRound(game, io);
       }
 
       syncHost(game);
       io.to(game.id).emit('new-round', publicGame(game));
-    }, 5000);
+    }, ROUND_SUMMARY_MS);
   }
 };
 
@@ -2334,29 +2155,6 @@ const endGame = (game, winner, io) => {
       status: p.id === winner.id ? 'winner' : p.status
     })),
     winner: publicWinner
-  });
-};
-
-// Sweeps the table into the discard pile at the end of a round. Deliberately separate
-// from resetPlayersForRound, because a round restart throws its hands away rather than
-// discarding them - those cards go back into the pile the restart is rewinding to.
-const discardAllHands = game => {
-  game.players.forEach(player => {
-    game.discardPile.push(...player.regularCards, ...player.specialCards);
-  });
-};
-
-// Everything a round begins with, shared by a fresh round and a replayed one.
-const resetPlayersForRound = players => {
-  players.forEach(player => {
-    player.regularCards = [];
-    player.specialCards = [];
-    player.status = 'active';
-    player.roundScore = 0;
-    player.bustedCard = null;
-    player.drawThreeRemaining = 0;
-    player.pendingSpecialCard = null;
-    player.pendingTarget = null;
   });
 };
 
@@ -2454,7 +2252,9 @@ server.on('error', err => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  // The port actually bound, not the one asked for: PORT=0 means "any free port", which
+  // is how the test harness starts a server without fighting a dev server for 3000.
+  console.log(`Server running on port ${server.address().port}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
   console.log(`Base URL: ${BASE_URL}`);
 });
