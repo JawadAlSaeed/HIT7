@@ -1012,9 +1012,17 @@ const registerHandlers = (io) => socket => {
     });
 
     // Add rematch handling
+    // Only from the end screen, and only from the host - the same two guards every
+    // other host action carries. Without them this was a way for anybody who knew the
+    // game code to wipe the table's scores back to zero in the middle of a round, which
+    // is not something the client has ever offered but was not the client's to enforce.
     socket.on('request-rematch', (gameId) => {
       const game = games.get(gameId);
-      if (!game) return;
+      if (!game || game.status !== 'finished') return;
+
+      // The acting host may be a stand-in while the original is away.
+      syncHost(game);
+      if (socket.id !== game.hostId) return;
 
       // Reset the game state but keep players
       const rematchGame = {

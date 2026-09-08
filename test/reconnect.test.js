@@ -23,10 +23,15 @@ test('a token gets you back into your own seat after a refresh', async t => {
     server, ['Ada', 'Zed']
   );
 
-  // Ada plays a card, so the seat has something in it worth coming back to.
+  // Ada plays a card, so the seat has something in it worth coming back to. The deck
+  // is stacked with a plain number on purpose: drawing a targeting card off a real
+  // shuffle would open a popup, and a popup restored on reconnect can legitimately
+  // discard the card it was holding. That path has its own test below; this one is
+  // about the hand surviving.
+  await ada.stackDeck(gameId, [9, 11, 12, 10, 8, 6, 4]);
   const drawn = ada.waitForState(
-    state => seat(state, 'Ada').regularCards.length + seat(state, 'Ada').specialCards.length > 0,
-    { what: 'Ada to draw something' }
+    state => seat(state, 'Ada').regularCards.includes(9),
+    { what: 'Ada to draw the 9' }
   );
   ada.emit('flip-card', gameId);
   const before = await drawn;

@@ -98,14 +98,17 @@ test('a pending target holds the turn - flipping again does nothing', async t =>
   const { gameId, host: alice, guests: [bob] } = await startGame(server, ['Alice', 'Bob']);
   await alice.stackDeck(gameId, ['Freeze', 7, 5, ...FILLER]);
 
-  const popup = alice.once('select-freeze-target');
-  alice.emit('flip-card', gameId);
-  await popup;
-
-  await alice.waitForState(
+  // Both registered before the flip. The popup and the broadcast that records
+  // pendingTarget go out in the same tick, so a listener added after awaiting the popup
+  // can miss the broadcast entirely.
+  const pending = alice.waitForState(
     state => seat(state, 'Alice').pendingTarget === 'Freeze',
     { what: 'the Freeze to be pending' }
   );
+  const popup = alice.once('select-freeze-target');
+  alice.emit('flip-card', gameId);
+  await popup;
+  await pending;
 
   // Flip twice more, then do something that definitely broadcasts, and check nothing
   // moved in between.
