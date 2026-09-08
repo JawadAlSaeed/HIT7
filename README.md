@@ -154,14 +154,16 @@ npm test       # node:test - unit tests and real socket games
 Every pull request runs `npm test` on GitHub Actions
 ([.github/workflows/test.yml](.github/workflows/test.yml)).
 
-The rules live in `lib/` - `deck.js`, `bot.js`, `presence.js`, `rules.js` - precisely so
-they can be tested without standing up a server, and `test/` mirrors that file for file.
-`test/game-flow.test.js` is the exception: it starts a real `server.js` on a free port
-and plays against it with socket.io clients, because the sequences worth testing most
-(a Draw Three that itself draws a targeting card, a Select as the last card in the pile,
-a turn timing out with a popup open) span several handlers and cannot be called as a
-function. It stacks the deck through test-only socket events that only exist when
-`HIT7_TEST_HOOKS=1` is set - never in production.
+The rules live in `lib/` - `deck.js`, `bot.js`, `presence.js`, `rules.js`, `seats.js` -
+precisely so they can be tested by calling a function rather than by playing a game, and
+`test/` mirrors that file for file.
+
+Four suites are the exception, because they cover sequences that span several socket
+handlers and so cannot be called as a function: `game-flow` (a Draw Three that itself
+draws a targeting card, a Select as the last card in the pile, a turn timing out with a
+popup open), `lobby`, `reconnect` and `cards`. Each starts a real `server.js` on a free
+port and plays against it with socket.io clients, stacking the deck through test-only
+socket events that exist only when `HIT7_TEST_HOOKS=1` is set - never in production.
 
 ## 📱 Install it on your phone
 

@@ -135,6 +135,15 @@ const wrap = (socket, name) => ({
   on: (event, handler) => socket.on(event, handler),
   waitForState: (predicate, options) => waitForState(socket, predicate, options),
 
+  // Drops the connection the way closing a tab does, and waits until it is really gone
+  // rather than racing the server's disconnect handler.
+  close: async () => {
+    if (!socket.connected) return;
+    const gone = new Promise(resolve => socket.once('disconnect', resolve));
+    socket.close();
+    await gone;
+  },
+
   // The deck is drawn from the top, so `cards` is simply the order they come out in.
   stackDeck: async (gameId, cards, discardPile) => {
     const ready = once(socket, '__test-ready', { where: `${name} stackDeck` });
@@ -157,14 +166,19 @@ const startGame = async (server, names, settings) => {
   const host = await server.client(hostName);
   const createdWait = host.once('game-created');
   host.emit('create-game', hostName);
-  const { gameId } = await createdWait;
+  const created = await createdWait;
+  const gameId = created.gameId;
+
+  // A token is a seat's proof of identity, and the only way back into it after a
+  // refresh, so the reconnect tests need them kept.
+  const tokens = { [hostName]: created.token };
 
   const guests = [];
   for (const guestName of guestNames) {
     const guest = await server.client(guestName);
     const joined = guest.once('game-joined');
     guest.emit('join-game', gameId, guestName);
-    await joined;
+    tokens[guestName] = (await joined).token;
     guests.push(guest);
   }
 
@@ -181,7 +195,31 @@ const startGame = async (server, names, settings) => {
   host.emit('start-game', gameId);
   const state = await started;
 
-  return { gameId, host, guests, players: [host, ...guests], state };
+  return { gameId, host, guests, players: [host, ...guests], state, tokens };
 };
 
-module.exports = { startServer, startGame, once, waitForState };
+// A lobby, without starting the game. The lobby tests need the table but not the deal.
+const openLobby = async (server, names) => {
+  const [hostName, ...guestNames] = names;
+
+  const host = await server.client(hostName);
+  const createdWait = host.once('game-created');
+  host.emit('create-game', hostName);
+  const created = await createdWait;
+  const gameId = created.gameId;
+
+  const tokens = { [hostName]: created.token };
+  const guests = [];
+
+  for (const guestName of guestNames) {
+    const guest = await server.client(guestName);
+    const joined = guest.once('game-joined');
+    guest.emit('join-game', gameId, guestName);
+    tokens[guestName] = (await joined).token;
+    guests.push(guest);
+  }
+
+  return { gameId, host, guests, players: [host, ...guests], tokens };
+};
+
+module.exports = { startServer, startGame, openLobby, once, waitForState };

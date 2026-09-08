@@ -64,6 +64,7 @@ Full detail in [FIXES_APPLIED.md](FIXES_APPLIED.md).
 | No rate limiting on socket events | One socket could emit as fast as it liked |
 | The client rebuilt game state from the DOM | `getCurrentGameState()` is gone and the winner popup reads the server's payload |
 | A dropped player froze the table | The host can hand the seat to a bot instead of restarting the round |
+| A table of bots locked friends out | The lobby counted seats, so a host who filled the spare chairs with bots had a "Game is full" waiting for anybody who clicked the link - even though a bot gives its seat up the moment a person arrives. Counted in people now |
 
 ---
 
@@ -80,7 +81,9 @@ playing a game:
 - `lib/bot.js` - every personality, on both decks, in every position.
 - `lib/presence.js` - the difference between a dropped socket and an absent player.
 - `lib/rules.js` - scoring, busts, Second Chances, turn order, who a targeting card may
-  be aimed at, and what ends a round or a game.
+  be aimed at, what ends a round or a game, and the Remove Card / Steal card-index rules.
+- `lib/seats.js` - identity: which seat a token belongs to, whose seat is held open, who
+  is in charge while the host is away, and how bot seats are filled.
 
 `test/game-flow.test.js` covers what none of those can: sequences that span several
 socket handlers. It starts a real `server.js` on a free port and drives it with socket.io
@@ -94,5 +97,11 @@ worth automating are now covered there:
 4. Every player busting in the same round.
 5. A turn timing out while a target popup is open.
 
-Still untested: the lobby, reconnects and host migration, the bot puppet-socket loop, and
-the Remove Card and Steal handlers. Those are the next ones to extract.
+`test/lobby.test.js`, `test/reconnect.test.js` and `test/cards.test.js` cover the rest of
+the same way: the lobby (names, a full table, bot seats yielding to people, host-only
+settings), coming back (token rejoin, reclaiming a seat by name, token rotation, host
+migration, the grace period, a target popup restored on reconnect), and Remove Card and
+Steal played for real.
+
+Still untested: the bot puppet-socket loop and scheduler, `return-to-lobby` / `end-game`
+/ rematch, and `kick-player` / `replace-with-bot`.
