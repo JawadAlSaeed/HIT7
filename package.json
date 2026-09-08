@@ -32,7 +32,8 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "kill-port": "^2.0.1"
+    "kill-port": "^2.0.1",
+    "socket.io-client": "^4.8.3"
   },
   "engines": {
     "node": "22.x",
