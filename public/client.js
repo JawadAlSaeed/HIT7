@@ -2,7 +2,7 @@
 // phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
 // it, so "is this fixed" and "is this the old page" look identical from the outside.
 // It is printed at the bottom of How To Play, which is two taps away on any device.
-const BUILD = '2026-09-07.3';
+const BUILD = '2026-09-09.1';
 
 const socket = io();
 let currentGameId = null;
@@ -3388,184 +3388,403 @@ function handleSelectedCard(gameId, selectedCard) {
   // For other cards, no immediate action needed
 }
 
+// ---------------------------------------------------------------------------
+// How to play
+//
+// A walkthrough of pages rather than one long scroll. Each page carries a single
+// idea, a hero built out of real game cards, and nothing else. Chapters across
+// the top let a player who came back for one rule jump straight to it; Back and
+// Next walk the pages either way, and the strip can be dragged directly.
+//
+// Motion follows the pointer. The strip tracks the finger 1:1 while dragging,
+// and on release a spring takes over from wherever the finger left it, aimed at
+// the page the throw was heading for rather than the nearest one.
+// ---------------------------------------------------------------------------
+
+// Hero art. Each entry is [data-card-type, face] - the colour comes from the
+// [data-card-type] rules in style.css, exactly as it does for a card in hand.
+function htpArt(cards, small) {
+    return cards
+        .map(([type, face]) =>
+            `<div class="htp-c${small ? ' sm' : ''}" data-card-type="${type}">${face}</div>`)
+        .join('');
+}
+
+const HTP_CHAPTERS = [
+    {
+        name: 'Basics',
+        pages: [
+            {
+                art: [['number', '7'], ['adder', '2+'], ['multiplier', '2x']],
+                pill: 'The goal',
+                title: 'First to 200 wins',
+                body: `Every round you bank points. Rounds keep coming until somebody
+                       reaches <b>200</b> — that player wins the game.`
+            },
+            {
+                art: [['number', '3'], ['number', '9'], ['number', '12']],
+                pill: 'Your turn',
+                title: 'Hit, or stand',
+                body: `<b>HIT</b> flips the top card straight into your hand and it takes
+                       effect at once. <b>STAND</b> ends your round and keeps everything
+                       you are holding. Then the turn moves on.`
+            },
+            {
+                art: [['number', '0'], ['number', '1'], ['number', '12']],
+                pill: 'Number cards',
+                title: 'Seven is the ceiling',
+                body: `Numbers run <b>0–12</b> and are worth their face value. You may hold
+                       seven of them at most. Fill all seven and your round stops there
+                       with a <b>+15 bonus</b>.`,
+                note: `The deck holds one 0, one 1, two 2s, and so on up to twelve 12s —
+                       79 number cards in all.`
+            },
+            {
+                art: [['number', '5'], ['number', '5']],
+                pill: 'The risk',
+                title: 'Doubles wipe the round',
+                body: `Take a number you already hold and you <b>BUST</b>. The whole round
+                       score is gone and you sit out until the next one. Points banked in
+                       earlier rounds stay safe.`,
+                note: `0 is a number like any other, and stealing or swapping can hand you
+                       a duplicate just as easily as a flip can.`
+            },
+            {
+                art: [['second-chance', '🛡️']],
+                pill: 'The save',
+                title: 'Second chance',
+                body: `Holding a <b>🛡️</b> when you would bust? It burns instead, the
+                       duplicate is binned, and you carry on. Three of them are in the
+                       deck.`
+            }
+        ]
+    },
+    {
+        name: 'Cards',
+        pages: [
+            {
+                art: [['freeze', '❄️'], ['draw-three', '🎯']],
+                pill: 'Action cards',
+                title: 'Cards that hit back',
+                body: `<b>❄️ Freeze</b> forces any player still in the round to stand,
+                       keeping the points they have. <b>🎯 Draw Three</b> makes a player
+                       flip three cards in a row — busts and all.`,
+                note: 'Three of each are in the deck. You may aim either one at yourself.'
+            },
+            {
+                art: [['remove-card', '🗑️'], ['steal-card', '🥷'], ['swap-card', '⇄️']],
+                pill: 'Action cards',
+                title: 'Take, bin and trade',
+                body: `<b>🗑️ Remove</b> deletes one card from anyone still in the round.
+                       <b>🥷 Steal</b> takes a card from a rival into your hand.
+                       <b>⇄️ Swap</b> trades one card between two other players.`,
+                note: `Three 🗑️, two 🥷 and two ⇄️. A 🗑️ can never be removed, and only
+                       scoring cards can be swapped.`
+            },
+            {
+                art: [['select-card', '🃏']],
+                pill: 'Action cards',
+                title: 'Pick anything you like',
+                body: `<b>🃏 Select Card</b> opens the whole deck and lets you take whatever
+                       you want. There is exactly one in the game.`,
+                note: 'An action card with no legal target is binned and your turn ends.'
+            }
+        ]
+    },
+    {
+        name: 'Scoring',
+        pages: [
+            {
+                art: [['adder', '2+'], ['multiplier', '2x'], ['minus', '4-'], ['divide', '2÷']],
+                pill: 'Modifiers',
+                title: 'Bend your score',
+                body: `These stay in your hand and change what the round is worth.
+                       <b>2+ … 10+</b> add, <b>2- … 10-</b> subtract, <b>2x</b> doubles and
+                       <b>2÷</b> halves. None of them can bust you.`
+            },
+            {
+                art: [['number', '3'], ['number', '5'], ['number', '7']],
+                pill: 'The maths',
+                title: 'Always in this order',
+                body: `Add your numbers, apply every <b>+</b> and <b>−</b>, then <b>2x</b>,
+                       then <b>2÷</b>, and finally <b>+15</b> if you hold all seven.`,
+                note: `Example: 3 + 5 + 7 = 15, then 2+ makes 17, then 2x makes
+                       <b>34 points</b>. A round can never score below 0.`
+            },
+            {
+                art: [['freeze', '❄️'], ['number', '7']],
+                pill: 'Round end',
+                title: 'When nobody is left',
+                body: `The round ends once everyone has stood, been frozen, filled seven
+                       cards or busted. Everyone still standing banks their score, hands
+                       are cleared, and the next round starts.`,
+                note: `The deck carries over and is reshuffled only when it runs dry. CARDS
+                       LEFT shows exactly what is still in it.`
+            }
+        ]
+    },
+    {
+        name: 'Tips',
+        pages: [
+            {
+                art: [['number', '1'], ['number', '12']],
+                pill: 'Tips',
+                title: 'How to win more',
+                body: `<ul class="htp-list">
+                         <li>Low numbers are the safe ones — one 1, but twelve 12s</li>
+                         <li>Read CARDS LEFT before you hit; it is the real odds</li>
+                         <li>Spend 🛡️ pushing for the +15, not sitting on 10 points</li>
+                         <li>Aim ❄️ at whoever is closest to 200</li>
+                         <li>2÷ hurts most on a big hand — pass it on with ⇄️</li>
+                         <li>📜 History shows every card played so far</li>
+                       </ul>`
+            }
+        ]
+    }
+];
+
+// Flattened once, so a page index is all the rest of the code has to carry.
+const HTP_PAGES = HTP_CHAPTERS.flatMap((chapter, ci) =>
+    chapter.pages.map(page => ({ ...page, chapter: ci })));
+
 function showTutorial() {
-    const existingPopup = document.querySelector('.tutorial-popup');
-    if (existingPopup) existingPopup.remove();
+    const existing = document.querySelector('.htp');
+    if (existing) existing.remove();
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const popup = document.createElement('div');
-    popup.className = 'tutorial-popup';
+    popup.className = 'htp';
     popup.innerHTML = `
-        <div class="popup-content">
-            <button class="close-button">×</button>
-            <h2 class="tutorial-title">HOW TO PLAY</h2>
-            
-            <div class="tutorial-content">
-                <section class="tutorial-section">
-                    <h3>🎮 OBJECTIVE</h3>
-                    <p>The game is played over as many rounds as it takes. Bank points each
-                       round, and the first player to <strong>200 total points</strong> wins.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>🔄 YOUR TURN</h3>
-                    <p>On your turn you do exactly one of two things:</p>
-                    <ul>
-                        <li><strong>HIT</strong> — flip the top card of the deck. It goes
-                            straight into your hand and takes effect immediately.</li>
-                        <li><strong>STAND</strong> — end your round and keep everything you
-                            have. Your points are banked when the round finishes.</li>
-                    </ul>
-                    <p class="tutorial-note">The turn then passes to the next player who is
-                       still in the round.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>🃏 NUMBER CARDS</h3>
-                    <p><strong>0–12:</strong> worth their face value. The deck holds one
-                       <strong>0</strong>, one <strong>1</strong>, two <strong>2</strong>s,
-                       and so on up to twelve <strong>12</strong>s — 79 cards in total.</p>
-                    <p><strong>You may hold at most 7 of them.</strong> Action cards and score
-                       modifiers do not count towards that limit.</p>
-                    <p>Fill all 7 and your round ends right there with a
-                       <strong>+15 bonus</strong>.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>💥 BUSTING</h3>
-                    <p>Take a number you already hold and you <strong>BUST</strong>: your whole
-                       round score is gone and you are out until the next round. Points you
-                       banked in earlier rounds are safe.</p>
-                    <p class="tutorial-note">⚠️ <strong>0 is a number like any other</strong> —
-                       a second 0 busts you just the same.</p>
-                    <p>Holding a 🛡️ <strong>Second Chance</strong> when it happens? The 🛡️ is
-                       burned instead, the duplicate is discarded, and you play on.</p>
-                    <p class="tutorial-note">Stealing and swapping can hand you a duplicate too,
-                       so they can bust you the same way a flip can.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>⭐ ACTION CARDS</h3>
-                    <p>These are played the moment you draw them, and are then discarded.</p>
-                    <table class="card-table">
-                        <tr>
-                            <td><strong>🛡️ Second Chance</strong></td>
-                            <td>Kept in hand. Automatically cancels your next bust (3 in deck)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>❄️ Freeze</strong></td>
-                            <td>Force any player still in the round — including yourself — to
-                                stand. They keep the points they already have (3)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🎯 Draw Three</strong></td>
-                            <td>Pick a player with room left. They must flip three cards in a
-                                row, busts and all (3)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🗑️ Remove Card</strong></td>
-                            <td>Delete one card from any player still in the round, yourself
-                                included. A 🗑️ cannot be removed (3)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🥷 Steal Card</strong></td>
-                            <td>Take any one card from another player and add it to your hand (2)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>⇄️ Swap Card</strong></td>
-                            <td>Trade one card between two different players. Only scoring cards
-                                move — numbers, 🛡️ and modifiers (2)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>🃏 Select Card</strong></td>
-                            <td>Look through the whole deck and take whatever you want (1)</td>
-                        </tr>
-                    </table>
-                    <p class="tutorial-note">If a card has no legal target it is discarded and
-                       your turn ends.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>🔢 SCORE MODIFIERS</h3>
-                    <p>These stay in your hand and change your round score. They never bust you.</p>
-                    <table class="card-table">
-                        <tr>
-                            <td><strong>2+ 4+ 6+ 8+ 10+</strong></td>
-                            <td>Add that many points</td>
-                        </tr>
-                        <tr>
-                            <td><strong>2- 4- 6- 8- 10-</strong></td>
-                            <td>Subtract that many points</td>
-                        </tr>
-                        <tr>
-                            <td><strong>2x</strong></td>
-                            <td>Double your round score</td>
-                        </tr>
-                        <tr>
-                            <td><strong>2÷</strong></td>
-                            <td>Halve your round score, rounded</td>
-                        </tr>
-                    </table>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>🧮 SCORING</h3>
-                    <p>Your round score is worked out in this order:</p>
-                    <ul>
-                        <li>Add up your number cards</li>
-                        <li>Apply every <strong>+</strong> and <strong>−</strong> card</li>
-                        <li>Then <strong>2x</strong>, then <strong>2÷</strong></li>
-                        <li>Finally <strong>+15</strong> if you hold all 7 numbers</li>
-                    </ul>
-                    <p class="tutorial-note">A round score can never drop below 0.</p>
-                    <p><strong>Example:</strong> [3, 5, 7] with 2+ and 2x</p>
-                    <p>3 + 5 + 7 = 15 → 15 + 2 = 17 → 17 × 2 = <strong>34 points</strong></p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>🏁 ENDING A ROUND</h3>
-                    <p>The round ends as soon as nobody is left drawing — everyone has stood,
-                       been frozen, filled 7 cards, or busted.</p>
-                    <p>Everyone who did not bust banks their round score. Hands are cleared,
-                       totals are kept, and the next round begins.</p>
-                    <p>The deck carries over between rounds and is reshuffled from scratch when
-                       it runs out. Check <strong>CARDS LEFT</strong> to see exactly what is
-                       still in it.</p>
-                </section>
-
-                <section class="tutorial-section">
-                    <h3>💡 TIPS</h3>
-                    <ul>
-                        <li>Low numbers are the safe ones — there is only one 1, but twelve 12s</li>
-                        <li>Watch the remaining pile before you hit; it tells you the real odds</li>
-                        <li>Hold 🛡️ while you push for the +15, not while you are on 10 points</li>
-                        <li>❄️ is best aimed at whoever is closest to 200</li>
-                        <li>2÷ hurts most on a big hand — pass it on with ⇄️ if you can</li>
-                        <li>📜 History shows every card played so far</li>
-                    </ul>
-                </section>
-
-                <p class="tutorial-build">Build ${escapeHtml(BUILD)}</p>
+        <div class="htp-card" role="dialog" aria-modal="true" aria-label="How to play">
+            <div class="htp-bar">
+                <button class="htp-back" type="button" aria-label="Previous page">‹</button>
+                <div class="htp-chapters" role="tablist">
+                    ${HTP_CHAPTERS.map((c, i) => `
+                        <button class="htp-chapter" type="button" role="tab" data-chapter="${i}">
+                            ${escapeHtml(c.name)}
+                        </button>`).join('')}
+                </div>
+                <button class="htp-close" type="button" aria-label="Close">×</button>
             </div>
+
+            <div class="htp-hero" aria-hidden="true"></div>
+
+            <div class="htp-track">
+                <div class="htp-strip">
+                    ${HTP_PAGES.map(p => `
+                        <section class="htp-page">
+                            <div class="htp-page-inner">
+                                <span class="htp-pill">${escapeHtml(p.pill)}</span>
+                                <h3 class="htp-title">${escapeHtml(p.title)}</h3>
+                                <div class="htp-body">${p.body}</div>
+                                ${p.note ? `<p class="htp-note">${p.note}</p>` : ''}
+                            </div>
+                        </section>`).join('')}
+                </div>
+            </div>
+
+            <div class="htp-foot">
+                <div class="htp-dots"></div>
+                <button class="htp-next" type="button"></button>
+            </div>
+
+            <p class="htp-build">Build ${escapeHtml(BUILD)}</p>
         </div>
     `;
 
-    // Close button functionality
-    popup.querySelector('.close-button').addEventListener('click', () => {
-        playSound('buttonClick');
-        dismissPopup(popup);
-        document.removeEventListener('keydown', handleEscape);
+    const hero = popup.querySelector('.htp-hero');
+    const track = popup.querySelector('.htp-track');
+    const strip = popup.querySelector('.htp-strip');
+    const dotsEl = popup.querySelector('.htp-dots');
+    const backBtn = popup.querySelector('.htp-back');
+    const nextBtn = popup.querySelector('.htp-next');
+    const chapterBtns = [...popup.querySelectorAll('.htp-chapter')];
+
+    let index = -1;
+    let x = 0;              // live strip offset, px
+    let vx = 0;             // strip velocity, px/s
+    let goal = 0;           // where the spring is pulling to
+    let frame = null;
+    let dragging = false;
+    let grabX = 0;
+    let grabOffset = 0;
+    let lastX = 0;
+    let lastT = 0;
+    let heroTimer = null;
+
+    const pageWidth = () => track.clientWidth || 1;
+    const minOffset = () => -(HTP_PAGES.length - 1) * pageWidth();
+
+    function setStrip(px) {
+        x = px;
+        strip.style.transform = `translate3d(${px}px, 0, 0)`;
+    }
+
+    // Critically damped: the pages settle without wobbling. Bounce is reserved
+    // for the flick, where the momentum came from the hand rather than the UI.
+    function runSpring() {
+        cancelAnimationFrame(frame);
+        if (reduced) { setStrip(goal); vx = 0; return; }
+
+        let last = performance.now();
+        const step = now => {
+            // A backgrounded tab hands back a huge dt, which would fling the
+            // strip across the screen on return.
+            const dt = Math.min((now - last) / 1000, 0.032);
+            last = now;
+            vx += ((goal - x) * 170 - vx * 26) * dt;
+            setStrip(x + vx * dt);
+
+            if (Math.abs(goal - x) > 0.4 || Math.abs(vx) > 0.4) {
+                frame = requestAnimationFrame(step);
+            } else {
+                setStrip(goal);
+                vx = 0;
+            }
+        };
+        frame = requestAnimationFrame(step);
+    }
+
+    function paintHero(page) {
+        clearTimeout(heroTimer);
+        hero.classList.add('is-swapping');
+        const draw = () => {
+            hero.innerHTML = htpArt(page.art, page.art.length > 3);
+            hero.classList.remove('is-swapping');
+            if (reduced) return;
+            [...hero.children].forEach((card, n) => {
+                card.style.animationDelay = `${n * 60}ms`;
+                card.classList.add('htp-deal');
+            });
+        };
+        if (reduced) draw(); else heroTimer = setTimeout(draw, 120);
+    }
+
+    function paintDots(chapterIndex, pageInChapter) {
+        // A chapter of one page has nowhere to go, and a lone dot reads as a
+        // progress bar that is broken rather than finished.
+        const count = HTP_CHAPTERS[chapterIndex].pages.length;
+        if (count < 2) { dotsEl.innerHTML = ''; return; }
+        if (dotsEl.children.length !== count) {
+            dotsEl.innerHTML = Array.from({ length: count }, () => '<i class="htp-dot"></i>').join('');
+        }
+        [...dotsEl.children].forEach((dot, n) => dot.classList.toggle('is-on', n === pageInChapter));
+    }
+
+    function go(next, silent) {
+        const n = Math.max(0, Math.min(HTP_PAGES.length - 1, next));
+        // A chapter jump is a switch, not a scroll: sliding eight pages past the
+        // eye says the chapters sit in a row, which is not what the row means.
+        const jump = index >= 0 && Math.abs(n - index) > 1;
+
+        if (n !== index) {
+            index = n;
+            const page = HTP_PAGES[n];
+            const chapterStart = HTP_PAGES.findIndex(p => p.chapter === page.chapter);
+
+            paintHero(page);
+            paintDots(page.chapter, n - chapterStart);
+            chapterBtns.forEach((b, ci) => {
+                b.classList.toggle('is-on', ci === page.chapter);
+                b.setAttribute('aria-selected', ci === page.chapter ? 'true' : 'false');
+            });
+
+            // The chapter row scrolls on a narrow phone. Centre the live chip by
+            // hand rather than with scrollIntoView, which is free to scroll the
+            // sheet and the page behind it as well.
+            const chip = chapterBtns[page.chapter];
+            const row = chip.parentElement;
+            row.scrollTo({
+                left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2,
+                behavior: reduced ? 'auto' : 'smooth'
+            });
+
+            backBtn.disabled = n === 0;
+            nextBtn.textContent = n === HTP_PAGES.length - 1 ? 'Got it' : 'Next  ›';
+            if (!silent) playSound('buttonClick');
+        }
+
+        goal = -index * pageWidth();
+        if (jump) { cancelAnimationFrame(frame); vx = 0; setStrip(goal); }
+        else runSpring();
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (index === HTP_PAGES.length - 1) close();
+        else go(index + 1);
+    });
+    backBtn.addEventListener('click', () => go(index - 1));
+    chapterBtns.forEach(btn => btn.addEventListener('click', () => {
+        go(HTP_PAGES.findIndex(p => p.chapter === Number(btn.dataset.chapter)));
+    }));
+
+    // Drag. The strip is glued to the finger, softening past either end so the
+    // boundary reads as "nothing more here" rather than "frozen".
+    track.addEventListener('pointerdown', e => {
+        if (e.target.closest('button, a')) return;
+        dragging = true;
+        track.setPointerCapture(e.pointerId);
+        grabX = e.clientX;
+        grabOffset = x;
+        lastX = e.clientX;
+        lastT = performance.now();
+        cancelAnimationFrame(frame);
     });
 
-    // Close on escape key
-    const handleEscape = (e) => {
-        if (e.key === 'Escape') {
-            dismissPopup(popup);
-            document.removeEventListener('keydown', handleEscape);
+    track.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        let next = grabOffset + (e.clientX - grabX);
+        const min = minOffset();
+        if (next > 0) next *= 0.35;
+        else if (next < min) next = min + (next - min) * 0.35;
+        setStrip(next);
+
+        const now = performance.now();
+        if (now > lastT) {
+            vx = (e.clientX - lastX) / ((now - lastT) / 1000);
+            lastX = e.clientX;
+            lastT = now;
         }
+    });
+
+    // Land on the page the throw was heading for, not the nearest one - the same
+    // exponential projection scroll deceleration uses. Clamped to one page
+    // either side, because a hard flick should turn the page, not the chapter.
+    const release = () => {
+        if (!dragging) return;
+        dragging = false;
+        const projected = x + (vx / 1000) * 0.998 / (1 - 0.998);
+        const aimed = Math.round(-projected / pageWidth());
+        go(Math.max(index - 1, Math.min(index + 1, aimed)), true);
     };
-    document.addEventListener('keydown', handleEscape);
+    track.addEventListener('pointerup', release);
+    track.addEventListener('pointercancel', release);
+
+    const onResize = () => { goal = -index * pageWidth(); setStrip(goal); };
+    window.addEventListener('resize', onResize);
+
+    const onKey = e => {
+        if (e.key === 'Escape') close();
+        else if (e.key === 'ArrowRight') go(index + 1);
+        else if (e.key === 'ArrowLeft') go(index - 1);
+    };
+    document.addEventListener('keydown', onKey);
+
+    function close() {
+        playSound('buttonClick');
+        cancelAnimationFrame(frame);
+        clearTimeout(heroTimer);
+        document.removeEventListener('keydown', onKey);
+        window.removeEventListener('resize', onResize);
+        dismissPopup(popup);
+    }
+
+    popup.querySelector('.htp-close').addEventListener('click', close);
+    popup.addEventListener('click', e => { if (e.target === popup) close(); });
 
     document.body.appendChild(popup);
+    go(0, true);
 }
 
 // ---------------------------------------------------------------------------
