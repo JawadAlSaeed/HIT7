@@ -2623,6 +2623,17 @@ function wireSettingsMenu() {
     const menu = document.getElementById('settingsMenu');
     if (!button || !menu) return;
 
+    // The menu is written next to its button, which is where it belongs in the source,
+    // and then moved to the end of <body>. `position: fixed` is only viewport-relative
+    // while no ancestor has a transform, a filter or a backdrop-filter: any one of those
+    // makes that ancestor the containing block instead, and a fixed child stops escaping
+    // its overflow. `.game-header` grew a backdrop-filter when it was made to look like
+    // glass, and from then on the menu was positioned inside a header that is
+    // `overflow: hidden` and one button tall - it measured the right size, reported
+    // itself open, and painted nothing. Parented to <body> there is no ancestor left to
+    // do that to it, whatever the header wears next.
+    if (menu.parentElement !== document.body) document.body.appendChild(menu);
+
     button.onclick = event => {
         event.stopPropagation();
         playSound('buttonClick');
@@ -2630,10 +2641,13 @@ function wireSettingsMenu() {
     };
 
     // A menu that only closes by its own button is a menu people leave open. Clicking
-    // the board, or Escape, is what everybody tries first.
+    // the board, or Escape, is what everybody tries first. Both selectors are needed:
+    // the menu no longer sits inside the wrap, so the wrap alone would count a click on
+    // the menu's own rows as a click outside it and shut it on the way past. Sound is
+    // the one row that deliberately stays open to be toggled twice.
     document.addEventListener('click', event => {
         if (!settingsMenuIsOpen()) return;
-        if (event.target.closest('.settings-menu-wrap')) return;
+        if (event.target.closest('.settings-menu-wrap, .settings-menu')) return;
         closeSettingsMenu();
     });
 

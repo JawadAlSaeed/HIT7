@@ -6680,8 +6680,14 @@ button.setting-option:active {
 /* Fixed, not absolute, and placed by placeSettingsMenu(). `.game-header` is
    `overflow: hidden` and only as tall as one button, so an absolutely positioned
    dropdown inside it is clipped to nothing - it measures the right size and paints
-   none of it. A fixed descendant escapes an ancestor's overflow, which is the whole
-   reason for the JS placement. */
+   none of it.
+
+   Escaping that overflow needs both halves: fixed positioning AND no ancestor that
+   is a containing block for it. A transform, a filter or a backdrop-filter on any
+   ancestor makes that ancestor the containing block, and the escape quietly stops
+   working - which is exactly what the header's glass backdrop-filter did to this menu.
+   wireSettingsMenu() moves the element to <body> for that reason; do not put it back
+   inside the header on the strength of `position: fixed` alone. */
 .settings-menu {
     position: fixed;
     z-index: var(--z-popup);
