@@ -67,10 +67,7 @@
     .remaining-pile .special-cards,
     .remaining-card .card-count,
     .select-card-popup .card-count,
-    .card-example,
-    .tab-button,
-    .tutorial-popup,
-    .tutorial-popup .popup-content,
+    .htp .htp-card,
     .history-popup .popup-content,
     .round-summary-popup .popup-content {
         background: var(--surface-solid);
@@ -1774,350 +1771,6 @@ body::before {
     transform: translateY(-2px);
 }
 
-/* Enhanced Tutorial Popup Styling - Completely Rewritten */
-.tutorial-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--z-controls);
-    padding: 0;
-}
-
-.tutorial-popup .popup-content {
-    background: var(--secondary);
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    position: relative;
-    -webkit-backdrop-filter: var(--material-thick);
-    backdrop-filter: var(--material-thick);
-}
-
-.tutorial-popup .close-button {
-    position: fixed;
-    top: max(1rem, env(safe-area-inset-top));
-    right: 1rem;
-    background: var(--highlight);
-    color: var(--text-light);
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    font-size: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.5);
-    z-index: var(--z-controls);
-    transition: all 0.2s ease;
-    padding: 0;
-    line-height: 1;
-}
-
-.tutorial-popup .close-button:hover {
-    transform: scale(1.1) rotate(90deg);
-    background: #d63d56;
-}
-
-.tutorial-popup .tutorial-title {
-    text-align: center;
-    font-size: 1.8rem;
-    margin: 1rem 0;
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: -0.015em;
-    background: var(--card-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    flex-shrink: 0;
-    padding: 0 1rem;
-}
-
-.tutorial-popup .tutorial-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 1rem 2rem 1rem;
-}
-
-.tutorial-popup .tutorial-section {
-    margin: 1rem 0;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.tutorial-popup .tutorial-section:last-child {
-    border-bottom: none;
-}
-
-.tutorial-popup .tutorial-section h3 {
-    font-size: 1.1rem;
-    color: var(--highlight);
-    margin: 0.8rem 0 0.5rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.01em;
-}
-
-.tutorial-popup .tutorial-section p {
-    font-size: 0.95rem;
-    line-height: 1.4;
-    margin: 0.4rem 0;
-    color: var(--text-light);
-}
-
-.tutorial-popup .tutorial-section ul {
-    padding-left: 1.2rem;
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-}
-
-/* Asides and warnings inside a tutorial section */
-.tutorial-popup .tutorial-section p.tutorial-note {
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
-    border-left: 3px solid var(--highlight);
-    padding-left: 0.7rem;
-    margin: 0.7rem 0 0.4rem 0;
-}
-
-.tutorial-popup .tutorial-section li {
-    margin: 0.4rem 0;
-    line-height: 1.3;
-}
-
-.card-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0.8rem 0;
-    font-size: 0.85rem;
-}
-
-.card-table tr {
-    border-bottom: 1px solid rgba(233, 69, 96, 0.15);
-}
-
-.card-table td {
-    padding: 0.6rem;
-    text-align: left;
-}
-
-.card-table td:first-child {
-    width: 30%;
-    color: var(--highlight);
-    font-weight: bold;
-}
-
-.card-table td:last-child {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.tutorial-popup .tutorial-section {
-    background: rgba(15, 52, 96, 0.3);
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid rgba(233, 69, 96, 0.2);
-}
-
-.tutorial-popup .tutorial-section h3 {
-    color: var(--highlight);
-    margin: 0 0 1rem 0;
-    font-size: 1.5rem;
-    font-family: 'Cairo Play', sans-serif;
-}
-
-.tutorial-popup .tutorial-section p {
-    color: var(--text-light);
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-}
-
-.tutorial-popup .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1rem;
-    margin: 1.5rem 0;
-}
-
-.tutorial-popup .card-example {
-    background: rgba(22, 33, 62, 0.5);
-    padding: 1.2rem;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.tutorial-popup .card-example:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-}
-
-.tutorial-popup .card-example .card {
-    width: 55px;
-    height: 77px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-.tutorial-popup .card-explanation {
-    flex: 1;
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-.tutorial-popup .card-explanation strong {
-    color: var(--highlight);
-    font-size: 1.1rem;
-    display: block;
-    margin-bottom: 0.3rem;
-}
-
-.tutorial-popup .rules-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.tutorial-popup .rules-list li {
-    padding: 0.8rem 1rem;
-    margin: 0.5rem 0;
-    background: rgba(15, 52, 96, 0.4);
-    border-radius: 8px;
-    line-height: 1.6;
-    border-left: 3px solid var(--highlight);
-    transition: transform 0.2s ease;
-}
-
-.tutorial-popup .rules-list li:hover {
-    transform: translateX(5px);
-    background: rgba(15, 52, 96, 0.6);
-}
-
-.tutorial-popup .rules-list li strong {
-    color: var(--highlight);
-}
-
-/* Score example styling */
-.tutorial-popup .score-example {
-    background: rgba(15, 52, 96, 0.4);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-}
-
-.tutorial-popup .score-formula {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-}
-
-.tutorial-popup .formula-step {
-    padding: 0.8rem;
-    background: rgba(22, 33, 62, 0.5);
-    border-radius: 8px;
-    border-left: 3px solid var(--highlight);
-}
-
-.tutorial-popup .score-scenario {
-    font-weight: 500;
-    font-size: 1.1rem;
-    background: rgba(22, 33, 62, 0.5);
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-    margin-bottom: 1.5rem;
-    color: var(--highlight);
-}
-
-.tutorial-popup .score-calculation {
-    list-style-type: none;
-    padding: 0;
-}
-
-.tutorial-popup .score-calculation li {
-    padding: 0.8rem;
-    margin: 0.5rem 0;
-    background: rgba(22, 33, 62, 0.5);
-    border-radius: 8px;
-    border-left: 3px solid var(--highlight);
-    transition: transform 0.2s ease;
-    opacity: 0.8;
-}
-
-.tutorial-popup .score-calculation li:hover {
-    transform: translateX(5px);
-    opacity: 1;
-}
-
-.tutorial-popup .score-calculation li:last-child {
-    font-weight: 700;
-    color: var(--highlight);
-    opacity: 1;
-}
-
-/* Mobile adjustments for tutorial popup */
-@media screen and (max-width: 430px) {
-    .tutorial-popup .popup-content {
-        padding: 1.5rem;
-        width: 95%;
-        max-height: 80vh;
-    }
-
-    .tutorial-popup .tutorial-title {
-        font-size: 1.8rem;
-    }
-
-    .tutorial-popup .tutorial-tabs {
-        flex-wrap: wrap;
-    }
-
-    .tutorial-popup .tab-button {
-        padding: 0.5rem 1rem;
-        font-size: 0.75rem;
-        flex: 1;
-        min-width: 80px;
-    }
-
-    .tutorial-popup .cards-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .tutorial-popup .card-example {
-        padding: 0.8rem;
-    }
-
-    .tutorial-popup .card-example .card {
-        width: 45px;
-        height: 63px;
-    }
-
-    .tutorial-popup .card-explanation {
-        font-size: 0.9rem;
-    }
-}
-
 /* Update Regular Cards */
 .card:not(.special) {
     font-weight: bold;
@@ -2128,97 +1781,6 @@ body::before {
 .card:not(.special):hover {
     transform: translateY(-5px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* Enhanced Tutorial Popup Styling */
-.tutorial-popup {
-    background: rgba(22, 33, 62, 0.95);
-    -webkit-backdrop-filter: var(--material-thick);
-    backdrop-filter: var(--material-thick);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.tutorial-popup .close-button {
-    background: var(--highlight);
-    color: var(--text-light);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    font-size: 2rem;
-    border: none;
-    top: 1.5rem;
-    right: 1.5rem;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-}
-
-.tutorial-popup .close-button:hover {
-    transform: scale(1.1) rotate(90deg);
-    background: #d63d56;
-    box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-}
-
-.tutorial-tabs {
-    background: rgba(15, 52, 96, 0.5);
-    padding: 0.5rem;
-    border-radius: 12px;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-}
-
-.tab-button {
-    background: rgba(15, 52, 96, 0.3);
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    -webkit-backdrop-filter: var(--material-thin);
-    backdrop-filter: var(--material-thin);
-    margin-bottom: 1.5rem;
-}
-
-.tutorial-section h2 {
-    color: var(--highlight);
-    font-family: 'Cairo Play', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
-}
-
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.card-example {
-    background: rgba(22, 33, 62, 0.8);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    -webkit-backdrop-filter: var(--material-thin);
-    backdrop-filter: var(--material-thin);
-    transition: transform 0.3s ease;
-}
-
-.card-example:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-}
-
-.card-explanation {
-    color: var(--text-light);
-    font-family: 'Roboto', sans-serif;
-    line-height: 1.6;
-}
-
-.rules-list li {
-    padding: 1rem;
-    background: rgba(22, 33, 62, 0.8);
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid rgba(233, 69, 96, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.rules-list li:hover {
-    transform: translateX(5px);
-    background: rgba(22, 33, 62, 0.9);
-    border-color: rgba(233, 69, 96, 0.3);
 }
 
 .share-link-input {
@@ -2889,8 +2451,7 @@ body::before {
 .remove-card-popup .popup-content,
 .steal-card-popup .popup-content,
 .round-summary-popup .popup-content,
-.winner-popup .popup-content,
-.tutorial-popup .popup-content {
+.winner-popup .popup-content {
     background: var(--secondary);
     padding: 2.5rem;
     border-radius: 15px;
@@ -3488,11 +3049,6 @@ draw-three-target.self-target:hover {
     height: 56px;
     font-size: 1.2rem;
   }
-}
-
-/* Update the tutorial section to reflect the new card set */
-.tutorial-popup .special-tab .cards-grid .card-explanation:contains('Multiply') {
-  content: "Multiply your total round score (2× or 3×)";
 }
 
 /* Fix for emojis in popup headers - ensure they display properly */
@@ -4250,7 +3806,8 @@ h3 span.emoji {
 .remaining-card[data-card-type],
 .last-card[data-card-type],
 .history-card[data-card-type],
-.card-button[data-card-type] {
+.card-button[data-card-type],
+.htp-c[data-card-type] {
     background: var(--card-face, var(--primary));
     border-color: var(--card-edge, var(--secondary));
     color: var(--card-ink, var(--text-dark));
@@ -4560,7 +4117,6 @@ h3 span.emoji {
     .round-summary-popup,
     .freeze-popup,
     .draw-three-popup,
-    .tutorial-popup,
     .info-popup {
         width: 90%;
         max-height: 80vh;
@@ -4572,76 +4128,12 @@ h3 span.emoji {
         padding: 1rem;
     }
 
-    /* Tutorial Popup */
-    .tutorial-popup {
-        width: 100%;
-        height: 100vh;
-        border-radius: 0;
-        padding: 1rem;
-        box-sizing: border-box;
-    }
-
-    .cards-grid {
-        grid-template-columns: 1fr;
-    }
 
     /* Waiting Screen */
     .waiting-screen {
         width: 90%;
         max-height: 80vh;
         padding: 1rem;
-    }
-
-    /* Tutorial Popup - Full Screen Mobile */
-    .tutorial-popup {
-        padding: 0;
-    }
-
-    .tutorial-popup .popup-content {
-        width: 100%;
-        height: 100%;
-        border-radius: 0;
-        padding: 0;
-    }
-
-    .tutorial-popup .tutorial-title {
-        font-size: 1.4rem;
-        margin: 0.8rem 0 0.5rem 0;
-        padding: 0 1rem;
-    }
-
-    .tutorial-popup .tutorial-content {
-        padding: 0 1rem 5rem 1rem;
-    }
-
-    .tutorial-popup .tutorial-section h3 {
-        font-size: 1rem;
-        margin: 0.8rem 0 0.3rem 0;
-    }
-
-    .tutorial-popup .tutorial-section p {
-        font-size: 0.85rem;
-        margin: 0.3rem 0;
-    }
-
-    .tutorial-popup .tutorial-section ul {
-        font-size: 0.8rem;
-        padding-left: 1rem;
-        margin: 0.4rem 0;
-    }
-
-    .tutorial-popup .tutorial-section li {
-        margin: 0.2rem 0;
-        line-height: 1.2;
-    }
-
-    .card-table {
-        font-size: 0.75rem;
-        margin: 0.6rem 0;
-    }
-
-    .card-table td {
-        padding: 0.4rem;
     }
 
     /* History Log - full screen on mobile like the tutorial */
@@ -4842,43 +4334,6 @@ h3 span.emoji {
 
     .score-value {
         font-size: 1rem;
-    }
-
-    .tutorial-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .tab-button {
-        flex: 1;
-        min-width: 70px;
-        padding: 0.5rem;
-        font-size: 0.9rem;
-    }
-
-    .cards-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.8rem;
-    }
-
-    .card-example {
-        padding: 0.8rem;
-    }
-
-    .card-explanation {
-        font-size: 0.85rem;
-    }
-
-    .tutorial-popup .close-button {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        font-size: 1.5rem;
-        top: max(1rem, env(safe-area-inset-top));
-        right: 1rem;
     }
 }
 @media screen and (min-width: 431px) and (max-width: 767px) {
@@ -5118,7 +4573,7 @@ h3 span.emoji {
 .round-summary-popup,
 .freeze-popup,
 .draw-three-popup,
-.tutorial-popup,
+.htp,
 .remove-card-popup,
 .steal-card-popup,
 .swap-card-popup,
@@ -5135,7 +4590,7 @@ h3 span.emoji {
 .round-summary-popup .popup-content,
 .freeze-popup .popup-content,
 .draw-three-popup .popup-content,
-.tutorial-popup .popup-content,
+.htp .htp-card,
 .remove-card-popup .popup-content,
 .steal-card-popup .popup-content,
 .swap-card-popup .popup-content,
@@ -6077,8 +5532,7 @@ h3 span.emoji {
     .steal-card-popup .popup-content,
     .swap-card-popup .popup-content,
     .select-card-popup .popup-content,
-    .history-popup .popup-content,
-    .tutorial-popup .popup-content {
+    .history-popup .popup-content {
         width: 100%;
         max-width: none;
         max-height: 82dvh;
@@ -6101,8 +5555,7 @@ h3 span.emoji {
     .steal-card-popup,
     .swap-card-popup,
     .select-card-popup,
-    .history-popup,
-    .tutorial-popup {
+    .history-popup {
         display: flex;
         align-items: flex-end;
         justify-content: center;
@@ -6117,8 +5570,8 @@ h3 span.emoji {
         max-height: none;
         /* The sheet scrolls; the scrim behind it never does. */
         overflow: hidden;
-        /* .tutorial-popup carries a 1px red border meant for a centred box; on
-           a full-screen scrim it is a hairline around the whole phone. */
+        /* A popup shell that carries its own border for a centred box would
+           show it here as a hairline around the whole phone. */
         border: 0;
         z-index: var(--z-popup);
     }
@@ -6629,7 +6082,7 @@ button.setting-option:active {
 }
 
 /* Small enough to ignore, findable enough to ask about. See BUILD in client.js. */
-.tutorial-build {
+.htp-build {
     margin: var(--space-5) 0 0;
     text-align: center;
     font-size: 0.7rem;
@@ -6878,5 +6331,380 @@ button.setting-option:active {
         padding: 7px 14px;
         font-size: 0.76rem;
         gap: 8px;
+    }
+}
+
+
+/* ---------------------------------------------------------------------------
+   How to play
+
+   Replaces the single scrolling wall of rules with a deck of pages: one idea
+   per page, a hero built from real cards, chapters across the top for anyone
+   who opened this to check one thing, and Back / Next either way.
+
+   The strip is moved by JS - it tracks the finger 1:1 and then springs - so
+   there is deliberately no `transition` on .htp-strip. A transition here would
+   fight the spring and make a grabbed page snap instead of follow.
+   --------------------------------------------------------------------------- */
+
+.htp {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-popup);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background: rgba(8, 10, 22, 0.72);
+    -webkit-backdrop-filter: var(--material-thin);
+    backdrop-filter: var(--material-thin);
+}
+
+.htp-card {
+    display: flex;
+    flex-direction: column;
+    width: min(460px, 100%);
+    height: min(700px, 88dvh);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-xl);
+    background:
+        radial-gradient(120% 70% at 50% -10%, rgba(233, 69, 96, 0.18), transparent 62%),
+        linear-gradient(160deg, #1a1a2e, #16213e);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+/* Top bar: back, chapters, close */
+
+.htp-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 0 0 auto;
+}
+
+.htp-back,
+.htp-close {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--radius-circle);
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out),
+                opacity var(--dur-fast) var(--ease-out);
+}
+
+.htp-back:hover,
+.htp-close:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.htp-back:active,
+.htp-close:active {
+    transform: scale(0.94);
+}
+
+/* Disabled rather than hidden, so the chapter row never shifts sideways
+   between page 1 and page 2. */
+.htp-back:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.htp-chapters {
+    flex: 1 1 auto;
+    display: flex;
+    gap: var(--space-1);
+    justify-content: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.htp-chapters::-webkit-scrollbar {
+    display: none;
+}
+
+.htp-chapter {
+    flex: 0 0 auto;
+    padding: var(--space-1) var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out),
+                background var(--dur-fast) var(--ease-out);
+}
+
+.htp-chapter:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.htp-chapter.is-on {
+    background: rgba(233, 69, 96, 0.9);
+    color: var(--text-light);
+    box-shadow: 0 3px 12px rgba(233, 69, 96, 0.32);
+}
+
+/* Hero */
+
+.htp-hero {
+    flex: 0 0 auto;
+    height: clamp(150px, 30dvh, 260px);
+    margin-top: var(--space-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(150deg, rgba(233, 69, 96, 0.14), rgba(15, 52, 96, 0.5));
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.htp-hero.is-swapping {
+    opacity: 0;
+}
+
+/* Geometry only - the face colour arrives from [data-card-type]. */
+.htp-c {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 56px;
+    height: 79px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 1.4rem;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.htp-c.sm {
+    width: 42px;
+    height: 60px;
+    font-size: 1.05rem;
+    border-radius: var(--radius-xs);
+}
+
+.htp-deal {
+    animation: htp-deal 500ms var(--ease-back) both;
+}
+
+@keyframes htp-deal {
+    from { transform: translateY(-44px) rotate(-8deg) scale(0.86); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+}
+
+/* Pages */
+
+.htp-track {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: hidden;
+    margin-top: var(--space-2);
+    /* Claim the horizontal axis for the drag and leave the vertical one to the
+       page, which scrolls when a long note pushes it past the sheet. */
+    touch-action: pan-y;
+}
+
+.htp-strip {
+    display: flex;
+    height: 100%;
+    will-change: transform;
+}
+
+.htp-page {
+    flex: 0 0 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3) var(--space-1) 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* The text sits directly under the hero and the slack falls to the bottom,
+   above the controls - centring it in a tall sheet leaves it floating with a
+   void on both sides. */
+.htp-page-inner {
+    margin: 0 0 auto;
+}
+
+.htp-pill {
+    display: inline-block;
+    margin-bottom: var(--space-3);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: var(--radius-pill);
+    background: rgba(233, 69, 96, 0.16);
+    color: #ff8ea1;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.htp-title {
+    margin: 0 0 var(--space-2);
+    font-family: 'Cairo Play', sans-serif;
+    font-size: clamp(1.35rem, 5.5vw, 1.6rem);
+    line-height: 1.1;
+    /* Display sizes read too loose at their default tracking. */
+    letter-spacing: -0.025em;
+    color: var(--text-light);
+}
+
+.htp-body {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.62;
+    color: rgba(255, 255, 255, 0.68);
+}
+
+.htp-body b {
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.htp-list {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.htp-list li {
+    margin-bottom: var(--space-2);
+}
+
+.htp-note {
+    margin: var(--space-3) 0 0;
+    padding-left: var(--space-3);
+    border-left: 2px solid rgba(233, 69, 96, 0.55);
+    font-size: 0.83rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Foot */
+
+.htp-foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+}
+
+.htp-dots {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.htp-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.24);
+    transition: width var(--dur-base) var(--ease-out),
+                background var(--dur-base) var(--ease-out);
+}
+
+.htp-dot.is-on {
+    width: 20px;
+    background: var(--highlight);
+}
+
+.htp-next {
+    flex: 0 0 auto;
+    padding: var(--space-3) var(--space-5);
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--card-gradient);
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(233, 69, 96, 0.32);
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.htp-next:active {
+    transform: scale(0.96);
+}
+
+.htp-build {
+    flex: 0 0 auto;
+    margin: var(--space-2) 0 0;
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.22);
+}
+
+/* The shared close animation targets .popup-content, which this sheet does not
+   use; without this the card would sit still while the scrim faded. */
+.htp.popup-closing .htp-card {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+    transition: opacity var(--dur-fast) var(--ease-in),
+                transform var(--dur-fast) var(--ease-in);
+}
+
+/* Phones: the sheet is the screen. */
+@media screen and (max-width: 430px) {
+    .htp {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .htp-card {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 0;
+        padding-top: max(var(--space-3), env(safe-area-inset-top));
+        padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    }
+}
+
+/* Small phones: four chapters plus two round buttons stop fitting, so the
+   chips give up their padding before the row starts scrolling. */
+@media screen and (max-width: 360px) {
+    .htp-chapter {
+        padding: var(--space-1) var(--space-2);
+        font-size: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .htp-deal {
+        animation: none;
+    }
+
+    .htp-hero,
+    .htp-dot,
+    .htp-next {
+        transition: none;
     }
 }
