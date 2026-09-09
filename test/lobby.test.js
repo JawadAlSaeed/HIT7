@@ -253,3 +253,126 @@ test('a game already under way cannot be joined by a stranger', async t => {
     .catch(() => null);
   assert.strictEqual(state, null, 'and they are not in the room to hear anything');
 });
+
+// ---------------------------------------------------------------- clearing a seat
+
+// A game code goes round a group chat, and whoever it reaches can sit down. Before the
+// deal there is no round to lose by removing them, so the host is not stuck with them.
+test('the host removes a player who is sitting in the lobby', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, guests: [quinn] } = await openLobby(server, ['Ada', 'Quinn']);
+
+  const told = quinn.once('removed-from-game');
+  const shorter = ada.waitForState(state => state.players.length === 1, { what: 'Quinn gone' });
+
+  ada.emit('kick-player', gameId, quinn.id);
+
+  assert.match(await told, /removed you/i, 'the player is told, not just dropped');
+  const lobby = await shorter;
+  assert.ok(!lobby.players.some(p => p.name === 'Quinn'), 'and the seat is gone');
+});
+
+// Their seat no longer exists, so the token that pointed at it is worth nothing.
+test('a removed player cannot use their token to walk back in', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, guests: [quinn], tokens } =
+    await openLobby(server, ['Ada', 'Quinn']);
+
+  const told = quinn.once('removed-from-game');
+  ada.emit('kick-player', gameId, quinn.id);
+  await told;
+
+  const refused = quinn.once('rejoin-failed');
+  quinn.emit('rejoin-game', gameId, tokens.Quinn);
+  assert.match(await refused, /no longer in that game/i);
+});
+
+test('the host cannot remove themselves, and a guest cannot remove anybody', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, guests: [quinn] } = await openLobby(server, ['Ada', 'Quinn']);
+
+  const refusedSelf = ada.once('error');
+  ada.emit('kick-player', gameId, ada.id);
+  assert.match(await refusedSelf, /cannot remove themselves/i);
+
+  // A non-host is ignored rather than refused, so there is no event to await. The host
+  // changing a setting is a round trip that does answer, and by the time it lands the
+  // ignored kicks have long since been handled.
+  quinn.emit('kick-player', gameId, ada.id);
+
+  const settled = ada.waitForState(
+    state => state.settings.winningScore === 100, { what: 'the target score' }
+  );
+  ada.emit('update-settings', gameId, { winningScore: 100 });
+  const state = await settled;
+
+  assert.strictEqual(state.players.length, 2, 'both seats still there');
+  assert.ok(state.players.some(p => p.name === 'Ada'), 'including the host');
+});
+
+// ---------------------------------------------------------------- leaving the lobby
+
+// Tapping "Create Game" when you meant "Join" used to be a one-way door.
+test('the host cancels the lobby and everybody is sent back', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, guests: [quinn] } = await openLobby(server, ['Ada', 'Quinn']);
+
+  const guestTold = quinn.once('game-cancelled');
+  const hostTold = ada.once('left-lobby');
+  ada.emit('leave-lobby', gameId);
+
+  assert.match(await guestTold, /cancelled/i);
+  await hostTold;
+
+  // The game is gone, not just emptied: the code stops working for everyone.
+  const stranger = await server.client('Milo-the-human');
+  const refused = stranger.once('error');
+  stranger.emit('join-game', gameId, 'Milo-the-human');
+  assert.match(await refused, /not found/i);
+});
+
+test('a guest leaves the lobby and the game carries on without them', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, guests: [quinn] } = await openLobby(server, ['Ada', 'Quinn']);
+
+  const left = quinn.once('left-lobby');
+  const shorter = ada.waitForState(state => state.players.length === 1, { what: 'Quinn gone' });
+
+  quinn.emit('leave-lobby', gameId);
+  await left;
+
+  const lobby = await shorter;
+  assert.ok(!lobby.players.some(p => p.name === 'Quinn'));
+  assert.strictEqual(lobby.status, 'lobby', 'and the lobby is still open');
+  assert.ok(lobby.players.some(p => p.name === 'Ada'), 'with the host still in it');
+});
+
+// Once cards are dealt this door is shut: walking out mid-round is what the dropped-player
+// handling is for, and it keeps the seat rather than deleting the game under everyone.
+test('leaving does nothing once the game has started', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada, tokens } = await startGame(server, ['Ada', 'Quinn']);
+
+  ada.emit('leave-lobby', gameId);
+
+  // Nothing is emitted back, so the proof is a round trip that does answer: the host's
+  // own token still finds the seat it was supposed to have lost.
+  const back = ada.once('rejoined');
+  ada.emit('rejoin-game', gameId, tokens.Ada);
+  const { game } = await back;
+
+  assert.strictEqual(game.players.length, 2, 'nobody left the table');
+  assert.strictEqual(game.status, 'playing');
+});

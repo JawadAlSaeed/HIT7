@@ -2311,6 +2311,56 @@ body::before {
     gap: 0.5rem;
 }
 
+/* The name takes the slack so every badge and the remove button sit hard right,
+   lined up down the list instead of drifting with the length of each name. */
+.waiting-screen .player-item .player-item-name {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Destructive and permanent, so it is deliberately quiet until you go looking for it -
+   but sized for a thumb, because on a phone a small × next to a name is a misfire
+   waiting to happen. A confirmation stands behind it either way. */
+.waiting-screen .player-item .lobby-kick-button {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-light);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.waiting-screen .player-item .lobby-kick-button:hover,
+.waiting-screen .player-item .lobby-kick-button:focus-visible {
+    opacity: 1;
+    background: rgba(220, 53, 69, 0.85);
+    border-color: rgba(220, 53, 69, 0.9);
+}
+
+/* Its own row under everything else. Sharing the start button's row would put "Cancel
+   Game" a thumb's width from "Start Game", which is the one neighbour it must not have. */
+.waiting-screen .lobby-exit-group {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.waiting-screen .lobby-exit-group .game-button {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.2rem;
+    opacity: 0.85;
+}
+
 .waiting-screen .player-item .host-badge {
     background: var(--highlight);
     padding: 0.2rem 0.5rem;

@@ -278,6 +278,9 @@ socket.on('rejoin-failed', handleRejoinFailed);
 socket.on('round-restarted', handleRoundRestarted);
 socket.on('turn-timeout', handleTurnTimeout);
 socket.on('returned-to-lobby', handleReturnedToLobby);
+socket.on('game-cancelled', handleGameCancelled);
+socket.on('left-lobby', () => returnToStartScreen());
+socket.on('removed-from-game', handleRemovedFromGame);
 
 // Fires on the first connection and again after every reconnect, so it is the one place
 // that can put a returning player back in their seat - whether they reloaded the page or
@@ -615,12 +618,25 @@ function lobbyPlayerRow(player, hostId) {
     // would have everyone waiting on somebody who has walked off. `connected` and not
     // `away` on purpose: the popup needs the grace period, a quiet badge does not.
     const isAway = player.connected === false;
+
+    // A shared link is open to anyone who has it, so the host needs a way to clear a
+    // seat before the deal. Never on a bot - the number of those is a setting, and the
+    // server refuses it - and never on the host's own row, which is what the cancel
+    // button below the list is for.
+    const canKick = isHost && !player.isBot && player.id !== hostId;
+
     return `
         <div class="player-item${player.isBot ? ' is-bot' : ''}${isAway ? ' is-away' : ''}">
-            ${escapeHtml(player.name)}
+            <span class="player-item-name">${escapeHtml(player.name)}</span>
             ${player.isBot ? `<span class="bot-badge">🤖 ${escapeHtml(botLabel(player))}</span>` : ''}
             ${isAway ? '<span class="away-badge">📵 away</span>' : ''}
             ${player.id === hostId ? '<span class="host-badge">HOST</span>' : ''}
+            ${canKick ? `
+                <button type="button" class="lobby-kick-button"
+                    data-kick-id="${escapeHtml(player.id)}"
+                    data-kick-name="${escapeHtml(player.name)}"
+                    aria-label="Remove ${escapeHtml(player.name)}">×</button>
+            ` : ''}
         </div>
     `;
 }
@@ -779,6 +795,8 @@ function handleGameUpdate(game) {
           shareInput.value = currentGameUrl || (window.location.origin + '/join/' + (game.id || currentGameId || ''));
         }
         renderLobbySettings(game);
+        updateLobbyExitButton();
+        wireLobbyExit(waitingScreen);
         if (isHost) updateStartButton(game.players.length);
         } else {
             // Show waiting screen if it doesn't exist
@@ -2098,6 +2116,50 @@ function handleRejoinFailed(message) {
     if (lobby) lobby.style.display = '';
 }
 
+// Every way out of a game that leaves nothing to go back to: the host cancelled the
+// lobby, the host cleared your seat, or you left it yourself. The token is dead in all
+// three, so it goes - otherwise the next 'connect' would try to rejoin a seat that is
+// not there and land on the rejoin-failed path instead of a clean start screen.
+function returnToStartScreen(message) {
+    clearSession();
+    hideConnectionLostOverlay();
+    closeSettingsMenu();
+
+    currentGameId = null;
+    currentGameUrl = "";
+    latestGame = null;
+    isHost = false;
+
+    document.querySelectorAll(
+        '.winner-popup, .round-summary-popup, .info-popup, .disconnect-popup, ' +
+        '.settings-confirm-popup, .seat-picker-popup'
+    ).forEach(popup => popup.remove());
+
+    document.getElementById('waitingScreen')?.remove();
+    clearPlayersBoard();
+    toggleActionButtons(false);
+
+    document.getElementById('gameArea').style.display = 'none';
+    const controls = document.querySelector('.controls');
+    if (controls) controls.style.display = 'none';
+
+    const lobby = document.querySelector('.lobby-screen');
+    if (lobby) lobby.style.display = '';
+
+    // Said under the form rather than in an alert(), so the code field they are about to
+    // retype is still on screen and still tappable. No focus() with it: on a phone that
+    // throws the keyboard up over the message explaining why they are back here.
+    if (message) showLobbyError(message); else clearLobbyError();
+}
+
+function handleGameCancelled(message) {
+    returnToStartScreen(message || 'The host cancelled that game.');
+}
+
+function handleRemovedFromGame(message) {
+    returnToStartScreen(message || 'The host removed you from that game.');
+}
+
 // The server has already busted them and moved the turn on. All this has to do is take
 // down a popup that is now aimed at nothing, and tell the table why the turn jumped.
 function handleTurnTimeout({ playerId, playerName }) {
@@ -2168,10 +2230,16 @@ function showWaitingScreen(gameData) {
         ` : `
             <p>Waiting for host to start the game<div class="loading-spinner"></div></p>
         `}
+        <div class="button-group lobby-exit-group">
+            <button id="leaveLobbyBtn" class="game-button red" type="button"></button>
+        </div>
     `;
     
     waitingScreen.innerHTML = content;
     document.body.appendChild(waitingScreen);
+
+    updateLobbyExitButton();
+    wireLobbyExit(waitingScreen);
 
     renderLobbySettings(gameData);
     wireLobbySettings();
@@ -2199,6 +2267,55 @@ function showWaitingScreen(gameData) {
 
     // Update start button state when players join/leave
     updateStartButton(gameData.players.length);
+}
+
+// The host can change while the waiting room is open - if the host's phone drops, the
+// server hands the role to somebody else - and the two doors are not the same door. So
+// the label is re-derived on every update rather than baked in when the screen is drawn.
+function updateLobbyExitButton() {
+    const button = document.getElementById('leaveLobbyBtn');
+    if (!button) return;
+    button.textContent = isHost ? 'Cancel Game' : 'Leave Game';
+}
+
+// Delegated on the waiting screen itself, because the players list is re-rendered from
+// scratch on every update and a handler bound to a row would go with it.
+function wireLobbyExit(waitingScreen) {
+    if (!waitingScreen || waitingScreen.dataset.exitWired) return;
+    waitingScreen.dataset.exitWired = 'true';
+
+    waitingScreen.addEventListener('click', event => {
+        const kick = event.target.closest('.lobby-kick-button');
+        if (kick) {
+            playSound('buttonClick');
+            confirmSettingsAction({
+                title: `Remove ${kick.dataset.kickName}?`,
+                body: 'They go back to the start screen. They can join again with the code, so this is for clearing a seat, not for locking anybody out.',
+                confirmLabel: 'Yes, remove them',
+                confirmClass: 'red',
+                onConfirm: () => socket.emit('kick-player', currentGameId, kick.dataset.kickId)
+            });
+            return;
+        }
+
+        if (!event.target.closest('#leaveLobbyBtn')) return;
+        playSound('buttonClick');
+
+        // A guest is only giving up their own seat, and one tap is the right price for
+        // that. The host is closing the table on everybody else, which is not.
+        if (!isHost) {
+            socket.emit('leave-lobby', currentGameId);
+            return;
+        }
+
+        confirmSettingsAction({
+            title: 'Cancel this game?',
+            body: 'The waiting room closes and everybody in it goes back to the start screen. The code stops working.',
+            confirmLabel: 'Yes, cancel it',
+            confirmClass: 'red',
+            onConfirm: () => socket.emit('leave-lobby', currentGameId)
+        });
+    });
 }
 
 // Update handleGameStarted to properly transition from waiting screen to game
