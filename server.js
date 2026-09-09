@@ -874,16 +874,34 @@ const registerHandlers = (io) => socket => {
         return socket.emit('error', 'Bots are set in the lobby, not kicked.');
       }
 
-      // Only ever aimed at someone who has actually dropped. This is not a way to
-      // remove a player who is sitting there playing.
-      if (game.players[index].connected) {
+      // Once cards are on the table this is only ever aimed at someone who has actually
+      // dropped: removing a player mid-round throws the round away, so it is not a way
+      // to remove somebody who is sitting there playing. In the lobby there is no round
+      // to lose and no cards to redeal, so the host can clear any seat - which is the
+      // only way to get rid of somebody who walked in off a shared link.
+      if (game.status !== 'lobby' && game.players[index].connected) {
         return socket.emit('error', 'You can only remove a disconnected player.');
+      }
+
+      // The host is the one holding the button. Leaving is a different door: see
+      // 'leave-lobby', which closes the table rather than leaving it hostless.
+      if (game.players[index].id === game.hostId) {
+        return socket.emit('error', 'The host cannot remove themselves.');
       }
 
       const wasPlaying = game.status === 'playing';
       cancelLobbyHold(gameId, game.players[index].token);
       const removed = removePlayerAt(game, index);
       logHistory(game, { player: removed.name, action: 'kicked' });
+
+      // A player kicked while still sitting there has a socket listening, so they get
+      // told rather than left staring at a lobby that has quietly stopped updating.
+      // Their token is dead too - the seat is gone, so rejoin-game has nothing to find.
+      const removedSocket = io.sockets.sockets.get(removed.id);
+      if (removedSocket) {
+        removedSocket.leave(gameId);
+        removedSocket.emit('removed-from-game', 'The host removed you from the game.');
+      }
 
       if (game.players.length === 0) {
         cancelAbandonTimer(gameId);
@@ -908,6 +926,55 @@ const registerHandlers = (io) => socket => {
       }
 
       restartRound(game, io);
+    });
+
+    // Creating a game used to be a one-way door. Tapping "Create Game" when you meant
+    // "Join" left you sitting in a waiting room of one with no way out but a reload, and
+    // the lobby you abandoned stayed in the map until the abandon timer got to it.
+    //
+    // For a guest this is just standing up from the seat. For the host it closes the
+    // table, because a lobby whose host has gone is a game nobody can start.
+    socket.on('leave-lobby', gameId => {
+      const game = games.get(gameId);
+      if (!game || game.status !== 'lobby') return;
+
+      syncHost(game);
+
+      const index = game.players.findIndex(p => p.id === socket.id);
+      if (index === -1) return;
+
+      if (socket.id === game.hostId) {
+        // Sent before the room is emptied, or there is nobody left in it to hear.
+        // Everybody but the host, who does not need telling what they just did - they
+        // get the same plain trip back to the start screen a guest leaving gets.
+        socket.to(gameId).emit('game-cancelled', 'The host cancelled this game.');
+        socket.emit('left-lobby');
+        io.in(gameId).socketsLeave(gameId);
+
+        game.players.forEach(p => cancelLobbyHold(gameId, p.token));
+        cancelAbandonTimer(gameId);
+        releaseBotSockets(game);
+        games.delete(gameId);
+        return;
+      }
+
+      cancelLobbyHold(gameId, game.players[index].token);
+      const removed = removePlayerAt(game, index);
+      socket.leave(gameId);
+      socket.emit('left-lobby');
+
+      // Bots are seats, not players, so a table of nothing but bots is an empty table.
+      if (humansIn(game).length === 0) {
+        cancelAbandonTimer(gameId);
+        releaseBotSockets(game);
+        games.delete(gameId);
+        return;
+      }
+
+      // People take priority over bots, so a freed seat may be worth a bot again.
+      syncBotSeats(game);
+      logHistory(game, { player: removed.name, action: 'left' });
+      broadcastGame(io, game);
     });
 
     // The third answer to somebody dropping, and usually the right one. Waiting keeps
