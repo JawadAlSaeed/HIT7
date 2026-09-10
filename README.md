@@ -192,7 +192,7 @@ MIT License - Feel free to use and modify while maintaining attribution
 
 ## 🙏 Credits
 - The game is inspired by the game "Flip 7" by Messy Table Games and published by The Op Games, you can get the physical game from [here](https://theop.games/products/flip-7)
-- Developed with the help of Copilot AI assistant
+- Developed with the help of Copilot/Claude AI assistant
 - Sound effects from open-source resources such as [Free Sound](https://freesound.org/)
 - Logo created using [Figma](https://www.figma.com/)
 - Icons and graphics from the public domain

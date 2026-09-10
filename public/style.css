@@ -3750,6 +3750,28 @@ h3 span.emoji {
     background: rgba(255, 255, 255, 0.15);
 }
 
+.lobby-footer {
+    margin: 1.25rem 0 0;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+}
+
+/* The one link on the lobby. It is only a shade brighter than the text around
+   it — loud enough to look clickable, quiet enough not to compete with the
+   buttons, which are the thing anybody actually came here to press. */
+.lobby-footer a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.lobby-footer a:hover,
+.lobby-footer a:focus-visible {
+    color: #fff;
+}
+
 .lobby-error {
     margin: 0;
     padding: 0.7rem 0.9rem;
