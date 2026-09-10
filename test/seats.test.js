@@ -15,7 +15,7 @@ const {
   pickBotName
 } = require('../lib/seats');
 
-const { MAX_PLAYERS } = require('../lib/rules');
+const { MAX_PLAYERS, MAX_BOTS } = require('../lib/rules');
 
 const person = (name, overrides = {}) => ({
   id: `socket:${name}`,
@@ -190,9 +190,24 @@ test('a name has to be long enough', () => {
 // ---------------------------------------------------------------- bot seats
 
 test('people take priority over bots for the seats that are left', () => {
-  assert.strictEqual(wantedBotCount(5, 1), 5, 'one human, five bots, table full');
-  assert.strictEqual(wantedBotCount(5, 3), 3, 'three humans leaves room for three');
-  assert.strictEqual(wantedBotCount(5, MAX_PLAYERS), 0, 'a full table of people takes none');
+  assert.strictEqual(wantedBotCount(MAX_BOTS, 1), MAX_BOTS, 'one human, every bot seat');
+  assert.strictEqual(
+    wantedBotCount(MAX_BOTS, MAX_PLAYERS - 2),
+    2,
+    'two seats left over leaves room for two bots'
+  );
+  assert.strictEqual(
+    wantedBotCount(MAX_BOTS, MAX_PLAYERS),
+    0,
+    'a full table of people takes none'
+  );
+});
+
+// The table holds MAX_PLAYERS but bots stop at MAX_BOTS, so a mostly empty table still
+// does not fill itself with bots.
+test('bots never outgrow their own cap however empty the table is', () => {
+  assert.strictEqual(wantedBotCount(99, 1), MAX_BOTS);
+  assert.strictEqual(wantedBotCount(MAX_PLAYERS, 1), MAX_BOTS);
 });
 
 test('a nonsense bot count is treated as none rather than thrown at', () => {

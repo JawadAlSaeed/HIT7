@@ -16,7 +16,7 @@
 //      table. Pictures and sounds, which do not change the rules, go the other way
 //      round because they are the slow part of a first load.
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const SHELL_CACHE = `hit7-shell-${VERSION}`;
 const ASSET_CACHE = `hit7-assets-${VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
