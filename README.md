@@ -131,7 +131,7 @@ Calculation: (15 + 4 - 2) × 2 = 34 points
 - Modern web browser required
 - JavaScript enabled
 - Responsive design (mobile-friendly)
-- Supports 2-6 players, humans and bots in any mix
+- Supports 2-10 players, humans and bots in any mix (up to 5 bots)
 
 ## 🎵 Features
 - Real-time multiplayer

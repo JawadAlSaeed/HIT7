@@ -2,15 +2,17 @@
 // phone. Installed on a home screen, iOS keeps the page suspended rather than reloading
 // it, so "is this fixed" and "is this the old page" look identical from the outside.
 // It is printed at the bottom of How To Play, which is two taps away on any device.
-const BUILD = '2026-09-09.1';
+const BUILD = '2026-09-10.1';
 
 const socket = io();
 let currentGameId = null;
 let isHost = false;
 const MAX_REGULAR_CARDS = 7;
-// Mirrors MAX_PLAYERS in server.js. Only used to work out how many bot seats are
-// still going spare; the server clamps the number it is actually sent regardless.
-const MAX_PLAYERS = 6;
+// Mirrors MAX_PLAYERS and MAX_BOTS in lib/rules.js. Only used to work out how many bot
+// seats are still going spare; the server clamps the number it is actually sent
+// regardless. Bots have their own, lower ceiling - the table grew, the bots did not.
+const MAX_PLAYERS = 10;
+const MAX_BOTS = 5;
 // Nothing caps how many special cards a hand can hold, so this is only how many
 // empty placeholders the special grid draws — enough to keep the box a stable
 // shape without padding it out to a full regular row of dead slots.
@@ -532,9 +534,9 @@ const DECK_MODE_INFO = {
 
 const WIN_SCORE_OPTIONS = [100, 150, 200, 300];
 
-// Bots are seats, so the most you can have is a full table minus yourself. Built
-// rather than written out, so it follows MAX_PLAYERS if that ever changes.
-const BOT_COUNT_OPTIONS = Array.from({ length: MAX_PLAYERS }, (_, n) => n);
+// None up to MAX_BOTS. Built rather than written out, so it follows the cap if that
+// ever changes.
+const BOT_COUNT_OPTIONS = Array.from({ length: MAX_BOTS + 1 }, (_, n) => n);
 
 const DEFAULT_SETTINGS = { deckMode: 'extreme', winningScore: 200, botCount: 0 };
 
@@ -573,7 +575,7 @@ function renderLobbySettings(gameData) {
     // offer. The server clamps it too; this is only so the lobby does not lie.
     const players = (gameData && gameData.players) || [];
     const humans = players.filter(p => !p.isBot).length;
-    const roomFor = Math.max(0, MAX_PLAYERS - humans);
+    const roomFor = Math.min(MAX_BOTS, Math.max(0, MAX_PLAYERS - humans));
 
     const botOptions = BOT_COUNT_OPTIONS.map(count => option(
         count === settings.botCount,

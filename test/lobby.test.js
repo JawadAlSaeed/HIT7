@@ -7,7 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 
 const { startServer, openLobby, startGame } = require('./helpers/harness');
-const { MAX_PLAYERS } = require('../lib/rules');
+const { MAX_PLAYERS, MAX_BOTS } = require('../lib/rules');
 
 const seat = (state, name) => state.players.find(p => p.name === name);
 
@@ -96,17 +96,23 @@ test('bot seats appear, spread across personalities, and go again', async t => {
   await fewer;
 });
 
+// Only once the table is actually full. Before that a newcomer just takes one of the
+// empty seats, which is why this fills the table to MAX_PLAYERS first.
 test('people take the seats bots were sitting in', async t => {
   const server = await startServer();
   t.after(() => server.stop());
 
-  const { gameId, host: ada } = await openLobby(server, ['Ada']);
+  const people = Array.from(
+    { length: MAX_PLAYERS - MAX_BOTS },
+    (_, i) => `Person${i + 1}`
+  );
+  const { gameId, host: ada } = await openLobby(server, people);
 
   const filled = ada.waitForState(
     state => state.players.length === MAX_PLAYERS,
-    { what: 'a full table of bots' }
+    { what: 'a full table' }
   );
-  ada.emit('update-settings', gameId, { botCount: 5 });
+  ada.emit('update-settings', gameId, { botCount: MAX_BOTS });
   await filled;
 
   // A person arriving must be able to sit down, which means a bot has to get up.
@@ -126,25 +132,66 @@ test('people take the seats bots were sitting in', async t => {
   const state = await seated;
 
   assert.strictEqual(state.players.length, MAX_PLAYERS, 'the table did not grow');
-  assert.strictEqual(state.players.filter(p => p.isBot).length, 4, 'a bot gave up its seat');
-  assert.strictEqual(state.settings.botCount, 4, 'and the setting agrees with the table');
+  assert.strictEqual(
+    state.players.filter(p => p.isBot).length,
+    MAX_BOTS - 1,
+    'a bot gave up its seat'
+  );
+  assert.strictEqual(
+    state.settings.botCount,
+    MAX_BOTS - 1,
+    'and the setting agrees with the table'
+  );
 });
 
-// A host may never fill every seat with a bot: a table has to have room for a person.
-test('a host cannot ask for a table of nothing but bots', async t => {
+// A newcomer takes an empty chair when there is one - no bot has to move.
+test('an empty seat is taken before a bot is asked to move', async t => {
+  const server = await startServer();
+  t.after(() => server.stop());
+
+  const { gameId, host: ada } = await openLobby(server, ['Ada']);
+
+  const filled = ada.waitForState(
+    state => state.players.length === MAX_BOTS + 1,
+    { what: 'every bot seat taken' }
+  );
+  ada.emit('update-settings', gameId, { botCount: MAX_BOTS });
+  await filled;
+
+  const quinn = await server.client('Quinn');
+  const seated = ada.waitForState(
+    state => state.players.some(p => p.name === 'Quinn'),
+    { what: 'Quinn to be seated' }
+  );
+  const joined = quinn.once('game-joined');
+  quinn.emit('join-game', gameId, 'Quinn');
+  await joined;
+  const state = await seated;
+
+  assert.strictEqual(state.players.length, MAX_BOTS + 2, 'the table grew by one');
+  assert.strictEqual(
+    state.players.filter(p => p.isBot).length,
+    MAX_BOTS,
+    'every bot kept its seat'
+  );
+});
+
+// Bots stop at MAX_BOTS however many seats the table has, so there is always room for
+// people - a host can never turn the game into a bot demo.
+test('a host cannot ask for more bots than the cap', async t => {
   const server = await startServer();
   t.after(() => server.stop());
 
   const { gameId, host: ada } = await openLobby(server, ['Ada']);
 
   const clamped = ada.waitForState(
-    state => state.settings.botCount === MAX_PLAYERS - 1,
+    state => state.settings.botCount === MAX_BOTS,
     { what: 'the bot count to be clamped' }
   );
   ada.emit('update-settings', gameId, { botCount: 99 });
   const state = await clamped;
 
-  assert.strictEqual(state.players.length, MAX_PLAYERS);
+  assert.strictEqual(state.players.length, MAX_BOTS + 1);
   assert.ok(state.players.some(p => !p.isBot), 'there is still a person at the table');
 });
 

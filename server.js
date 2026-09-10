@@ -27,6 +27,7 @@ const {
 const {
   MAX_REGULAR_CARDS,
   MAX_PLAYERS,
+  MAX_BOTS,
   MAX_NAME_LENGTH,
   DEFAULT_WINNING_SCORE,
   WIN_SCORE_OPTIONS,
@@ -142,11 +143,11 @@ const sanitizeSettings = (current, incoming) => {
   if (WIN_SCORE_OPTIONS.includes(incoming.winningScore)) {
     settings.winningScore = incoming.winningScore;
   }
-  // A table has to have room for at least one person, so a host can never fill every
-  // seat with bots. The real ceiling also depends on how many humans are already
-  // sitting down, which only syncBotSeats can see.
+  // Bots have their own ceiling, well below a full table: a table has to have room for
+  // people, and a mostly-bot game is not what anybody joined for. The real ceiling also
+  // depends on how many humans are already sitting down, which only syncBotSeats sees.
   if (Number.isInteger(incoming.botCount)) {
-    settings.botCount = Math.min(MAX_PLAYERS - 1, Math.max(0, incoming.botCount));
+    settings.botCount = Math.min(MAX_BOTS, Math.max(0, incoming.botCount));
   }
   return settings;
 };
@@ -1748,7 +1749,7 @@ const botifySeat = (game, index) => {
   // table it is describing.
   game.settings = {
     ...settingsOf(game),
-    botCount: Math.min(MAX_PLAYERS - 1, game.players.filter(isBot).length)
+    botCount: Math.min(MAX_BOTS, game.players.filter(isBot).length)
   };
 
   return bot;
