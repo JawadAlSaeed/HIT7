@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -16 272 288" width="272" height="288" role="img" aria-label="HIT 7">
+  <!-- The 7. -20/-16 of breathing room on each side so the mark sits at roughly the
+       size the old PNG did inside the same CSS box. -->
+  <polygon points="0,0 232,0 120,256 33,256 128,37 0,37" fill="#cc3350"/>
+  <!-- HIT, cream on the 7 with a navy keyline so it holds on both the red and the page. -->
+  <g fill="#fff3d6" stroke="#1a1a2e" stroke-width="9" stroke-linejoin="round">
+    <path d="M5 40h20v59h30V40h20v135H55v-55H25v55H5z"/>
+    <path d="M82 40h21v135H82z"/>
+    <path d="M108 40h63v21h-21v114h-21V61h-21z"/>
+  </g>
+</svg>

@@ -1193,10 +1193,10 @@ function renderDisconnectRows(popup, game) {
                 <span class="disconnect-name">${escapeHtml(player.name)}</span>
                 <span class="disconnect-elapsed">${elapsed ? `away ${elapsed}` : 'away'}</span>
                 ${amHost ? `
-                    <button class="game-button green botify-button" data-id="${escapeHtml(player.id)}">
+                    <button class="game-button quiet botify-button" data-id="${escapeHtml(player.id)}">
                         Let a bot take over
                     </button>
-                    <button class="game-button red kick-button" data-id="${escapeHtml(player.id)}">
+                    <button class="game-button quiet kick-button" data-id="${escapeHtml(player.id)}">
                         Remove &amp; restart round
                     </button>
                 ` : ''}
@@ -2222,7 +2222,7 @@ function showWaitingScreen(gameData) {
         </div>
         ${isHost ? `
             <div class="button-group">
-                <button id="startGameBtn" class="game-button green" 
+                <button id="startGameBtn" class="game-button" 
                     ${gameData.players.length < 2 ? 'disabled' : ''}>
                     ${gameData.players.length < 2 ? 
                         'Waiting for Players <div class="loading-spinner"></div>' : 
@@ -2233,7 +2233,7 @@ function showWaitingScreen(gameData) {
             <p>Waiting for host to start the game<div class="loading-spinner"></div></p>
         `}
         <div class="button-group lobby-exit-group">
-            <button id="leaveLobbyBtn" class="game-button red" type="button"></button>
+            <button id="leaveLobbyBtn" class="game-button quiet" type="button"></button>
         </div>
     `;
     
@@ -2294,7 +2294,6 @@ function wireLobbyExit(waitingScreen) {
                 title: `Remove ${kick.dataset.kickName}?`,
                 body: 'They go back to the start screen. They can join again with the code, so this is for clearing a seat, not for locking anybody out.',
                 confirmLabel: 'Yes, remove them',
-                confirmClass: 'red',
                 onConfirm: () => socket.emit('kick-player', currentGameId, kick.dataset.kickId)
             });
             return;
@@ -2314,7 +2313,6 @@ function wireLobbyExit(waitingScreen) {
             title: 'Cancel this game?',
             body: 'The waiting room closes and everybody in it goes back to the start screen. The code stops working.',
             confirmLabel: 'Yes, cancel it',
-            confirmClass: 'red',
             onConfirm: () => socket.emit('leave-lobby', currentGameId)
         });
     });
@@ -2514,7 +2512,7 @@ function showWinnerPopup(winner, isHost, players = []) {
             ` : ''}
 
             ${isHost ? `
-                <button id="rematchButton" class="game-button green">
+                <button id="rematchButton" class="game-button">
                     Rematch?
                 </button>
             ` : `
@@ -2683,7 +2681,6 @@ function wireSettingsMenu() {
             title: 'Back to the lobby?',
             body: 'Everyone goes back to the waiting room and the scores are wiped. You can change the deck, the target score and the bots before starting again.',
             confirmLabel: 'Yes, back to lobby',
-            confirmClass: 'blue',
             onConfirm: () => socket.emit('return-to-lobby', currentGameId)
         });
     };
@@ -2700,7 +2697,6 @@ function wireSettingsMenu() {
                 ? `The game stops here and ${leader} wins on points. Everyone sees the end screen.`
                 : 'The game stops here and whoever is ahead on points wins.',
             confirmLabel: 'Yes, end it',
-            confirmClass: 'red',
             onConfirm: () => socket.emit('end-game', currentGameId)
         });
     };
@@ -2719,7 +2715,7 @@ function leadingPlayerName() {
 }
 
 // Both of these throw away a game in progress, so neither happens on one tap.
-function confirmSettingsAction({ title, body, confirmLabel, confirmClass, onConfirm }) {
+function confirmSettingsAction({ title, body, confirmLabel, onConfirm }) {
     document.querySelectorAll('.settings-confirm-popup').forEach(p => p.remove());
 
     const popup = document.createElement('div');
@@ -2729,10 +2725,10 @@ function confirmSettingsAction({ title, body, confirmLabel, confirmClass, onConf
             <h2>${escapeHtml(title)}</h2>
             <p>${escapeHtml(body)}</p>
             <div class="button-group">
-                <button class="game-button ${confirmClass}" type="button" data-role="confirm">
+                <button class="game-button" type="button" data-role="confirm">
                     ${escapeHtml(confirmLabel)}
                 </button>
-                <button class="game-button" type="button" data-role="cancel">Cancel</button>
+                <button class="game-button quiet" type="button" data-role="cancel">Cancel</button>
             </div>
         </div>
     `;

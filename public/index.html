@@ -11,6 +11,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo+Play:wght@700&display=swap" rel="stylesheet">
         <title>HIT 7</title>
         <!-- Updated favicon links with base path -->
+        <link rel="icon" type="image/svg+xml" href="/images/hit7-logo.svg">
         <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
         <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
@@ -50,7 +51,7 @@
         <!-- Lobby Screen -->
         <div class="lobby-screen">
             <div class="game-logo">
-                <img src="/images/hit7-logo.png" alt="HIT 7 Logo" class="logo-image">
+                <img src="/images/hit7-logo.svg" alt="HIT 7 Logo" class="logo-image">
             </div>
 
             <div class="menu-container">
@@ -78,13 +79,13 @@
                             same code and the same name.</span>
                     </div>
 
-                    <button type="button" id="joinGame" class="lobby-button blue">
+                    <button type="button" id="joinGame" class="lobby-button">
                         🔗 Join Game
                     </button>
 
                     <p class="lobby-error" id="lobbyError" role="alert" hidden></p>
 
-                    <button type="button" id="tutorialButton" class="lobby-button tutorial-button">
+                    <button type="button" id="tutorialButton" class="lobby-button quiet tutorial-button">
                         📖 How To Play
                     </button>
                 </form>
@@ -107,7 +108,7 @@
             <div class="game-header">
                 <div class="header-left">
                     <div class="game-logo">
-                        <img src="/images/hit7-logo.png" alt="HIT 7 Logo" class="logo-image">
+                        <img src="/images/hit7-logo.svg" alt="HIT 7 Logo" class="logo-image">
                     </div>
                 </div>
                 <div class="header-right">
@@ -130,7 +131,7 @@
                          The dot on the gear is how a muted game says so with the menu
                          shut, which the old standalone speaker button did by itself. -->
                     <div class="settings-menu-wrap">
-                        <button id="settingsButton" class="game-button" title="Settings"
+                        <button id="settingsButton" class="game-button quiet" title="Settings"
                                 aria-label="Settings" aria-haspopup="true" aria-expanded="false"
                                 aria-controls="settingsMenu">⚙️<span class="button-label">Settings</span></button>
 
@@ -234,8 +235,8 @@
 
         <!-- Move controls out of gameArea so they are fixed to the viewport -->
         <div class="controls" style="display: none;">
-            <button id="flipCard" class="game-button blue">HIT</button>
-            <button id="standButton" class="game-button orange">Stand</button>
+            <button id="flipCard" class="game-button">HIT</button>
+            <button id="standButton" class="game-button quiet">Stand</button>
         </div>
 
         <!-- Popup Container -->
