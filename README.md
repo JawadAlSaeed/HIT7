@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/images/hit7-logo.png" alt="HIT 7 Logo" width="200"/>
+  <img src="public/images/hit7-logo.svg" alt="HIT 7 Logo" width="200"/>
   <p>A fast-paced card game of risk and strategy!</p>
 </div>
 
