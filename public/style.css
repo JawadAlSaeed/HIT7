@@ -5025,6 +5025,9 @@ h3 span.emoji {
 
     /* ------------------------------------------------------------ game board */
 
+    /* Drawn for a 1600x900 window. On anything bigger client.js sets a
+       `zoom` on this element so the whole table scales up with the screen
+       rather than sitting small in the middle of it - see fitBoardToScreen. */
     .game-board {
         flex: 1 1 auto;
         min-height: 0;
@@ -6916,6 +6919,9 @@ button.setting-option:active {
        bar. It is the same shape the phone layout has, with the rail showing
        the whole hand instead of pips because there is room for it. */
 
+    /* Drawn for a 1600x900 window. On anything bigger client.js sets a
+       `zoom` on this element so the whole table scales up with the screen
+       rather than sitting small in the middle of it - see fitBoardToScreen. */
     .game-board {
         flex: 1 1 auto;
         min-height: 0;
@@ -6965,11 +6971,18 @@ button.setting-option:active {
         padding: 4px;
     }
 
+    /* 60px is what fits two rows of under a five-seat rail in a 900px-tall
+       window. Bigger windows do not get bigger cards here: client.js zooms
+       the whole board to the window instead, so everything grows together. */
+    .my-hand {
+        --hand-card: 60px;
+    }
+
     .my-hand .player {
         /* The base rule's flex: 1 would grow the panel to fill the column on
            a tall screen - a hand with 300px of nothing under the cards. */
         flex: 0 0 auto;
-        width: min(640px, 100%);
+        width: min(max(640px, calc(var(--hand-card) * 7 + 140px)), 100%);
         min-width: 0;
         max-width: none;
         margin: auto 0 0;
@@ -7044,20 +7057,25 @@ button.setting-option:active {
        1fr track made them 77px, and the two rows together would not fit the
        height a 900px window leaves under the rail. */
     .my-hand .card-grid {
-        grid-template-columns: repeat(7, 60px);
+        grid-template-columns: repeat(7, var(--hand-card));
         justify-content: center;
     }
 
     .my-hand .card-grid.special {
-        grid-template-columns: repeat(auto-fit, 60px);
+        grid-template-columns: repeat(auto-fit, var(--hand-card));
     }
 
     .my-hand .card,
     .my-hand .empty-slot {
-        width: 60px;
+        width: var(--hand-card);
         height: auto;
         aspect-ratio: 5 / 7;
         min-width: 0;
+        font-size: calc(var(--hand-card) * 0.42);
+    }
+
+    .my-hand .card.special {
+        font-size: calc(var(--hand-card) * 0.3);
     }
 
     /* ---- one compact panel per opponent ---- */
@@ -7238,21 +7256,12 @@ button.setting-option:active {
        the hand loses its two captions and a size on the cards so it still
        fits under the rail without scrolling. */
     @media (max-height: 820px) {
+        .my-hand {
+            --hand-card: 50px;
+        }
+
         .my-hand .cards-label {
             display: none;
-        }
-
-        .my-hand .card-grid {
-            grid-template-columns: repeat(7, 50px);
-        }
-
-        .my-hand .card-grid.special {
-            grid-template-columns: repeat(auto-fit, 50px);
-        }
-
-        .my-hand .card,
-        .my-hand .empty-slot {
-            width: 50px;
         }
     }
 }

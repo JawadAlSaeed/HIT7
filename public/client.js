@@ -1693,6 +1693,32 @@ function initMobileChrome() {
 
     if (PHONE_QUERY.addEventListener) PHONE_QUERY.addEventListener('change', onBreakpoint);
     else PHONE_QUERY.addListener(onBreakpoint);
+
+    window.addEventListener('resize', fitBoardToScreen);
+    fitBoardToScreen();
+}
+
+// The desktop table is drawn for a 1600x900 window: the header and the
+// HIT / STAND bar take 172px of that, the board the other 728. A bigger
+// window zooms the board up in step, so a 1080p screen shows the same table a
+// quarter larger instead of the same table with a band of nothing around it.
+// Never below 1: smaller windows have their own rules in style.css, and the
+// phone layout is sized in dvh already.
+const BOARD_DESIGN = { width: 1600, boardHeight: 728, chrome: 172 };
+
+function fitBoardToScreen() {
+    const board = document.querySelector('.game-board');
+    if (!board) return;
+
+    if (isPhoneLayout()) {
+        board.style.zoom = '';
+        return;
+    }
+
+    const byHeight = (window.innerHeight - BOARD_DESIGN.chrome) / BOARD_DESIGN.boardHeight;
+    const byWidth = window.innerWidth / BOARD_DESIGN.width;
+    const scale = Math.max(1, Math.min(byHeight, byWidth, 1.6));
+    board.style.zoom = scale === 1 ? '' : scale.toFixed(3);
 }
 
 // document.querySelector needs socket ids escaped; CSS.escape is not in every
