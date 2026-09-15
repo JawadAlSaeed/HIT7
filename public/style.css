@@ -568,8 +568,10 @@ body::before {
 
 .scores {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    /* One label row and one value row shared by all three boxes. Without this a
+    /* Round and Total. There used to be a third box counting cards (0/7), but
+       the seven slots under it already say that. */
+    grid-template-columns: repeat(2, 1fr);
+    /* One label row and one value row shared by both boxes. Without this a
        label that wraps to two lines makes its own box taller and leaves the
        numbers beside it sitting higher - which is exactly what CARDS vs
        ROUND SCORE / TOTAL SCORE used to do. */
@@ -4143,7 +4145,7 @@ h3 span.emoji {
 
     /* Scores Section */
     .scores {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 0.3rem;
         padding: 0.5rem;
     }
@@ -5023,6 +5025,9 @@ h3 span.emoji {
 
     /* ------------------------------------------------------------ game board */
 
+    /* Drawn for a 1600x900 window. On anything bigger client.js sets a
+       `zoom` on this element so the whole table scales up with the screen
+       rather than sitting small in the middle of it - see fitBoardToScreen. */
     .game-board {
         flex: 1 1 auto;
         min-height: 0;
@@ -5170,7 +5175,7 @@ h3 span.emoji {
 
     .my-hand .scores {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 6px;
         margin: 10px 0;
     }
@@ -6903,6 +6908,361 @@ button.setting-option:active {
         padding: 0;
         gap: 10px;
         background: none;
+    }
+
+    /* ---- the card table: opponents in a row up top, your hand big below ----
+
+       Before this the board was one equal panel per player in a grid: with six
+       players the bottom half of the screen was empty, with two the panels sat
+       in the far corners. Now the other players are compact panels across the
+       top and your own hand is the one big panel, sat down by the HIT / STAND
+       bar. It is the same shape the phone layout has, with the rail showing
+       the whole hand instead of pips because there is room for it. */
+
+    /* Drawn for a 1600x900 window. On anything bigger client.js sets a
+       `zoom` on this element so the whole table scales up with the screen
+       rather than sitting small in the middle of it - see fitBoardToScreen. */
+    .game-board {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        /* The HIT / STAND bar is fixed over the bottom 88px of the window;
+           the container's own 16px covers the rest. */
+        padding-bottom: 72px;
+        box-sizing: border-box;
+    }
+
+    /* Only a spectator uses the equal board; for everyone else it is empty. */
+    .players-container:empty {
+        display: none;
+    }
+
+    /* Wraps so a tablet with five opponents gets two short rows rather than
+       five panels too narrow for their seven slots. */
+    .opponent-rail {
+        display: flex;   /* undoes the desktop hide above the phone block */
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: stretch;
+        gap: 12px;
+        padding: 4px;
+        overflow: visible;
+    }
+
+    .opponent-rail:empty,
+    .my-hand:empty {
+        display: none;
+    }
+
+    /* The hand keeps to the bottom of whatever room the rail leaves, but the
+       auto margin gives way when the panel is taller than the room - so on a
+       short window the panel scrolls rather than losing its top. */
+    .my-hand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 4px;
+    }
+
+    /* 60px is what fits two rows of under a five-seat rail in a 900px-tall
+       window. Bigger windows do not get bigger cards here: client.js zooms
+       the whole board to the window instead, so everything grows together. */
+    .my-hand {
+        --hand-card: 60px;
+    }
+
+    .my-hand .player {
+        /* The base rule's flex: 1 would grow the panel to fill the column on
+           a tall screen - a hand with 300px of nothing under the cards. */
+        flex: 0 0 auto;
+        width: min(max(640px, calc(var(--hand-card) * 7 + 140px)), 100%);
+        min-width: 0;
+        max-width: none;
+        margin: auto 0 0;
+        padding: 14px 16px;
+        gap: 10px;
+        box-sizing: border-box;
+    }
+
+    /* Trimmed so that the whole hand - two rows of 60px cards included - fits
+       under a five-seat rail in a 900px-tall window without scrolling. */
+    .my-hand .scores {
+        padding: 6px;
+        gap: 8px;
+    }
+
+    .my-hand .score-box {
+        padding: 6px 8px;
+    }
+
+    /* Cairo Play's normal line box is nearly twice its cap height; at this
+       size that was 54px of box for 29px of digits. */
+    .my-hand .score-value {
+        margin-top: 2px;
+        line-height: 1.1;
+    }
+
+    .my-hand .cards-label {
+        padding: 5px;
+        margin-bottom: 6px;
+        line-height: 1.2;
+    }
+
+    /* Name on the left, state on the right, one line - the same head the
+       compact panels have, so the two read as one family. The boxed status
+       strip it replaces cost 60px the cards below wanted. */
+    .my-hand .player-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px 12px;
+    }
+
+    .my-hand .player-header h3 {
+        margin: 0;
+        min-width: 0;
+    }
+
+    .my-hand .player-status {
+        margin: 0;
+        padding: 0;
+        gap: 6px;
+        background: none;
+        border: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .my-hand .status-icon {
+        width: auto;
+        height: auto;
+        font-size: 1.1rem;
+    }
+
+    .my-hand .busted-card,
+    .my-hand .second-chance-indicator,
+    .my-hand .away-indicator {
+        margin: 0;
+    }
+
+    /* Cards at a fixed 60px, not one seventh of the panel: at 640px wide a
+       1fr track made them 77px, and the two rows together would not fit the
+       height a 900px window leaves under the rail. */
+    .my-hand .card-grid {
+        grid-template-columns: repeat(7, var(--hand-card));
+        justify-content: center;
+    }
+
+    .my-hand .card-grid.special {
+        grid-template-columns: repeat(auto-fit, var(--hand-card));
+    }
+
+    .my-hand .card,
+    .my-hand .empty-slot {
+        width: var(--hand-card);
+        height: auto;
+        aspect-ratio: 5 / 7;
+        min-width: 0;
+        font-size: calc(var(--hand-card) * 0.42);
+    }
+
+    .my-hand .card.special {
+        font-size: calc(var(--hand-card) * 0.3);
+    }
+
+    /* ---- one compact panel per opponent ---- */
+
+    .opponent-rail .player {
+        /* 200px holds the name, both scores and seven 24px slots. */
+        flex: 1 1 200px;
+        width: auto;
+        min-width: 0;
+        max-width: 300px;
+        margin: 0;
+        padding: 10px 12px;
+        gap: 8px;
+        border-radius: 10px;
+    }
+
+    /* The lift is for a panel you are about to read closely; six of them
+       bobbing in a row is noise. */
+    .opponent-rail .player:hover {
+        transform: none;
+    }
+
+    .opponent-rail .player.busted {
+        opacity: 0.55;
+    }
+
+    /* Name on the left, state on the right, one line. */
+    .opponent-rail .player-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px 8px;
+    }
+
+    .opponent-rail .player-header h3 {
+        margin: 0;
+        min-width: 0;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .opponent-rail .player-status {
+        margin: 0;
+        padding: 0;
+        gap: 4px;
+        background: none;
+        border: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .opponent-rail .status-icon {
+        width: auto;
+        height: auto;
+        font-size: 0.8rem;
+    }
+
+    .opponent-rail .status-text {
+        font-size: 0.66rem;
+        letter-spacing: 0.1em;
+    }
+
+    .opponent-rail .busted-card,
+    .opponent-rail .second-chance-indicator,
+    .opponent-rail .away-indicator {
+        margin: 0;
+        padding: 1px 6px;
+        font-size: 0.62rem;
+    }
+
+    .opponent-rail .scores {
+        padding: 0;
+        gap: 6px;
+        background: none;
+        border: 0;
+    }
+
+    .opponent-rail .score-box {
+        padding: 5px 4px;
+        border-radius: 6px;
+    }
+
+    .opponent-rail .score-label {
+        font-size: 0.6rem;
+        letter-spacing: 0.1em;
+    }
+
+    .opponent-rail .score-value {
+        margin-top: 2px;
+        font-size: 1.05rem;
+        line-height: 1.1;
+    }
+
+    /* The slots say "regular" and "special" by themselves. */
+    .opponent-rail .cards-label {
+        display: none;
+    }
+
+    .opponent-rail .cards-section {
+        gap: 8px;
+    }
+
+    .opponent-rail .card-grid {
+        --cell-gap: 4px;
+        grid-template-columns: repeat(7, 24px);
+        justify-content: center;
+        padding: 0;
+        background: none;
+        border: 0;
+        border-radius: 0;
+    }
+
+    /* A line between the two rows, centred like the row above it. */
+    .opponent-rail .card-grid.special {
+        grid-template-columns: repeat(auto-fit, 24px);
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    /* The base rules pin a card at 45x63 with more specificity than the grid
+       track can override, so the size is restated here. */
+    .opponent-rail .card,
+    .opponent-rail .empty-slot {
+        width: 24px;
+        height: auto;
+        aspect-ratio: 5 / 7;
+        min-width: 0;
+        border-radius: 4px;
+        border-width: 1px;
+        font-size: 0.8rem;
+    }
+
+    .opponent-rail .card.special {
+        font-size: 0.66rem;
+    }
+
+    .opponent-rail .card.special::before {
+        font-size: 0.8rem;
+    }
+
+    .opponent-rail .draw-three-indicator {
+        font-size: 0.62rem;
+        padding: 2px 6px;
+    }
+
+    /* A 1024px tablet or a narrow window: five 200px seats do not fit in one
+       row, so the seats and their slots go one size down and five fit. */
+    @media (max-width: 1280px) {
+        .opponent-rail {
+            gap: 10px;
+        }
+
+        .opponent-rail .player {
+            flex-basis: 180px;
+            padding: 8px 10px;
+        }
+
+        .opponent-rail .card-grid {
+            --cell-gap: 3px;
+            grid-template-columns: repeat(7, 20px);
+        }
+
+        .opponent-rail .card-grid.special {
+            grid-template-columns: repeat(auto-fit, 20px);
+        }
+
+        .opponent-rail .card,
+        .opponent-rail .empty-slot {
+            width: 20px;
+            font-size: 0.7rem;
+        }
+    }
+
+    /* A short window (a 768px-tall tablet, a laptop with the bar showing):
+       the hand loses its two captions and a size on the cards so it still
+       fits under the rail without scrolling. */
+    @media (max-height: 820px) {
+        .my-hand {
+            --hand-card: 50px;
+        }
+
+        .my-hand .cards-label {
+            display: none;
+        }
     }
 }
 

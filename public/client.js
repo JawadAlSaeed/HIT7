@@ -1331,12 +1331,13 @@ function clearPlayersBoard() {
     lastPlayerState.clear();
 }
 
-// Phones get a different shape entirely: your own hand fills the screen, the
-// other players compress into a tap-to-open rail. Anything wider keeps the
-// board where every panel is equal.
-// Must stay identical to the media query mobile.css opens with, or the rail and
-// hand get styled but never filled. A landscape phone is wide but short, so
-// width alone would misread it as a desktop.
+// Both layouts are a card table: your own hand is the big panel, the other
+// players sit in a rail. On a phone the rail holds tap-to-open tiles and the
+// hand fills the screen; on anything wider the rail holds compact panels
+// across the top and the hand sits below them.
+// Must stay identical to the media query the phone block in style.css opens
+// with, or the rail and hand get styled but never filled. A landscape phone
+// is wide but short, so width alone would misread it as a desktop.
 const PHONE_QUERY = window.matchMedia(
     '(max-width: 767px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse)'
 );
@@ -1346,33 +1347,95 @@ function isPhoneLayout() {
 }
 
 function renderPlayers(game) {
-    // Panels left in the container the other layout owns would sit there
-    // forever, so every render evicts them rather than trusting the
-    // breakpoint listener to have fired. Rotating a phone mid-game, or any
-    // missed change event, self-corrects on the next update.
+    // The rail holds .opp-tile buttons on a phone and .player panels on a
+    // desktop. Whatever the other layout left behind gets evicted on every
+    // render rather than trusting the breakpoint listener to have fired, so
+    // rotating a phone mid-game, or any missed change event, self-corrects on
+    // the next update.
     const phone = isPhoneLayout();
-    const stale = phone
-        ? ['playersContainer']
-        : ['opponentRail', 'myHand'];
-
-    stale.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.children.length) {
-            el.innerHTML = '';
-            lastPlayerState.clear();
-        }
-    });
+    const rail = document.getElementById('opponentRail');
+    if (rail && rail.querySelector(phone ? '.player' : '.opp-tile')) {
+        rail.innerHTML = '';
+        lastPlayerState.clear();
+    }
 
     if (phone) {
         renderPlayersPhone(game);
     } else {
-        renderPlayersBoard(game);
+        renderPlayersDesk(game);
     }
     updateTurnStrip(game);
     refreshOpenPlayerSheet(game);
 }
 
-// Desktop / tablet: one equal panel per player, in seat order.
+// Desktop / tablet: my panel goes in #myHand at full size, everyone else is a
+// compact panel in the rail. A spectator has no hand, so they get the old
+// equal board instead.
+function renderPlayersDesk(game) {
+    const hand = document.getElementById('myHand');
+    const rail = document.getElementById('opponentRail');
+    const board = document.getElementById('playersContainer');
+    if (!hand || !rail || !board) return;
+
+    const meIndex = game.players.findIndex(p => p.id === socket.id);
+    const me = meIndex >= 0 ? game.players[meIndex] : null;
+
+    if (!me) {
+        if (hand.children.length || rail.children.length) {
+            hand.innerHTML = '';
+            rail.innerHTML = '';
+            lastPlayerState.clear();
+        }
+        renderPlayersBoard(game);
+        return;
+    }
+
+    if (board.children.length) {
+        board.innerHTML = '';
+        lastPlayerState.clear();
+    }
+
+    let mine = hand.querySelector(`.player[data-player-id="${cssEscape(me.id)}"]`);
+    const isNewMine = !mine;
+    if (isNewMine) {
+        hand.innerHTML = '';
+        mine = buildPlayerPanel(me);
+        mine.classList.add('is-me');
+        hand.appendChild(mine);
+    }
+    syncPlayerPanel(mine, me, meIndex === game.currentPlayer, isNewMine);
+
+    const opponents = game.players.filter(p => p.id !== socket.id);
+    const seen = new Set();
+
+    opponents.forEach((player, index) => {
+        seen.add(player.id);
+
+        let panel = rail.querySelector(`.player[data-player-id="${cssEscape(player.id)}"]`);
+        const isNewPanel = !panel;
+        if (isNewPanel) {
+            panel = buildPlayerPanel(player);
+            panel.classList.add('compact');
+            rail.appendChild(panel);
+        }
+        if (rail.children[index] !== panel) {
+            rail.insertBefore(panel, rail.children[index] || null);
+        }
+
+        const isTheirTurn = game.players[game.currentPlayer]?.id === player.id;
+        syncPlayerPanel(panel, player, isTheirTurn, isNewPanel);
+    });
+
+    [...rail.querySelectorAll('.player')].forEach(panel => {
+        const id = panel.dataset.playerId;
+        if (!seen.has(id)) {
+            panel.remove();
+            lastPlayerState.delete(id);
+        }
+    });
+}
+
+// Spectator fallback: one equal panel per player, in seat order.
 function renderPlayersBoard(game) {
     const container = document.getElementById('playersContainer');
     if (!container) return;
@@ -1413,6 +1476,13 @@ function renderPlayersPhone(game) {
     const hand = document.getElementById('myHand');
     const rail = document.getElementById('opponentRail');
     if (!hand || !rail) return;
+
+    // Only a desktop spectator uses the equal board; on a phone it is unused.
+    const board = document.getElementById('playersContainer');
+    if (board && board.children.length) {
+        board.innerHTML = '';
+        lastPlayerState.clear();
+    }
 
     const meIndex = game.players.findIndex(p => p.id === socket.id);
     const me = meIndex >= 0 ? game.players[meIndex] : null;
@@ -1623,6 +1693,32 @@ function initMobileChrome() {
 
     if (PHONE_QUERY.addEventListener) PHONE_QUERY.addEventListener('change', onBreakpoint);
     else PHONE_QUERY.addListener(onBreakpoint);
+
+    window.addEventListener('resize', fitBoardToScreen);
+    fitBoardToScreen();
+}
+
+// The desktop table is drawn for a 1600x900 window: the header and the
+// HIT / STAND bar take 172px of that, the board the other 728. A bigger
+// window zooms the board up in step, so a 1080p screen shows the same table a
+// quarter larger instead of the same table with a band of nothing around it.
+// Never below 1: smaller windows have their own rules in style.css, and the
+// phone layout is sized in dvh already.
+const BOARD_DESIGN = { width: 1600, boardHeight: 728, chrome: 172 };
+
+function fitBoardToScreen() {
+    const board = document.querySelector('.game-board');
+    if (!board) return;
+
+    if (isPhoneLayout()) {
+        board.style.zoom = '';
+        return;
+    }
+
+    const byHeight = (window.innerHeight - BOARD_DESIGN.chrome) / BOARD_DESIGN.boardHeight;
+    const byWidth = window.innerWidth / BOARD_DESIGN.width;
+    const scale = Math.max(1, Math.min(byHeight, byWidth, 1.6));
+    board.style.zoom = scale === 1 ? '' : scale.toFixed(3);
 }
 
 // document.querySelector needs socket ids escaped; CSS.escape is not in every
@@ -1647,7 +1743,6 @@ function buildPlayerPanel(player) {
         <div class="scores">
             ${scoreBox('ROUND', 0)}
             ${scoreBox('TOTAL', 0)}
-            ${scoreBox('CARDS', `0/${MAX_REGULAR_CARDS}`)}
         </div>
 
         <div class="cards-section">
@@ -1700,7 +1795,6 @@ function syncPlayerPanel(panel, player, isCurrentTurn, isNewPanel, track = true)
     const scoreEls = panel.querySelectorAll('.score-value');
     setScore(scoreEls[0], player.roundScore, isNewPanel);
     setScore(scoreEls[1], player.totalScore, isNewPanel);
-    setText(scoreEls[2], `${player.regularCards.length}/${MAX_REGULAR_CARDS}`);
 
     // A brand new panel should not fire seven entrance animations at once —
     // that happens when you rejoin a game already in progress.

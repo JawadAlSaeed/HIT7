@@ -222,9 +222,10 @@
                     </div>
                 </div>
 
-                <!-- On phones the opponents render as tiles in the rail and the player's own
-                     panel renders into #myHand. On desktop both sit empty and every panel goes
-                     into #playersContainer as before. -->
+                <!-- A card table on every screen: the other players render into the rail
+                     (tap-to-open tiles on a phone, compact panels on a desktop) and your own
+                     panel renders into #myHand. #playersContainer is only used by a desktop
+                     spectator, who has no hand of their own. -->
                 <div class="opponent-rail" id="opponentRail"></div>
                 <div id="playersContainer" class="players-container"></div>
                 <div class="my-hand" id="myHand"></div>
