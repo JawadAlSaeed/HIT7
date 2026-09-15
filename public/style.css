@@ -5887,7 +5887,10 @@ h3 span.emoji {
         max-width: 960px;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto auto 1fr;
+        /* The settings box is the tallest thing and sets the height. The
+           players box stretches to meet the two buttons, which sit level
+           with the bottom of the settings box, so both columns end together. */
+        grid-template-rows: auto auto 1fr auto auto;
         grid-template-areas:
             "title    title"
             "share    players"
@@ -5896,6 +5899,25 @@ h3 span.emoji {
             "settings exit";
         gap: 1rem 1.5rem;
         align-items: start;
+    }
+
+    .waiting-screen .players-list {
+        align-self: stretch;
+        box-sizing: border-box;
+    }
+
+    /* The same box the players list and the settings wear, so the two
+       columns start with matching corners. */
+    .waiting-screen .share-section {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 10px;
+        box-sizing: border-box;
+    }
+
+    /* Six bot counts in one row: at 72px each they were five and a lone 5. */
+    .waiting-screen .setting-option {
+        min-width: 56px;
     }
 
     .waiting-screen > h2,
@@ -5913,7 +5935,7 @@ h3 span.emoji {
     .waiting-screen .players-list { grid-area: players; }
     .waiting-screen .button-group,
     .waiting-screen > p { grid-area: start; }
-    .waiting-screen .lobby-exit-group { grid-area: exit; align-self: end; }
+    .waiting-screen .lobby-exit-group { grid-area: exit; }
 
     /* A guest has no link to share, so the settings take the whole column. */
     .waiting-screen:not(:has(.share-section)) .lobby-settings {
