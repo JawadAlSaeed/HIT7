@@ -494,6 +494,13 @@ body::before {
    Every gap inside the panel now comes from this flex `gap`, so the children
    below carry no vertical margins of their own to double up with it. */
 .player {
+    /* The hover sheet below is absolute with every edge at 0. Without this it
+       is placed against the nearest positioned ancestor - the whole game
+       screen - and, being a child of the panel, keeps the panel in :hover
+       wherever the mouse goes next. The header's buttons went dead until the
+       pointer left the window. The lift transform used to contain it by
+       accident; the compact seats have no lift. */
+    position: relative;
     flex: 1;
     min-width: 350px;
     max-width: 450px;
@@ -526,6 +533,8 @@ body::before {
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     opacity: 1;
     transition: opacity 0.3s ease;
+    /* Decoration only; it must never be the thing under the mouse. */
+    pointer-events: none;
 }
 
 .player::after {
@@ -1927,9 +1936,17 @@ body::before {
     opacity: 0.9;
 }
 
+/* Hangs just under the copy button, over the top of whatever is next. It
+   used to sit 40px below the whole panel's bottom edge, which put 40px of
+   invisible overflow on a panel that scrolls - so the waiting room drew a
+   scrollbar even when everything you could see fit on the screen. */
+.waiting-screen .share-section {
+    position: relative;
+}
+
 .waiting-screen .copied-message {
     position: absolute;
-    bottom: -40px;
+    bottom: -36px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--highlight);
@@ -1937,6 +1954,7 @@ body::before {
     border-radius: 20px;
     font-size: 0.9rem;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.3s ease;
 }
 
@@ -5860,6 +5878,55 @@ h3 span.emoji {
     overflow-y: auto;
 }
 
+/* One column of link, settings, players and buttons is about 1160px tall -
+   taller than any laptop screen - so on a wide screen it becomes two: how to
+   set the game up on the left, who is here and the start button on the right.
+   That is about 720px, and the panel stops needing to scroll. */
+@media screen and (min-width: 900px) and (min-height: 501px) {
+    .waiting-screen {
+        max-width: 960px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto auto 1fr;
+        grid-template-areas:
+            "title    title"
+            "share    players"
+            "settings players"
+            "settings start"
+            "settings exit";
+        gap: 1rem 1.5rem;
+        align-items: start;
+    }
+
+    .waiting-screen > h2,
+    .waiting-screen .share-section,
+    .waiting-screen .lobby-settings,
+    .waiting-screen .players-list,
+    .waiting-screen .button-group,
+    .waiting-screen > p {
+        margin: 0;
+    }
+
+    .waiting-screen > h2 { grid-area: title; }
+    .waiting-screen .share-section { grid-area: share; }
+    .waiting-screen .lobby-settings { grid-area: settings; }
+    .waiting-screen .players-list { grid-area: players; }
+    .waiting-screen .button-group,
+    .waiting-screen > p { grid-area: start; }
+    .waiting-screen .lobby-exit-group { grid-area: exit; align-self: end; }
+
+    /* A guest has no link to share, so the settings take the whole column. */
+    .waiting-screen:not(:has(.share-section)) .lobby-settings {
+        grid-row: share-start / settings-end;
+    }
+
+    /* Ten names is a tall list; let it run rather than scroll inside a
+       panel that no longer scrolls itself. */
+    .waiting-screen .players-list {
+        max-height: none;
+    }
+}
+
 /* The overlay centres its child, which clips the top of anything taller than the
    viewport. auto margins centre it without doing that. */
 .winner-popup .popup-content {
@@ -6969,6 +7036,14 @@ button.setting-option:active {
         overflow-y: auto;
         overflow-x: hidden;
         padding: 4px;
+        /* Safety net only. The panel is built not to outgrow the room (see
+           .my-hand .player); on a window shorter than any rule here plans
+           for it still wheel-scrolls, without a bar down the whole board. */
+        scrollbar-width: none;
+    }
+
+    .my-hand::-webkit-scrollbar {
+        display: none;
     }
 
     /* 60px is what fits two rows of under a five-seat rail in a 900px-tall
@@ -6978,6 +7053,10 @@ button.setting-option:active {
         --hand-card: 60px;
     }
 
+    /* The hand is sized to fit the room under the rail with a few pixels
+       to spare, so nothing in it may grow a row: the name line is one line
+       that never wraps, and the "draw N more" strip sits on that line in a
+       second column instead of under the cards. */
     .my-hand .player {
         /* The base rule's flex: 1 would grow the panel to fill the column on
            a tall screen - a hand with 300px of nothing under the cards. */
@@ -6987,8 +7066,27 @@ button.setting-option:active {
         max-width: none;
         margin: auto 0 0;
         padding: 14px 16px;
-        gap: 10px;
         box-sizing: border-box;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+    }
+
+    .my-hand .player-header { grid-column: 1; }
+    .my-hand .draw-three-slot { grid-column: 2; grid-row: 1; align-self: center; }
+    .my-hand .scores,
+    .my-hand .cards-section { grid-column: 1 / -1; }
+
+    .my-hand .draw-three-slot:empty {
+        display: none;
+    }
+
+    .my-hand .draw-three-indicator {
+        margin: 0;
+        padding: 3px 10px;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
     }
 
     /* Trimmed so that the whole hand - two rows of 60px cards included - fits
@@ -7020,15 +7118,20 @@ button.setting-option:active {
        strip it replaces cost 60px the cards below wanted. */
     .my-hand .player-header {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: space-between;
-        gap: 4px 12px;
+        gap: 12px;
+        min-width: 0;
     }
 
     .my-hand .player-header h3 {
         margin: 0;
         min-width: 0;
+        flex: 0 1 auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .my-hand .player-status {
@@ -7037,7 +7140,9 @@ button.setting-option:active {
         gap: 6px;
         background: none;
         border: 0;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         justify-content: flex-end;
     }
 
@@ -7051,6 +7156,8 @@ button.setting-option:active {
     .my-hand .second-chance-indicator,
     .my-hand .away-indicator {
         margin: 0;
+        padding: 2px 8px;
+        font-size: 0.72rem;
     }
 
     /* Cards at a fixed 60px, not one seventh of the panel: at 640px wide a
@@ -7102,13 +7209,15 @@ button.setting-option:active {
         opacity: 0.55;
     }
 
-    /* Name on the left, state on the right, one line. */
+    /* Name on the left, state on the right, one line. It must stay one
+       line: a seat that grows a row takes that row from the hand below. */
     .opponent-rail .player-header {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: baseline;
         justify-content: space-between;
-        gap: 4px 8px;
+        gap: 8px;
+        min-width: 0;
     }
 
     .opponent-rail .player-header h3 {
@@ -7126,8 +7235,18 @@ button.setting-option:active {
         gap: 4px;
         background: none;
         border: 0;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         justify-content: flex-end;
+    }
+
+    /* Both say what the seat already shows - the card that busted them is in
+       their row and the shield is in their special row - and at this width
+       either one would wrap the head onto a second line. */
+    .opponent-rail .busted-card,
+    .opponent-rail .second-chance-indicator {
+        display: none;
     }
 
     .opponent-rail .status-icon {
@@ -7141,8 +7260,6 @@ button.setting-option:active {
         letter-spacing: 0.1em;
     }
 
-    .opponent-rail .busted-card,
-    .opponent-rail .second-chance-indicator,
     .opponent-rail .away-indicator {
         margin: 0;
         padding: 1px 6px;
