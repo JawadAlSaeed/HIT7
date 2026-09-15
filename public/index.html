@@ -110,20 +110,34 @@
                         <img src="/images/hit7-logo.svg" alt="HIT 7 Logo" class="logo-image">
                     </div>
                 </div>
+                <!-- The middle of the bar: the last move. On every screen the header is
+                     the whole top of the game - one bar instead of a header, a strip, a
+                     stats box and the pile. -->
+                <div class="header-center" id="headerCenter">
+                    <!-- What just happened, on every screen. It is also the way into the
+                         full log: the History button that used to sit in the header was
+                         doing the same job from further away, so the strip took it over
+                         and the header lost a button. The chevron is what says the whole
+                         row is a button. -->
+                    <button class="last-action" id="lastAction" type="button"
+                            aria-label="Last action — open the full history" aria-live="polite">
+                        <span class="last-action-icon" id="lastActionIcon" aria-hidden="true">▶️</span>
+                        <span class="last-action-text" id="lastActionText">Waiting for the first move…</span>
+                        <span class="last-action-more" aria-hidden="true">›</span>
+                    </button>
+                </div>
                 <div class="header-right">
                     <div class="game-code-display">
                         <span class="share-link" id="shareLink"></span>
                     </div>
-                    <!-- Phone-only: opens the remaining-deck sheet. Hidden on desktop, where the
-                         full pile is on the board already. -->
+                    <!-- Opens the remaining-deck sheet (phone) or dialog (desktop). Next
+                         to the gear on both. -->
                     <button id="deckButton" class="deck-button" type="button"
                             aria-haspopup="dialog" aria-expanded="false"
                             aria-label="Cards left in the deck">
                         <span class="deck-button-count" id="deckButtonCount">0</span>
                         <span class="deck-button-label">left</span>
-                        <span class="deck-button-last" id="deckButtonLast">—</span>
                     </button>
-
                     <!-- Everything that is not played with. Sound and the rules are here
                          for everyone; the two that end or unwind the game are host-only
                          and sit below a divider so neither is next to a harmless one.
@@ -191,17 +205,6 @@
                 <span id="turnStripText">Waiting…</span>
             </div>
 
-            <!-- What just happened, on every screen. It is also the way into the full
-                 log: the History button that used to sit in the header was doing the
-                 same job from further away, so the strip took it over and the header
-                 lost a button. The chevron is what says the whole row is a button. -->
-            <button class="last-action" id="lastAction" type="button"
-                    aria-label="Last action — open the full history" aria-live="polite">
-                <span class="last-action-icon" id="lastActionIcon" aria-hidden="true">▶️</span>
-                <span class="last-action-text" id="lastActionText">Waiting for the first move…</span>
-                <span class="last-action-more" aria-hidden="true">›</span>
-            </button>
-
             <div class="game-board">
                 <div class="deck-area">
                     <div class="discard-info">
@@ -209,10 +212,6 @@
                             <div class="deck-stat-item">
                                 <span class="stat-label">CARDS LEFT:</span>
                                 <span class="stat-value" id="deckCount">93</span>
-                            </div>
-                            <div class="deck-stat-item">
-                                <span class="stat-label">LAST CARD DRAWN:</span>
-                                <div id="lastCardDrawn" class="last-card-container"></div>
                             </div>
                             <div class="deck-stat-item">
                                 <span class="stat-label">PLAYING TO:</span>

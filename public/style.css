@@ -1145,33 +1145,6 @@ body::before {
     font-family: 'Cairo Play', sans-serif;
 }
 
-.last-card-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.last-card {
-    width: 50px;
-    height: 70px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    font-family: 'Roboto', sans-serif;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-.no-card {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 1.5rem;
-}
-
 /* Remaining Pile Cards Container */
 .remaining-pile {
     display: flex;
@@ -3770,8 +3743,8 @@ h3 span.emoji {
    Colour and geometry are independent, so they are set independently:
 
      colour   <- [data-card-type="<type>"]   assigned by client.js (el.dataset.cardType)
-     geometry <- the context class      .card / .remaining-card / .last-card /
-                                        .history-card / .card-button
+     geometry <- the context class      .card / .remaining-card / .history-card /
+                                        .card-button
 
    Adding a card type means adding one block here. Nothing else in this file and
    nothing in client.js needs to know about it.
@@ -3786,7 +3759,6 @@ h3 span.emoji {
    per-type block and lands on the fallbacks. */
 .card[data-card-type],
 .remaining-card[data-card-type],
-.last-card[data-card-type],
 .history-card[data-card-type],
 .card-button[data-card-type],
 .htp-c[data-card-type] {
@@ -3806,22 +3778,11 @@ h3 span.emoji {
 [data-card-type="minus"]         { --card-face: #f1624f; --card-face-2: #d9574a; --card-edge: #d9574a; --card-ink: #fff; }
 [data-card-type="divide"]        { --card-face: #f1624f; --card-face-2: #d9574a; --card-edge: #d9574a; --card-ink: #fff; }
 
-/* The one type whose face is a gradient in every context, so it opts out of the
-   flat/lifted distinction below by setting both faces to the same thing. */
+/* The one type whose face is a gradient. */
 [data-card-type="select-card"] {
     --card-face: linear-gradient(135deg, #cc3350 0%, #9b59b6 50%, #3498db 100%);
-    --card-face-lift: linear-gradient(135deg, #cc3350 0%, #9b59b6 50%, #3498db 100%);
     --card-edge: #cc3350;
     --card-ink: #fff;
-}
-
-/* "Last card drawn" is the one panel that lifts the flat face into a gradient.
-   One rule covers all twelve types. */
-.last-card[data-card-type] {
-    background: var(--card-face-lift,
-        linear-gradient(135deg,
-            var(--card-face, var(--primary)),
-            var(--card-face-2, var(--primary))));
 }
 
 
@@ -4654,13 +4615,11 @@ h3 span.emoji {
     /* Entrances and exits become plain cross-fades rather than vanishing. */
     .card.is-new,
     .card.special.is-new,
-    .last-card.is-new,
     .restart-notice {
         animation: scrim-in var(--dur-fast) var(--ease-out) backwards !important;
     }
 
-    .card.is-leaving,
-    .last-card.is-leaving {
+    .card.is-leaving {
         animation: none !important;
         opacity: 0;
         transition: opacity var(--dur-fast) var(--ease-in) !important;
@@ -4714,27 +4673,6 @@ h3 span.emoji {
     }
 }
 
-/* ---------- last card drawn slot ---------- */
-
-/* The outgoing card is taken out of flow so the incoming one does not jump
-   sideways for the 160ms they overlap. */
-.last-card-container {
-    position: relative;
-}
-
-.last-card.is-new {
-    animation: deal var(--dur-base) var(--ease-back) backwards;
-}
-
-.last-card.is-leaving {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    margin-left: -25px;
-    animation: card-leave var(--dur-fast) var(--ease-in) forwards;
-    pointer-events: none;
-}
-
 
 /* ==========================================================================
    PHONE LAYOUT
@@ -4769,11 +4707,11 @@ h3 span.emoji {
    ========================================================================== */
 
 /* Desktop-side hiding of the phone-only chrome. Outside the media query so it
-   applies at every width above the breakpoint. */
+   applies at every width above the breakpoint. The deck button and the
+   last-move strip are not here: both layouts have them in the header now. */
 .turn-strip,
 .opponent-rail,
-.my-hand,
-.deck-button {
+.my-hand {
     display: none;
 }
 
@@ -4888,7 +4826,10 @@ h3 span.emoji {
     }
 
     .header-right {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
+        /* The <=430px block gives this `width: 100%`, which with the strip in
+           the row would push the gear off the right edge of the screen. */
+        width: auto;
         display: flex;
         align-items: center;
         justify-content: flex-end;
@@ -4940,55 +4881,102 @@ h3 span.emoji {
         display: none;
     }
 
-    /* ----------------------------------------------------------- deck button */
+    /* ------------------------------------------- deck button and the gear */
 
-    .deck-button {
+    /* The same box as the desktop bar, a size down: chip and gear share one
+       height, border, fill and corner, so the row reads as one set. */
+    .deck-button,
+    .header-right #settingsButton {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        justify-content: center;
+        gap: 6px;
         flex: 0 0 auto;
         height: 40px;
-        padding: 0 8px;
-        border-radius: 9px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: transparent;
+        min-height: 0;
+        min-width: 0;
+        padding: 0 10px;
+        margin: 0;
+        box-sizing: border-box;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: none;
         color: var(--text-light);
-        font-family: inherit;
+        font-family: 'Roboto', sans-serif;
+        font-size: 1rem;
+        white-space: nowrap;
         cursor: pointer;
         transition: background var(--dur-fast) var(--ease-out),
                     border-color var(--dur-fast) var(--ease-out),
                     transform var(--dur-tap) var(--ease-out);
     }
 
-    .deck-button:active {
+    .header-right #settingsButton {
+        width: 40px;
+        padding: 0;
+    }
+
+    .deck-button:active,
+    .header-right #settingsButton:active {
         transform: scale(0.96);
     }
 
+    .header-right #settingsButton.is-open {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .deck-button[aria-expanded="true"] {
+        border-color: var(--highlight);
+        background: rgba(204, 51, 80, 0.14);
+    }
+
     .deck-button-count {
-        font-size: 0.85rem;
+        font-family: 'Cairo Play', sans-serif;
+        font-size: 1.05rem;
         font-weight: 700;
+        line-height: 1;
         font-variant-numeric: tabular-nums;
     }
 
     .deck-button-label {
         font-size: 0.58rem;
+        font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         opacity: 0.6;
     }
 
-    .deck-button-last {
-        min-width: 20px;
-        height: 26px;
-        padding: 0 3px;
-        border-radius: 4px;
-        background: var(--text-light);
-        color: var(--text-dark);
-        font-size: 0.72rem;
-        font-weight: 700;
+    /* ------------------------------------------------------ last-move strip */
+
+    /* The same bar as desktop: the strip sits between the logo and the chip,
+       and takes whatever width the three fixed things leave it. A long line
+       (a Swap names two players and two cards) ends in an ellipsis rather
+       than wrapping the header. Two classes deep because the base
+       .last-action rule sits later in the file. */
+    .header-center {
         display: flex;
         align-items: center;
-        justify-content: center;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .header-center .last-action {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        height: 40px;
+        box-sizing: border-box;
+        padding: 0 10px;
+        gap: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        font-size: 0.76rem;
+    }
+
+    .header-center .last-action-more {
+        font-size: 1rem;
     }
 
     /* ------------------------------------------------------------ turn strip */
@@ -5381,20 +5369,6 @@ h3 span.emoji {
     }
 
     .deck-area .stat-value {
-        font-size: 1rem;
-    }
-
-    /* 50x70 is a desktop card. Next to a label it is what tipped the row over
-       the edge of the screen. */
-    .deck-area .last-card {
-        width: 30px;
-        height: 42px;
-        min-width: 30px;
-        font-size: 0.8rem;
-        border-radius: 6px;
-    }
-
-    .deck-area .no-card {
         font-size: 1rem;
     }
 
@@ -6292,9 +6266,11 @@ button.setting-option:active {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* A move you were not watching for should catch your eye once and then stop. */
+/* A move you were not watching for should catch your eye for one second and
+   then stop. client.js strips is-new afterwards, so the flash can never be
+   replayed by a later reflow or display toggle. */
 .last-action.is-new {
-    animation: last-action-flash var(--dur-slow, 320ms) var(--ease-out) 2;
+    animation: last-action-flash 500ms var(--ease-out) 2;
 }
 
 @keyframes last-action-flash {
@@ -6688,5 +6664,226 @@ button.setting-option:active {
     .htp-dot,
     .htp-next {
         transition: none;
+    }
+}
+
+
+/* ==========================================================================
+   DESKTOP ONE-BAR HEADER
+   ---------------------------------------------------------------------------
+   The exact complement of the phone query at the top of the PHONE LAYOUT block:
+   phone = (width <= 767) OR (landscape AND height <= 500 AND coarse), so
+   desktop = width >= 768 AND (height >= 501 OR pointer fine). Keep the two in
+   step with PHONE_QUERY in client.js, which moves the deck chip and the
+   last-move strip between their phone and desktop slots.
+
+   Four boxes became one bar: logo | last move | cards left + gear - the phone
+   header, a size up. The grid gives the outer columns equal width so the
+   strip is centred on the screen. Every box in the bar is the same height,
+   border and fill, the gear included. The remaining pile is a dialog behind
+   the deck chip, as it is a sheet on phones - same markup, same body class,
+   same close paths. There is no "last card drawn" any more: the strip already
+   says who drew what.
+   ========================================================================== */
+@media screen and (min-width: 768px) and (min-height: 501px),
+       screen and (min-width: 768px) and (pointer: fine) {
+
+    .game-header {
+        display: grid;
+        /* 180px holds the deck chip and the gear; the logo side gets the same
+           so the strip stays centred on the screen at every width. */
+        grid-template-columns: minmax(180px, 1fr) minmax(0, 920px) minmax(180px, 1fr);
+        align-items: center;
+        gap: 1rem;
+        min-height: 0;
+        padding: 0.55rem 1.25rem;
+        margin-bottom: 0.75rem;
+        /* .game-container is a flex column the height of the screen; without
+           this the bar gives up its own height to the board and clips. */
+        flex: 0 0 auto;
+    }
+
+    .header-left {
+        justify-self: start;
+        min-width: 0;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .header-left .logo-image {
+        height: 48px;
+        margin-right: 0;
+    }
+
+    .header-right {
+        justify-self: end;
+        flex: 0 0 auto;
+        height: auto;
+        gap: 0.75rem;
+    }
+
+    .header-center {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-width: 0;
+    }
+
+    /* ---- the chip and the gear: one box, so the bar reads as one thing ---- */
+
+    .deck-button,
+    .header-right #settingsButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        height: 44px;
+        min-height: 0;
+        min-width: 0;
+        padding: 0 12px;
+        margin: 0;
+        box-sizing: border-box;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: none;
+        color: var(--text-light);
+        font-family: 'Roboto', sans-serif;
+        font-size: 1rem;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background var(--dur-fast) var(--ease-out),
+                    border-color var(--dur-fast) var(--ease-out),
+                    transform var(--dur-tap) var(--ease-out);
+    }
+
+    /* Icon only, a square, so it weighs about the same as the logo. */
+    .header-right #settingsButton {
+        width: 44px;
+        padding: 0;
+    }
+
+    .header-right #settingsButton .button-label {
+        display: none;
+    }
+
+    .deck-button:hover,
+    .deck-button:focus-visible,
+    .header-right #settingsButton:hover:not(:disabled),
+    .header-right #settingsButton.is-open {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .deck-button:active,
+    .header-right #settingsButton:active {
+        transform: scale(0.97);
+    }
+
+    .deck-button[aria-expanded="true"] {
+        border-color: var(--highlight);
+        background: rgba(204, 51, 80, 0.14);
+    }
+
+    .deck-button-count {
+        font-family: 'Cairo Play', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .deck-button-label {
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    /* ---- the strip becomes a pill in the middle of the bar ---- */
+
+    .header-center .last-action {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        height: 44px;
+        box-sizing: border-box;
+        padding: 0 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        font-size: 0.86rem;
+    }
+
+    /* ---- the remaining pile is a dialog behind the chips ---- */
+
+    /* Same rule as the phone sheet: open/closed is a display switch, never the
+       end of an animation. */
+    .deck-area {
+        display: none;
+    }
+
+    body.deck-sheet-open .deck-area {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-popup);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        margin: 0;
+        padding: 88px 24px 24px;
+        box-sizing: border-box;
+        background: rgba(8, 8, 18, 0.62);
+        animation: scrim-in var(--dur-fast) var(--ease-out);
+    }
+
+    body.deck-sheet-open .deck-area .discard-info {
+        width: min(960px, 100%);
+        max-height: calc(100vh - 112px);
+        box-sizing: border-box;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        margin: 0;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(204, 51, 80, 0.28);
+        background: var(--secondary);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        animation: deck-dialog-in var(--dur-base) var(--ease-back);
+    }
+
+    @keyframes deck-dialog-in {
+        from { transform: translateY(-10px) scale(0.98); opacity: 0; }
+        to   { transform: none; opacity: 1; }
+    }
+
+    /* Inside the dialog the stats row is a heading, not a panel of its own. */
+    body.deck-sheet-open .deck-stats-container {
+        padding: 6px 10px;
+        gap: 2rem;
+        background: none;
+        border: 0;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    body.deck-sheet-open .stat-label {
+        font-size: 1rem;
+    }
+
+    body.deck-sheet-open .stat-value {
+        font-size: 1.2rem;
+    }
+
+    body.deck-sheet-open .remaining-pile {
+        min-height: 0;
+        padding: 0;
+        gap: 10px;
+        background: none;
     }
 }
