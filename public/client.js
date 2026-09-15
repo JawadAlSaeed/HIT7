@@ -776,8 +776,7 @@ function handleGameUpdate(game) {
     updateSettingsDisplay(game);
     // Update the remaining pile display immediately
     updateRemainingPile(game.deck);
-    // Update the last card drawn
-    updateLastCardDrawn(game.lastCardDrawn);
+    updateDeckButton(game.deck);
     // Keep the action log current whether or not the popup is open
     updateHistory(game.history);
     updateDisconnectNotice(game);
@@ -835,8 +834,7 @@ function updateGameDisplay(game) {
     document.getElementById('deckCount').textContent = game.deck.length;
     updateSettingsDisplay(game);
     updateRemainingPile(game.deck);
-    updateLastCardDrawn(game.lastCardDrawn);
-    updateDeckButton(game.deck, game.lastCardDrawn);
+    updateDeckButton(game.deck);
     updateHistory(game.history);
     renderPlayers(game);
 }
@@ -917,46 +915,6 @@ function renderCard({ cardType, displayValue, count }) {
             ${count > 1 ? `<span class="card-count">×${count}</span>` : ''}
         </div>
     `;
-}
-
-function updateLastCardDrawn(card) {
-    const container = document.getElementById('lastCardDrawn');
-    if (!container) return;
-
-    const key = card === null || card === undefined ? '' : String(card);
-
-    // Nothing changed, so leave the node alone - rewriting it would replay the
-    // entrance animation on every unrelated game update.
-    if (container.dataset.value === key) return;
-
-    const outgoing = container.querySelector('.last-card');
-    container.dataset.value = key;
-
-    if (!key) {
-        container.innerHTML = '<span class="no-card">---</span>';
-        return;
-    }
-
-    const { cardType, displayValue } = getCardVisual(card);
-    const incoming = document.createElement('div');
-    incoming.className = `last-card ${cardType} ${cardType === 'number' ? 'regular-card' : 'special'}`;
-    // Colour comes from the [data-card-type] rules in style.css.
-    incoming.dataset.cardType = cardType;
-    incoming.textContent = displayValue;
-
-    // The old card lifts out while the new one deals in, so you can always tell
-    // the slot changed even when the two cards look similar.
-    if (outgoing && !prefersReducedMotion()) {
-        outgoing.classList.add('is-leaving');
-        outgoing.addEventListener('animationend', () => outgoing.remove(), { once: true });
-        setTimeout(() => outgoing.remove(), 400);
-        incoming.classList.add('is-new');
-        clearAfter(incoming, 'is-new', 600);
-        container.appendChild(incoming);
-    } else {
-        container.innerHTML = '';
-        container.appendChild(incoming);
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1103,6 +1061,8 @@ function updateLastAction(history) {
     strip.classList.remove('is-new');
     void strip.offsetWidth;
     strip.classList.add('is-new');
+    // One second of flashing, then the class goes so nothing can replay it.
+    clearAfter(strip, 'is-new', 1100);
 }
 
 function updateHistory(history) {
@@ -1611,16 +1571,8 @@ function updateTurnStrip(game) {
     setText(text, mine ? 'Your turn' : `${current.name} is playing`);
 }
 
-function updateDeckButton(deck, lastCard) {
-    const count = document.getElementById('deckButtonCount');
-    const last = document.getElementById('deckButtonLast');
-    if (count) setText(count, deck.length);
-    if (last) {
-        const { displayValue } = lastCard === null || lastCard === undefined
-            ? { displayValue: '—' }
-            : getCardVisual(lastCard);
-        setText(last, displayValue);
-    }
+function updateDeckButton(deck) {
+    setText(document.getElementById('deckButtonCount'), deck.length);
 }
 
 // The remaining-deck grid is 94% of a phone screen, so on phones it lives
