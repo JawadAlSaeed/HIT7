@@ -6966,6 +6966,9 @@ button.setting-option:active {
     }
 
     .my-hand .player {
+        /* The base rule's flex: 1 would grow the panel to fill the column on
+           a tall screen - a hand with 300px of nothing under the cards. */
+        flex: 0 0 auto;
         width: min(640px, 100%);
         min-width: 0;
         max-width: none;
