@@ -312,6 +312,11 @@ body::before {
     overflow: hidden;
     overflow-y: auto;
     max-height: 100vh; /* Ensure it doesn't exceed the viewport height */
+    scrollbar-width: none;
+}
+
+.game-container::-webkit-scrollbar {
+    display: none;
 }
 
 .game-container.active {
@@ -5858,6 +5863,13 @@ h3 span.emoji {
     max-height: calc(100vh - 2rem);
     max-height: calc(100dvh - 2rem);
     overflow-y: auto;
+    /* A panel a few pixels taller than the window grew a full-height grey
+       bar down its side. It still scrolls; it just does not show a bar. */
+    scrollbar-width: none;
+}
+
+.waiting-screen::-webkit-scrollbar {
+    display: none;
 }
 
 /* The overlay centres its child, which clips the top of anything taller than the
@@ -6969,6 +6981,14 @@ button.setting-option:active {
         overflow-y: auto;
         overflow-x: hidden;
         padding: 4px;
+        /* Same as the phone hand: a "draw 3 more" strip or a busted note can
+           make the panel a few pixels taller than the room, and a bar down
+           the whole board for that is worse than a quiet wheel-scroll. */
+        scrollbar-width: none;
+    }
+
+    .my-hand::-webkit-scrollbar {
+        display: none;
     }
 
     /* 60px is what fits two rows of under a five-seat rail in a 900px-tall
