@@ -156,13 +156,11 @@ body::before {
     text-transform: uppercase;
     position: relative;
     letter-spacing: -0.03em;
-    transition: transform 0.3s ease;
     text-shadow: 0 0 20px rgba(204, 51, 80, 0.4);
 }
 
-.game-logo:hover {
-    transform: scale(1.05);
-}
+/* No hover on the logo: it is not a button, and a thing that reacts to the
+   mouse but does nothing when clicked only teaches people to click it. */
 
 .game-logo .hit {
     background: var(--card-gradient);
@@ -4918,6 +4916,7 @@ h3 span.emoji {
     }
 
     .deck-button:active,
+    .header-center .last-action:active,
     .header-right #settingsButton:active {
         transform: scale(0.96);
     }
@@ -4970,7 +4969,9 @@ h3 span.emoji {
         box-sizing: border-box;
         padding: 0 10px;
         gap: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        /* The same edge as the chip and the gear beside it, so the three read as
+           one set; a fainter line here made the strip look like a different box. */
+        border: 1px solid rgba(255, 255, 255, 0.38);
         border-radius: 10px;
         font-size: 0.76rem;
     }
@@ -6231,11 +6232,15 @@ button.setting-option:active {
     font-size: 0.82rem;
     text-align: left;
     cursor: pointer;
+    /* Same fade as the chip and the gear it shares the bar with. */
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                transform var(--dur-tap) var(--ease-out);
 }
 
 .last-action:hover,
 .last-action:focus-visible {
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .last-action-icon {
@@ -6770,15 +6775,26 @@ button.setting-option:active {
 
     .deck-button:hover,
     .deck-button:focus-visible,
+    .header-center .last-action:hover,
+    .header-center .last-action:focus-visible,
     .header-right #settingsButton:hover:not(:disabled),
     .header-right #settingsButton.is-open {
         background: rgba(255, 255, 255, 0.1);
         border-color: rgba(255, 255, 255, 0.6);
     }
 
+    /* The gear is a .game-button, so it already lifts 2px on hover like every
+       other button in the app. The chip and the strip are not, so they get
+       the same lift here - three boxes in one bar, one hover, one press. */
+    .deck-button:hover,
+    .header-center .last-action:hover {
+        transform: translateY(-2px);
+    }
+
     .deck-button:active,
+    .header-center .last-action:active,
     .header-right #settingsButton:active {
-        transform: scale(0.97);
+        transform: translateY(0) scale(0.97);
     }
 
     .deck-button[aria-expanded="true"] {
@@ -6811,7 +6827,9 @@ button.setting-option:active {
         height: 44px;
         box-sizing: border-box;
         padding: 0 14px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        /* The same edge as the chip and the gear beside it, so the three read as
+           one set; a fainter line here made the strip look like a different box. */
+        border: 1px solid rgba(255, 255, 255, 0.38);
         border-radius: 12px;
         font-size: 0.86rem;
     }
@@ -6886,4 +6904,47 @@ button.setting-option:active {
         gap: 10px;
         background: none;
     }
+}
+
+/* ---------- optical centring ----------
+
+   A line of text is taller than its letters: the box leaves room for descenders
+   (g, j, y) and accents that capitals never use. Centre that box and the capitals
+   land a pixel or two low - worst with Cairo Play, whose box is almost twice its
+   cap height, and next to an emoji, whose fallback font has a taller box again.
+   Trim the box to the capitals so the letters get centred, not the empty room
+   around them. Browsers without text-box-trim ignore it and look as they did. */
+.game-button,
+.status-icon,
+.status-text,
+.last-action-icon,
+.deck-button-count,
+.deck-button-label {
+    text-box: trim-both cap alphabetic;
+}
+
+/* Not .last-action-text: it clips to one line with overflow: hidden, and a box
+   trimmed to the capitals would cut off descenders and the card chips in it.
+   It is a mixed-case sentence anyway, which the plain line box centres fine. */
+
+/* Emoji sit low. Every colour-emoji font (Segoe, Apple, Noto) draws its glyphs
+   a touch below the baseline, so next to capitals an emoji lands about 0.07em
+   under the middle of the letters - and trimming to the caps above cannot see
+   that, because the trim reads the text font, not the emoji font. Lift every
+   emoji that is its own element by that much; in em so it scales with the
+   font. Inline emoji in prose (the how-to-play text) are left alone. */
+.emoji,
+.status-icon,
+.history-icon,
+.last-action-icon,
+.settings-icon,
+.bot-mark,
+.view-game-button .icon {
+    position: relative;
+    top: -0.07em;
+}
+
+/* Same cap trim as .game-button, so the lobby buttons centre their label too. */
+.lobby-button {
+    text-box: trim-both cap alphabetic;
 }
