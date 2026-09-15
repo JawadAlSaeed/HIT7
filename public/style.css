@@ -494,6 +494,13 @@ body::before {
    Every gap inside the panel now comes from this flex `gap`, so the children
    below carry no vertical margins of their own to double up with it. */
 .player {
+    /* The hover sheet below is absolute with every edge at 0. Without this it
+       is placed against the nearest positioned ancestor - the whole game
+       screen - and, being a child of the panel, keeps the panel in :hover
+       wherever the mouse goes next. The header's buttons went dead until the
+       pointer left the window. The lift transform used to contain it by
+       accident; the compact seats have no lift. */
+    position: relative;
     flex: 1;
     min-width: 350px;
     max-width: 450px;
@@ -526,6 +533,8 @@ body::before {
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     opacity: 1;
     transition: opacity 0.3s ease;
+    /* Decoration only; it must never be the thing under the mouse. */
+    pointer-events: none;
 }
 
 .player::after {
