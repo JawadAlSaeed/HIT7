@@ -630,8 +630,8 @@ function lobbyPlayerRow(player, hostId) {
     return `
         <div class="player-item${player.isBot ? ' is-bot' : ''}${isAway ? ' is-away' : ''}">
             <span class="player-item-name">${escapeHtml(player.name)}</span>
-            ${player.isBot ? `<span class="bot-badge">🤖 ${escapeHtml(botLabel(player))}</span>` : ''}
-            ${isAway ? '<span class="away-badge">📵 away</span>' : ''}
+            ${player.isBot ? `<span class="bot-badge"><span class="emoji">🤖</span> ${escapeHtml(botLabel(player))}</span>` : ''}
+            ${isAway ? '<span class="away-badge"><span class="emoji">📵</span> away</span>' : ''}
             ${player.id === hostId ? '<span class="host-badge">HOST</span>' : ''}
             ${canKick ? `
                 <button type="button" class="lobby-kick-button"
@@ -951,7 +951,11 @@ const HISTORY_ICONS = {
 
 function renderHistoryCard(card) {
     const { cardType, displayValue } = getCardVisual(card);
-    return `<span class="history-card ${cardType}" data-card-type="${cardType}">${escapeHtml(displayValue)}</span>`;
+    // A special card's face is an emoji, which draws low in its chip; .emoji lifts it.
+    const face = /^[\w+\-÷]+$/.test(displayValue)
+        ? escapeHtml(displayValue)
+        : `<span class="emoji">${escapeHtml(displayValue)}</span>`;
+    return `<span class="history-card ${cardType}" data-card-type="${cardType}">${face}</span>`;
 }
 
 // The server logs only what happened; the wording lives here so the log reads the
@@ -1686,10 +1690,10 @@ function syncPlayerPanel(panel, player, isCurrentTurn, isNewPanel, track = true)
 
     const statusEl = panel.querySelector('.player-status');
     const statusHtml = `
-        ${isAway ? '<div class="away-indicator">🔌 DISCONNECTED</div>' : ''}
+        ${isAway ? '<div class="away-indicator"><span class="emoji">🔌</span> DISCONNECTED</div>' : ''}
         ${getStatusIcon(player.status)}
         ${player.bustedCard ? `<div class="busted-card">BUSTED ON ${player.bustedCard}</div>` : ''}
-        ${player.specialCards.includes('SC') ? '<div class="second-chance-indicator">🛡️ SECOND CHANCE</div>' : ''}
+        ${player.specialCards.includes('SC') ? '<div class="second-chance-indicator"><span class="emoji">🛡️</span> SECOND CHANCE</div>' : ''}
     `;
     if (statusEl.innerHTML !== statusHtml) statusEl.innerHTML = statusHtml;
 
@@ -1707,7 +1711,7 @@ function syncPlayerPanel(panel, player, isCurrentTurn, isNewPanel, track = true)
 
     const drawSlot = panel.querySelector('.draw-three-slot');
     const drawHtml = player.drawThreeRemaining > 0
-        ? `<div class="draw-three-indicator">🎯 DRAW ${player.drawThreeRemaining} MORE CARDS</div>`
+        ? `<div class="draw-three-indicator"><span class="emoji">🎯</span> DRAW ${player.drawThreeRemaining} MORE CARDS</div>`
         : '';
     if (drawSlot.innerHTML !== drawHtml) drawSlot.innerHTML = drawHtml;
 
@@ -2010,15 +2014,11 @@ function toggleActionButtons(active) {
         .some(popup => !popup.classList.contains('popup-closing'));
     const enabled = active && !aiming;
 
-    // Always show buttons but disable them when not active
-    if (flipCardBtn) {
-        flipCardBtn.disabled = !enabled;
-        flipCardBtn.style.display = 'block';
-    }
-    if (standButton) {
-        standButton.disabled = !enabled;
-        standButton.style.display = 'block';
-    }
+    // Nothing ever hides these two, so only the disabled state changes here. Do not
+    // set style.display on them: an inline "block" overrides the flex centring in
+    // .game-button and the label drops below the middle of the button.
+    if (flipCardBtn) flipCardBtn.disabled = !enabled;
+    if (standButton) standButton.disabled = !enabled;
 }
 
 // Game event handlers
