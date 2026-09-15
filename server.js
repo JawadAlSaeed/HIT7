@@ -319,7 +319,7 @@ const bustOnTimeout = (game, io) => {
   bump(player, 'timeouts');
   logHistory(game, { player: player.name, action: 'timeout' });
   io.to(game.id).emit('turn-timeout', { playerId: player.id, playerName: player.name });
-  io.to(game.id).emit('play-sound', 'bustSound');
+  io.to(game.id).emit('play-sound', 'bustCardSound');
 
   advanceTurn(game);
   checkGameStatus(game, io);

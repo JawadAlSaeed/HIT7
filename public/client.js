@@ -2768,7 +2768,9 @@ function handleReturnedToLobby(game) {
 }
 
 function handleRoundSummary({ players, allBusted }) {
-    playSound(allBusted ? 'bustSound' : 'roundEnd');
+    // No round-end sound when everyone busted: the last bust just played, and a
+    // second sting on top of it was one failure noise too many.
+    if (!allBusted) playSound('roundEnd');
     const popup = document.createElement('div');
     popup.className = 'round-summary-popup';
     
@@ -3798,8 +3800,7 @@ const SOUND_LEVELS = {
     cardFlip: 0.45,
     standSound: 0.45,
     secondChanceSound: 0.6,
-    bustCardSound: 0.6,
-    bustSound: 0.7,
+    bustCardSound: 0.35,
     roundEnd: 0.6,
     winSound: 0.8
 };
