@@ -51,6 +51,21 @@
     --z-toast: 500;     /* transient notices, disconnect banner */
 }
 
+/* Cairo Play is a colour font: its glyphs carry their own paint (red, purple,
+   amber, green) and ignore `color`, which is why every score and the deck count
+   came out green no matter what the rules above them said. Overriding all four
+   palette slots to white flattens the layers into one plain white glyph.
+   font-palette inherits, so setting it once on the root covers every heading,
+   score and counter that uses the face. */
+@font-palette-values --hit7-flat {
+    font-family: 'Cairo Play';
+    override-colors: 0 #ffffff, 1 #ffffff, 2 #ffffff, 3 #ffffff;
+}
+
+html {
+    font-palette: --hit7-flat;
+}
+
 /* Without backdrop-filter a translucent surface just shows whatever is behind it,
    unblurred, which makes text on these surfaces hard to read. This replaces the old
    .blur-bg rule, which stopped matching anything when the JS that applied that class
