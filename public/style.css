@@ -1,23 +1,50 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo+Play:wght@700&display=swap');
 
 :root {
+    color-scheme: dark;
+
+    /* Card face and card edge. These are the same in both themes: a number card
+       is white with a navy edge whatever the page behind it looks like. */
     --primary: #ffffff;
     --secondary: #16213e;
-    --accent: #0f3460;
     --highlight: #cc3350;   /* the logo red - go, the 7, and anything that stops you */
-    --cream: #fff3d6;       /* the logo letters - the your-turn glow, nothing else */
+    --cream: #fff3d6;       /* the logo letters - the dark-mode your-turn glow */
     --success: #4caf50;
     --danger: #cc3350;
     --warning: #ff9800;
-    --text-light: #ffffff;
-    --text-dark: #1a1a2e;
-    --gradient-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --text-dark: #1a1a2e;   /* the ink on a white card - not the page ink */
+    --on-accent: #ffffff;   /* text on a red or coloured fill; never changes */
     --card-gradient: linear-gradient(135deg, #cc3350 0%, #c62f47 100%);
     --glow: 0 0 10px rgba(204, 51, 80, 0.5);
 
+    /* Theme tokens. Dark is the default; html[data-theme="light"] and the
+       prefers-color-scheme block below swap every one of these and nothing else.
+       The *-rgb triplets exist so the sheet can keep its many rgba() fades:
+       rgba(var(--ink-rgb), 0.1) is "ink at 10%" in either theme. */
+    --surface-0: #1a1a2e;                 /* the page */
+    --surface: #16213e;                   /* panels, popups, the header */
+    --surface-2: #0f3460;                 /* wells inside a panel */
+    --surface-rgb: 22, 33, 62;
+    --surface-2-rgb: 15, 52, 96;
+    --gradient-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --ink: #ffffff;
+    --ink-rgb: 255, 255, 255;
+    --ink-muted: rgba(255, 255, 255, 0.6);
+    --line: rgba(255, 255, 255, 0.12);
+    --line-strong: rgba(255, 255, 255, 0.35);
+    --shadow-rgb: 0, 0, 0;                /* box-shadows and darkened wells */
+    --scrim-rgb: 0, 0, 0;                 /* the sheet behind a popup */
+    --scrim-mul: 1;                       /* light mode thins the scrim */
+    --highlight-text: #ffb3c0;            /* red as text on the page */
+    --highlight-text-soft: #ffd7de;
+    --turn: var(--cream);                 /* the your-turn ring and glow */
+    --turn-rgb: 255, 243, 214;
+    --turn-ink: var(--text-dark);         /* text on a --turn badge */
+    --number-card-shadow: none;           /* light mode lifts white cards off white */
+
     /* Solid stand-in for surfaces that normally rely on backdrop-filter.
        Used by the @supports fallback below. */
-    --surface-solid: rgba(22, 33, 62, 0.95);
+    --surface-solid: rgba(var(--surface-rgb), 0.95);
 
     /* Spacing - 4px base. The odd values that used to appear inline
        (0.35rem, 0.7rem, 0.9rem) round to the nearest step. */
@@ -51,6 +78,64 @@
     --z-toast: 500;     /* transient notices, disconnect banner */
 }
 
+/* Light mode. The same tokens, different values; nothing below this block
+   knows which theme it is in. Two copies of the block because a selector list
+   cannot contain a media query: the first is an explicit choice from the
+   Settings menu, the second follows the OS when nothing has been chosen.
+   font-palette is here too: Cairo Play is a colour font and ignores `color`,
+   so its navy twin (defined further down) is picked with the theme. */
+html[data-theme="light"] {
+    color-scheme: light;
+    --surface-0: #eceff5;
+    --surface: #ffffff;
+    --surface-2: #dfe4ee;
+    --surface-rgb: 255, 255, 255;
+    --surface-2-rgb: 223, 228, 238;
+    --gradient-bg: linear-gradient(135deg, #eceff5 0%, #e3e8f2 100%);
+    --ink: #1a1a2e;
+    --ink-rgb: 26, 26, 46;
+    --ink-muted: rgba(26, 26, 46, 0.62);
+    --line: rgba(26, 26, 46, 0.14);
+    --line-strong: rgba(26, 26, 46, 0.32);
+    --shadow-rgb: 20, 30, 60;
+    --scrim-rgb: 20, 30, 60;
+    --scrim-mul: 0.6;
+    --highlight-text: #a3243e;
+    --highlight-text-soft: #8f1f36;
+    --turn: #1a1a2e;
+    --turn-rgb: 26, 26, 46;
+    --turn-ink: #ffffff;
+    --number-card-shadow: 0 1px 3px rgba(20, 30, 60, 0.25);
+    font-palette: --hit7-flat-ink;
+}
+
+@media (prefers-color-scheme: light) {
+    html:not([data-theme="dark"]) {
+        color-scheme: light;
+        --surface-0: #eceff5;
+        --surface: #ffffff;
+        --surface-2: #dfe4ee;
+        --surface-rgb: 255, 255, 255;
+        --surface-2-rgb: 223, 228, 238;
+        --gradient-bg: linear-gradient(135deg, #eceff5 0%, #e3e8f2 100%);
+        --ink: #1a1a2e;
+        --ink-rgb: 26, 26, 46;
+        --ink-muted: rgba(26, 26, 46, 0.62);
+        --line: rgba(26, 26, 46, 0.14);
+        --line-strong: rgba(26, 26, 46, 0.32);
+        --shadow-rgb: 20, 30, 60;
+        --scrim-rgb: 20, 30, 60;
+        --scrim-mul: 0.6;
+        --highlight-text: #a3243e;
+        --highlight-text-soft: #8f1f36;
+        --turn: #1a1a2e;
+        --turn-rgb: 26, 26, 46;
+        --turn-ink: #ffffff;
+        --number-card-shadow: 0 1px 3px rgba(20, 30, 60, 0.25);
+        font-palette: --hit7-flat-ink;
+    }
+}
+
 /* Cairo Play is a colour font: its glyphs carry their own paint (red, purple,
    amber, green) and ignore `color`, which is why every score and the deck count
    came out green no matter what the rules above them said. Overriding all four
@@ -60,6 +145,12 @@
 @font-palette-values --hit7-flat {
     font-family: 'Cairo Play';
     override-colors: 0 #ffffff, 1 #ffffff, 2 #ffffff, 3 #ffffff;
+}
+
+/* The same trick in navy for light mode. Chosen by the theme blocks above. */
+@font-palette-values --hit7-flat-ink {
+    font-family: 'Cairo Play';
+    override-colors: 0 #1a1a2e, 1 #1a1a2e, 2 #1a1a2e, 3 #1a1a2e;
 }
 
 html {
@@ -102,13 +193,13 @@ body {
    those edges, so it has to match the top of the body gradient and the manifest's
    background_color exactly. */
 html {
-    background-color: #1a1a2e;
+    background-color: var(--surface-0);
 }
 
 body {
     font-family: 'Roboto', sans-serif;
     background: var(--gradient-bg);
-    color: var(--text-light);
+    color: var(--ink);
     margin: 0;
     min-height: 100vh;
     display: flex;
@@ -129,7 +220,7 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('data:image/svg+xml,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20" fill="none"/><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.05)"/></svg>') repeat;
+    background: url('data:image/svg+xml,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20" fill="none"/><circle cx="10" cy="10" r="1" fill="rgba(var(--ink-rgb), 0.05)"/></svg>') repeat;
     z-index: -1;
     opacity: 0.5;
 }
@@ -222,7 +313,7 @@ body::before {
 
 .lobby-button {
     background: var(--highlight);
-    color: var(--text-light);
+    color: var(--on-accent);
     padding: 1rem 2rem;
     border: none;
     border-radius: 12px;
@@ -257,8 +348,8 @@ body::before {
     margin: 1rem 0;
     border: 2px solid var(--highlight);
     border-radius: 12px;
-    background: rgba(255,255,255,0.1);
-    color: var(--text-light);
+    background: rgba(var(--ink-rgb), 0.1);
+    color: var(--ink);
     font-size: 1.2rem;
     text-transform: uppercase;
     text-align: center;
@@ -274,7 +365,7 @@ body::before {
 
 /* Game Code Display */
 .game-code-display {
-    background: rgba(22, 33, 62, 0.8);
+    background: rgba(var(--surface-rgb), 0.8);
     padding: 1.2rem 2rem;
     border-radius: 12px;
     margin: 2rem 0;
@@ -335,12 +426,12 @@ body::before {
 
 /* Update Game Header Styling */
 .game-header {
-    background: rgba(22, 33, 62, 0.8);
+    background: rgba(var(--surface-rgb), 0.8);
     border-radius: 15px;
     padding: 0.75rem 1.5rem;
     margin-bottom: 1rem;
     border: 1px solid rgba(204, 51, 80, 0.2);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 20px rgba(var(--shadow-rgb), 0.2);
     position: relative;
     overflow: hidden;
     display: flex;
@@ -401,9 +492,9 @@ body::before {
     right: 0;
     bottom: 0;
     background: linear-gradient(45deg, 
-        rgba(255,255,255,0.03) 0%, 
-        rgba(255,255,255,0.06) 50%, 
-        rgba(255,255,255,0.03) 100%);
+        rgba(var(--ink-rgb), 0.03) 0%, 
+        rgba(var(--ink-rgb), 0.06) 50%, 
+        rgba(var(--ink-rgb), 0.03) 100%);
 }
 
 .game-header > * {
@@ -421,7 +512,7 @@ body::before {
 
 .deck-info {
     font-size: 1.2rem;
-    background: rgba(0,0,0,0.15);
+    background: rgba(var(--shadow-rgb), 0.15);
     padding: 0.8rem 1.5rem;
     border-radius: 8px;
     display: flex;
@@ -447,7 +538,7 @@ body::before {
 .game-header .game-code-display .label {
     font-family: 'Cairo Play', sans-serif;
     font-size: 1.4rem;
-    color: var(--text-light);
+    color: var(--ink);
     opacity: 0.8;
 }
 
@@ -473,7 +564,7 @@ body::before {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: var(--highlight) var(--secondary);
+    scrollbar-color: var(--highlight) var(--surface);
     justify-content: center;
     overflow-y: visible;
     max-height: calc(100vh - 150px); /* Adjust for header and controls */
@@ -522,9 +613,9 @@ body::before {
     scroll-snap-align: center;
     margin: 0 auto;
     padding: var(--space-4);
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(var(--surface-rgb), 0.9);
     border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(var(--shadow-rgb), 0.2);
     border: 1px solid rgba(204, 51, 80, 0.2);
     height: fit-content;
     box-sizing: border-box;
@@ -545,7 +636,7 @@ body::before {
     right: 0;
     bottom: 0;
     border-radius: 15px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 30px rgba(var(--shadow-rgb), 0.3);
     opacity: 1;
     transition: opacity 0.3s ease;
     /* Decoration only; it must never be the thing under the mouse. */
@@ -558,33 +649,33 @@ body::before {
 }
 
 .player.current-turn {
-    border: 2px solid var(--cream) !important;
+    border: 2px solid var(--turn) !important;
     animation: border-pulse 2s infinite;
-    box-shadow: 0 0 20px rgba(255, 243, 214, 0.3);
+    box-shadow: 0 0 20px rgba(var(--turn-rgb), 0.3);
 }
 
 @keyframes border-pulse {
-    0% { box-shadow: 0 0 15px rgba(255, 243, 214, 0.2); }
-    50% { box-shadow: 0 0 25px rgba(255, 243, 214, 0.55); }
-    100% { box-shadow: 0 0 15px rgba(255, 243, 214, 0.2); }
+    0% { box-shadow: 0 0 15px rgba(var(--turn-rgb), 0.2); }
+    50% { box-shadow: 0 0 25px rgba(var(--turn-rgb), 0.55); }
+    100% { box-shadow: 0 0 15px rgba(var(--turn-rgb), 0.2); }
 }
 
 .player.busted {
     border-color: var(--danger);
-    background: linear-gradient(to bottom right, var(--secondary), #3a2c3c);
+    background: linear-gradient(to bottom right, var(--surface), rgba(204, 51, 80, 0.25));
     animation: busted-flash 1s ease 2;
 }
 
 @keyframes busted-flash {
-    0% { background: var(--secondary); }
+    0% { background: var(--surface); }
     50% { background: rgba(204, 51, 80,0.3); }
-    100% { background: var(--secondary); }
+    100% { background: var(--surface); }
 }
 
 /* Frozen Status */
 .player.frozen {
   border-color: #3498db;
-  background: linear-gradient(to bottom right, var(--secondary), #2c3e50);
+  background: linear-gradient(to bottom right, var(--surface), #2c3e50);
 }
 
 .status-icon.frozen { color: #3498db; }
@@ -601,7 +692,7 @@ body::before {
        ROUND SCORE / TOTAL SCORE used to do. */
     grid-template-rows: auto auto;
     gap: 0.5rem;
-    background: rgba(15, 52, 96, 0.5);
+    background: rgba(var(--surface-2-rgb), 0.5);
     padding: var(--space-2);
     border-radius: var(--radius-md);
     margin: 0;
@@ -619,16 +710,16 @@ body::before {
     align-content: start;
     text-align: center;
     padding: var(--space-2);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
     border-radius: 12px;
     transition: transform 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
     font-size: 0.9rem;
 }
 
 .score-box:hover {
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(var(--ink-rgb), 0.08);
 }
 
 .score-value {
@@ -648,8 +739,8 @@ body::before {
     margin: var(--space-2) 0 0;
     padding: var(--space-3);
     border-radius: var(--radius-md);
-    background: rgba(15, 52, 96, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(var(--surface-2-rgb), 0.5);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
 }
 
 .status-icon {
@@ -695,9 +786,9 @@ body::before {
     gap: var(--space-2);
     margin: 0;
     padding: var(--space-2);
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
     position: relative;
     justify-content: center;
 }
@@ -716,8 +807,8 @@ body::before {
 }
 
 .empty-slot {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px dashed rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.05);
+    border: 2px dashed rgba(var(--ink-rgb), 0.1);
 }
 
 .empty-slot.special {
@@ -802,7 +893,7 @@ body::before {
     left: 0;
     right: 0;
     height: 70px;
-    background: rgba(22, 33, 62, 0.98);
+    background: rgba(var(--surface-rgb), 0.98);
     border-top: 2px solid rgba(204, 51, 80, 0.3);
     padding: 0.5rem;
     display: flex;
@@ -812,12 +903,12 @@ body::before {
     z-index: var(--z-controls);
     -webkit-backdrop-filter: var(--material-regular);
     backdrop-filter: var(--material-regular);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 -4px 20px rgba(var(--shadow-rgb), 0.3);
 }
 
 .game-button {
     background: var(--highlight);
-    color: var(--text-light);
+    color: var(--on-accent);
     padding: 1rem 2rem;
     border: none;
     border-radius: 12px;
@@ -857,14 +948,14 @@ body::before {
    a fill, so there is one loud thing on screen at a time. */
 .game-button.quiet {
     background: transparent;
-    color: var(--text-light);
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: var(--ink);
+    border: 2px solid rgba(var(--ink-rgb), 0.35);
     box-shadow: none;
 }
 
 .game-button.quiet:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(var(--ink-rgb), 0.08);
+    border-color: rgba(var(--ink-rgb), 0.6);
     box-shadow: none;
 }
 
@@ -877,14 +968,14 @@ body::before {
 
 .game-button:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 5px 12px rgba(var(--shadow-rgb), 0.2);
 }
 
 .game-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     background: #95a5a6 !important;
-    color: #666 !important;
+    color: #3b3b3b !important;
     box-shadow: none !important;
     transform: none !important;
 }
@@ -898,7 +989,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95) !important;
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul))) !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -910,12 +1001,12 @@ body::before {
 }
 
 .winner-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     padding: 2.5rem;
     border-radius: 15px;
     max-width: 600px;
     width: 100%;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(var(--shadow-rgb), 0.5);
     border: 3px solid var(--highlight);
     text-align: center;
 }
@@ -931,7 +1022,7 @@ body::before {
 .winner-name {
     font-size: 1.8rem;
     margin: 1rem 0;
-    color: var(--text-light);
+    color: var(--ink);
 }
 
 .winner-score {
@@ -969,7 +1060,7 @@ body::before {
     align-items: center;
     gap: 1rem;
     padding: 0.8rem;
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(var(--surface-rgb), 0.9);
     border-radius: 8px;
     border: 1px solid rgba(204, 51, 80, 0.2);
 }
@@ -986,7 +1077,7 @@ body::before {
 
 .leaderboard-row .player-name {
     flex: 1;
-    color: var(--text-light);
+    color: var(--ink);
 }
 
 .leaderboard-row .player-score {
@@ -997,9 +1088,9 @@ body::before {
 .winner-popup .waiting-message {
     margin-top: 1.5rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     border-radius: 8px;
-    color: var(--text-light);
+    color: var(--ink);
     font-size: 1.1rem;
     animation: pulse 2s infinite;
 }
@@ -1018,7 +1109,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95) !important;
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul))) !important;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1042,7 +1133,7 @@ body::before {
 
 .popup-countdown {
     font-size: 1.4rem;
-    color: var(--text-light);
+    color: var(--ink);
     margin: 0;
 }
 
@@ -1055,7 +1146,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95) !important;
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul))) !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1067,12 +1158,12 @@ body::before {
 }
 
 .settings-confirm-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     padding: 2rem;
     border-radius: 15px;
     max-width: 400px;
     width: 100%;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(var(--shadow-rgb), 0.5);
     border: 3px solid var(--highlight);
     text-align: center;
 }
@@ -1083,7 +1174,7 @@ body::before {
 }
 
 .settings-confirm-popup p {
-    color: var(--text-light);
+    color: var(--ink);
     margin-bottom: 2rem;
 }
 
@@ -1123,7 +1214,7 @@ body::before {
     align-items: center;
     gap: 2rem;
     margin-bottom: 2rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     padding: 1.5rem;
     border-radius: 15px;
     width: 100%;
@@ -1137,7 +1228,7 @@ body::before {
     justify-content: center;
     gap: 3rem;
     padding: 1.5rem 2rem;
-    background: rgba(22, 33, 62, 0.8);
+    background: rgba(var(--surface-rgb), 0.8);
     border-radius: 12px;
     border: 1px solid rgba(204, 51, 80, 0.2);
     -webkit-backdrop-filter: var(--material-regular);
@@ -1155,7 +1246,7 @@ body::before {
     font-size: 1.4rem;
     font-family: 'Cairo Play', sans-serif;
     white-space: nowrap;
-    color: white;
+    color: var(--ink);
 }
 
 .stat-value {
@@ -1176,7 +1267,7 @@ body::before {
     gap: 1.5rem;
     min-height: 100px;
     padding: 1.5rem;
-    background: var(--secondary);
+    background: var(--surface);
     border-radius: 15px;
     flex-grow: 1;
 }
@@ -1187,7 +1278,7 @@ body::before {
     flex-wrap: wrap;
     gap: 1.5rem;
     padding: 1.5rem;
-    background: rgba(15, 52, 96, 0.5);
+    background: rgba(var(--surface-2-rgb), 0.5);
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -1201,7 +1292,7 @@ body::before {
     flex-wrap: wrap;
     gap: 1.5rem;
     padding: 1.5rem;
-    background: rgba(15, 52, 96, 0.5);
+    background: rgba(var(--surface-2-rgb), 0.5);
     border-radius: 15px;
     position: relative;
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -1219,15 +1310,15 @@ body::before {
     justify-content: center;
     font-weight: bold;
     font-size: 1.2rem;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(var(--shadow-rgb), 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(var(--ink-rgb), 0.1);
 }
 
 .remaining-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 12px rgba(var(--shadow-rgb), 0.3);
 }
 
 /* Card Count Badge */
@@ -1235,14 +1326,14 @@ body::before {
     position: absolute;
     bottom: 4px;
     right: 4px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
+    background: rgba(var(--shadow-rgb), 0.7);
+    color: var(--on-accent);
     font-size: 0.8rem;
     padding: 2px 6px;
     border-radius: 8px;
     line-height: 1;
     font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
     -webkit-backdrop-filter: var(--material-thin);
     backdrop-filter: var(--material-thin);
 }
@@ -1253,7 +1344,7 @@ body::before {
     flex-wrap: wrap;
     gap: 0.8rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
     border-radius: 8px;
     position: relative;
 }
@@ -1264,7 +1355,7 @@ body::before {
     flex-wrap: wrap;
     gap: 0.8rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
     border-radius: 8px;
     position: relative;
 }
@@ -1279,7 +1370,7 @@ body::before {
     justify-content: center;
     font-weight: bold;
     font-size: 1.2rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
     transition: transform 0.2s ease;
 }
 
@@ -1292,8 +1383,8 @@ body::before {
     position: absolute;
     bottom: 2px;
     right: 2px;
-    background: rgba(0, 0, 0, 0.4);
-    color: white;
+    background: rgba(var(--shadow-rgb), 0.7);
+    color: var(--on-accent);
     font-size: 0.7rem;
     padding: 2px 5px;
     border-radius: 3px;
@@ -1305,8 +1396,8 @@ body::before {
     position: absolute;
     bottom: 2px;
     right: 2px;
-    background: rgba(0, 0, 0, 0.4);
-    color: white;
+    background: rgba(var(--shadow-rgb), 0.4);
+    color: var(--ink);
     font-size: 0.7rem;
     padding: 2px 5px;
     border-radius: 3px;
@@ -1322,7 +1413,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95) !important;
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul))) !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1334,12 +1425,12 @@ body::before {
 }
 
 .round-summary-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     padding: 2.5rem;
     border-radius: 15px;
     max-width: 600px;
     width: 100%;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(var(--shadow-rgb), 0.5);
     border: 3px solid var(--highlight);
 }
 
@@ -1363,7 +1454,7 @@ body::before {
     flex: 0 0 auto; /* Prevent items from shrinking */
     width: 300px; /* Adjust as needed */
     min-width: 300px;
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(var(--surface-rgb), 0.9);
     border-radius: 15px;
     padding: 1.5rem;
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -1381,7 +1472,7 @@ body::before {
 .player-name {
     font-size: 1.3rem;
     font-weight: 600;
-    color: var(--text-light);
+    color: var(--ink);
     margin-bottom: 0.3rem;
     display: block;
 }
@@ -1396,6 +1487,7 @@ body::before {
 .status-badge {
     padding: 0.5rem 1rem;
     border-radius: 20px;
+    color: var(--on-accent);
     font-size: 0.8rem;
     font-weight: bold;
     text-transform: uppercase;
@@ -1405,7 +1497,7 @@ body::before {
 }
 
 /* Status Badge Colors */
-.status-badge.active { background: var(--cream); color: var(--text-dark); }
+.status-badge.active { background: var(--turn); color: var(--turn-ink); }
 .status-badge.stood { background: #2ecc71; }
 .status-badge.busted { background: #cc3350; }
 .status-badge.frozen { background: #95a5a6; }
@@ -1413,7 +1505,7 @@ body::before {
 
 .bonus-badge {
     background: #9b59b6;
-    color: white;
+    color: var(--on-accent);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.8rem;
@@ -1433,13 +1525,13 @@ body::before {
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--shadow-rgb), 0.2);
     padding: 0.8rem 1rem;
     border-radius: 8px;
 }
 
 .score-label {
-    color: var(--text-light);
+    color: var(--ink);
     opacity: 0.8;
     font-size: 0.9rem;
 }
@@ -1466,7 +1558,7 @@ body::before {
     color: var(--highlight);
     margin-top: 2rem;
     font-weight: 500;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--shadow-rgb), 0.2);
     padding: 1rem;
     border-radius: 10px;
 }
@@ -1532,7 +1624,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1556,11 +1648,11 @@ body::before {
 }
 
 .freeze-popup h3 {
-    color: white !important;
+    color: var(--ink) !important;
     margin: 0;
     text-align: center;
     font-size: 1.4rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .freeze-popup .freeze-targets {
@@ -1568,15 +1660,15 @@ body::before {
     flex-direction: column;
     gap: 0.5rem;
     margin: 1rem 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(var(--ink-rgb), 0.1);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
     margin-bottom: 30px; /* Added space below target buttons */
 }
 
 .freeze-popup .freeze-target {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(var(--ink-rgb), 0.15);
+    color: var(--ink);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
     padding: 1rem;
     border-radius: 8px;
     cursor: pointer;
@@ -1587,9 +1679,9 @@ body::before {
 }
 
 .freeze-popup .freeze-target:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(var(--ink-rgb), 0.25);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.2);
 }
 
 .card.special.second-chance::before {
@@ -1619,7 +1711,7 @@ body::before {
   height: 100%;
   min-width: 100vw;
   min-height: 100vh;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1647,7 +1739,7 @@ body::before {
   margin: 0 0 1rem 0;
   text-align: center;
   font-size: 1.4rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .draw-three-popup .draw-three-targets {
@@ -1655,15 +1747,15 @@ body::before {
     flex-direction: column;
     gap: 0.5rem;
     margin: 1rem 0;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(var(--ink-rgb), 0.2);
+    border: 1px solid rgba(var(--shadow-rgb), 0.1);
     margin-bottom: 30px; /* Added space below target buttons */
 }
 
 .draw-three-popup .draw-three-target {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(var(--ink-rgb), 0.35);
     color: #2c3e50;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(var(--shadow-rgb), 0.1);
   padding: 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -1674,9 +1766,9 @@ body::before {
 }
 
 .draw-three-popup .draw-three-target:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(var(--ink-rgb), 0.5);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.2);
 }
 
 @keyframes pulse {
@@ -1687,12 +1779,12 @@ body::before {
 
 /* Enhanced Menu Styling */
 .menu-container {
-    background: rgba(22, 33, 62, 0.8);
+    background: rgba(var(--surface-rgb), 0.8);
     border-radius: 20px;
     padding: 2.5rem;
     margin: 2rem auto;
     max-width: 400px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(var(--shadow-rgb), 0.2);
     -webkit-backdrop-filter: var(--material-thick);
     backdrop-filter: var(--material-thick);
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -1736,20 +1828,20 @@ body::before {
 .card:not(.special) {
     font-weight: bold;
     border: 2px solid var(--secondary);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(var(--shadow-rgb), 0.2);
 }
 
 .card:not(.special):hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.3);
 }
 
 .share-link-input {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     border: 1px solid rgba(204, 51, 80, 0.2);
     border-radius: 8px;
     padding: 0.8rem;
-    color: var(--text-light);
+    color: var(--ink);
     width: 300px;
     margin-right: 0.5rem;
     font-family: 'Roboto', sans-serif;
@@ -1757,8 +1849,8 @@ body::before {
 
 .copy-link-btn {
     background: transparent;
-    color: var(--text-light);
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: var(--ink);
+    border: 2px solid rgba(var(--ink-rgb), 0.35);
     box-shadow: none;
     border-radius: 8px;
     padding: 0.8rem 1.5rem;
@@ -1769,8 +1861,8 @@ body::before {
 }
 
 .copy-link-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(var(--ink-rgb), 0.08);
+    border-color: rgba(var(--ink-rgb), 0.6);
     box-shadow: none;
     transform: translateY(-2px);
 }
@@ -1781,7 +1873,7 @@ body::before {
     align-items: center;
     gap: 1rem;
     padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     border-radius: 8px;
     background: transparent; /* Remove gray background */
     padding: 0;            /* Remove extra padding */
@@ -1799,10 +1891,10 @@ body::before {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: var(--secondary);
+    background: var(--surface);
     padding: 2rem;
     border-radius: 15px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(var(--shadow-rgb), 0.5);
     z-index: var(--z-controls);
     width: 90%;
     max-width: 500px;
@@ -1819,7 +1911,7 @@ body::before {
 }
 
 .waiting-screen .players-list {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--shadow-rgb), 0.2);
     padding: 1rem;
     border-radius: 10px;
     margin: 1rem 0;
@@ -1830,7 +1922,7 @@ body::before {
 .waiting-screen .player-item {
     padding: 0.8rem;
     margin: 0.5rem 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1855,10 +1947,10 @@ body::before {
     width: 32px;
     height: 32px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 1px solid rgba(var(--ink-rgb), 0.24);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-light);
+    background: rgba(var(--ink-rgb), 0.08);
+    color: var(--ink);
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
@@ -1878,7 +1970,7 @@ body::before {
 .waiting-screen .lobby-exit-group {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(var(--ink-rgb), 0.12);
 }
 
 .waiting-screen .lobby-exit-group .game-button {
@@ -1902,8 +1994,8 @@ body::before {
 }
 
 .waiting-screen .player-item .away-badge {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(var(--ink-rgb), 0.12);
+    border: 1px solid rgba(var(--ink-rgb), 0.24);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -1914,8 +2006,8 @@ body::before {
 /* Nobody should have to guess which of these are people. The lobby badge names
    the personality as well, because it is the only place with room to say it. */
 .waiting-screen .player-item .bot-badge {
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(var(--ink-rgb), 0.16);
+    border: 1px solid rgba(var(--ink-rgb), 0.28);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -1947,7 +2039,7 @@ body::before {
 
 .waiting-screen .share-text {
     font-size: 1.1rem;
-    color: var(--text-light);
+    color: var(--ink);
     opacity: 0.9;
 }
 
@@ -1982,7 +2074,7 @@ body::before {
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
+    border: 3px solid rgba(var(--ink-rgb), .3);
     border-radius: 50%;
     border-top-color: var(--highlight);
     animation: spin 1s ease-in-out infinite;
@@ -2009,7 +2101,7 @@ body::before {
   height: 100%;
   min-width: 100vw;
   min-height: 100vh;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2029,7 +2121,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2095,19 +2187,19 @@ body::before {
 }
 
 .remove-card-popup h3 {
-  color: white;
+  color: var(--ink);
   text-align: center;
   margin: 0 0 1rem 0;
   font-size: 1.4rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .steal-card-popup h3 {
-    color: white;
+    color: var(--ink);
     text-align: center;
     margin: 0 0 1rem 0;
     font-size: 1.4rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .remove-card-popup .players-list,
@@ -2115,22 +2207,22 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(var(--ink-rgb), 0.1);
+  border: 1px solid rgba(var(--ink-rgb), 0.2);
 }
 
 .remove-card-popup .player-section,
 .steal-card-popup .player-section {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(var(--ink-rgb), 0.1);
+  border: 1px solid rgba(var(--ink-rgb), 0.2);
   padding: 1rem;
   border-radius: 12px;
 }
 
 .remove-card-popup .player-section h4,
 .steal-card-popup .player-section h4 {
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: var(--ink);
+  text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
   font-size: 1.2rem;
   margin: 0 0 1rem 0;
   font-family: 'Cairo Play', sans-serif;
@@ -2143,8 +2235,8 @@ body::before {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(var(--ink-rgb), 0.1);
+  border: 1px solid rgba(var(--ink-rgb), 0.2);
 }
 
 .remove-card-popup .card-button,
@@ -2158,7 +2250,7 @@ body::before {
   font-weight: bold;
   transition: transform 0.2s;
   color: var(--text-dark);
-  background: white;
+  background: var(--primary);
 }
 
 /* Minus cards (- cards) */
@@ -2188,7 +2280,7 @@ body::before {
     height: 100%;
     min-width: 100vw;
     min-height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2212,11 +2304,11 @@ body::before {
 }
 
 .swap-card-popup h3 {
-    color: white;
+    color: var(--ink);
     text-align: center;
     margin: 0 0 1rem 0;
     font-size: 1.4rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .swap-card-popup .players-list {
@@ -2225,20 +2317,20 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
 }
 
 .swap-card-popup .player-section {
     background: rgba(66, 174, 93, 0.18) !important;
     border-color: rgba(66, 174, 93, 0.35) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
     padding: 1rem;
     border-radius: 12px;
 }
 
 .swap-card-popup .player-section h4 {
-    color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: var(--ink);
+    text-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
     font-size: 1.2rem;
     margin: 0 0 1rem 0;
     font-family: 'Cairo Play', sans-serif;
@@ -2252,7 +2344,7 @@ body::before {
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
 }
 
 .swap-card-popup .card-button {
@@ -2265,7 +2357,7 @@ body::before {
     font-weight: bold;
     transition: all 0.2s;
     color: var(--text-dark);
-    background: white;
+    background: var(--primary);
 }
 
 .swap-card-popup .card-button.special {
@@ -2274,8 +2366,8 @@ body::before {
 
 .swap-card-popup .card-button.swap-selectable.selected {
     transform: scale(1.1);
-    box-shadow: 0 0 15px 3px rgba(255, 255, 255, 0.8);
-    border: 3px solid white !important;
+    box-shadow: 0 0 15px 3px rgba(var(--ink-rgb), 0.8);
+    border: 3px solid var(--ink) !important;
 }
 
 .swap-card-popup .card-button.same-player-disabled {
@@ -2289,32 +2381,36 @@ body::before {
     left: 50%;
     transform: translateX(-50%);
     padding: 12px 30px;
-    background: linear-gradient(135deg, #fff, #f0f0f0);
-    color: #42ae5d;
+    /* The loud half of its pair, so it takes the same red as HIT. It used to be a
+       white pill with green Cairo Play text, and Cairo Play is a colour font whose
+       palette is flattened to the page ink - so the text was white on white. */
+    background: var(--highlight);
+    color: var(--on-accent);
     border: none;
     border-radius: 25px;
     font-size: 1.1rem;
-    font-weight: bold;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    font-family: 'Cairo Play', sans-serif;
+    box-shadow: 0 4px 15px rgba(204, 51, 80, 0.3);
+    font-family: 'Roboto', sans-serif;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
     width: auto;
     min-width: 200px;
 }
 
 .confirm-swap-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #f8f8f8, #e8e8e8);
+    background: #b02a44;
     transform: translateX(-50%) translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.4);
 }
 
 .confirm-swap-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: linear-gradient(135deg, #ccc, #aaa);
-    color: #666;
+    background: var(--surface-2);
+    color: var(--ink-muted);
 }
 
 .swap-card-popup .view-game-button {
@@ -2325,14 +2421,14 @@ body::before {
 /* Add styles for self-targeting buttons */
 .freeze-target.self-target,
 .draw-three-target.self-target {
-    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+    border: 2px solid rgba(var(--ink-rgb), 0.5) !important;
     position: relative;
-    background: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(var(--ink-rgb), 0.1) !important;
 }
 
 .freeze-target.self-target:hover,
 .draw-three-target.self-target:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(var(--ink-rgb), 0.2) !important;
 }
 
 .cards-section {
@@ -2357,7 +2453,7 @@ body::before {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: var(--space-2);
-    background: rgba(15, 52, 96, 0.5);
+    background: rgba(var(--surface-2-rgb), 0.5);
     border-radius: var(--radius-md);
     border: 1px solid rgba(204, 51, 80, 0.2);
     margin-bottom: var(--space-2);
@@ -2372,7 +2468,7 @@ body::before {
     grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
     gap: var(--cell-gap);
     padding: var(--space-2);
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: var(--radius-md);
     border: 1px solid rgba(204, 51, 80, 0.2);
     min-width: 0;
@@ -2401,7 +2497,7 @@ body::before {
    collapses the tracks the four do not use, so the row stays centred and the
    cells stay exactly the size of a regular card. */
 .card-grid.special {
-    background: rgba(15, 52, 96, 0.2);
+    background: rgba(var(--surface-2-rgb), 0.2);
     grid-template-columns: repeat(auto-fit, var(--cell));
     justify-content: center;
 }
@@ -2410,8 +2506,8 @@ body::before {
     width: auto;
     aspect-ratio: 5/7;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px dashed rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.05);
+    border: 2px dashed rgba(var(--ink-rgb), 0.1);
 }
 
 .empty-slot.special {
@@ -2425,10 +2521,10 @@ body::before {
 .steal-card-popup .popup-content,
 .round-summary-popup .popup-content,
 .winner-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     padding: 2.5rem;
     border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(var(--shadow-rgb), 0.3);
     max-width: 600px;
     width: 90%;
     margin: 20px;
@@ -2443,7 +2539,7 @@ body::before {
 .draw-three-popup h3,
 .remove-card-popup h3,
 .steal-card-popup h3 {
-    color: var(--text-light);
+    color: var(--ink);
     text-align: center;
     font-size: 1.6rem;
     margin: 0 0 1.5rem 0;
@@ -2456,7 +2552,7 @@ body::before {
 .freeze-targets,
 .draw-three-targets,
 .remove-card-popup .players-list {
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: 12px;
     padding: 1.5rem;
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -2481,7 +2577,7 @@ body::before {
     cursor: pointer;
     transition: all 0.3s ease;
     background: var(--highlight);
-    color: var(--text-light);
+    color: var(--on-accent);
     box-shadow: 0 4px 15px rgba(204, 51, 80, 0.3);
 }
 
@@ -2496,20 +2592,20 @@ body::before {
 /* Self Target Button Styling */
 .freeze-target.self-target,
 .draw-three-target.self-target {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
     border: 2px solid rgba(204, 51, 80, 0.3);
 }
 
 .freeze-target.self-target:hover,
 draw-three-target.self-target:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(var(--ink-rgb), 0.15);
     border-color: var(--highlight);
 }
 
 /* Remove/Steal Card Popup Specific */
 .remove-card-popup .player-section,
 .steal-card-popup .player-section {
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: 12px;
     padding: 1.5rem;
     margin: 1rem 0;
@@ -2518,7 +2614,7 @@ draw-three-target.self-target:hover {
 
 .remove-card-popup .player-section h4,
 .steal-card-popup .player-section h4 {
-    color: var(--text-light);
+    color: var(--ink);
     font-size: 1.2rem;
     margin: 0 0 1rem 0;
     font-family: 'Cairo Play', sans-serif;
@@ -2531,7 +2627,7 @@ draw-three-target.self-target:hover {
     grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
     gap: 0.8rem;
     padding: 1rem;
-    background: rgba(15, 52, 96, 0.2);
+    background: rgba(var(--surface-2-rgb), 0.2);
     border-radius: 8px;
     border: 1px solid rgba(204, 51, 80, 0.1);
 }
@@ -2552,7 +2648,7 @@ draw-three-target.self-target:hover {
 /* Regular cards in remove-card popup */
 .remove-card-popup .card-button.regular,
 .steal-card-popup .card-button.regular {
-    background: white !important;
+    background: var(--primary) !important;
     color: var(--text-dark) !important;
     border: 2px solid var(--secondary);
     font-size: 1.6rem;
@@ -2588,14 +2684,14 @@ draw-three-target.self-target:hover {
     left: 50%;
     transform: translate(-50%, -50%) rotate(-15deg);
     background: #cc3350;
-    color: white;
+    color: var(--on-accent);
     padding: 0.5rem 2rem;
     border-radius: 5px;
     font-weight: bold;
     font-size: 1.2rem;
     z-index: 1;
     letter-spacing: 0.01em;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.3);
 }
 
 .remove-card-popup .player-section.busted .cards-list,
@@ -2612,7 +2708,7 @@ draw-three-target.self-target:hover {
 /* Round Summary Popup */
 
 .round-summary-popup .popup-content {
-    background: linear-gradient(135deg, var(--secondary), var(--accent));
+    background: linear-gradient(135deg, var(--surface), var(--surface-2));
     padding: 2.5rem;
     border-radius: 20px;
     max-width: 800px;
@@ -2624,7 +2720,7 @@ draw-three-target.self-target:hover {
 }
 
 .round-summary-popup h2 {
-    color: white;
+    color: var(--ink);
     text-align: center;
     margin-bottom: 2rem;
     font-size: 2.5rem;
@@ -2644,14 +2740,14 @@ draw-three-target.self-target:hover {
     grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(15, 52, 96, 0.5);
+    background: rgba(var(--surface-2-rgb), 0.5);
     border-radius: 12px 12px 0 0;
     border: 1px solid rgba(204, 51, 80, 0.2);
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-light);
+    color: var(--ink);
     font-weight: 600;
     align-items: center;
     text-align: center;
@@ -2669,7 +2765,7 @@ draw-three-target.self-target:hover {
     grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: 12px;
     border: 1px solid rgba(204, 51, 80, 0.2);
     align-items: center;
@@ -2685,7 +2781,7 @@ draw-three-target.self-target:hover {
 .points-label {
     font-size: 0.8rem;
     text-transform: uppercase;
-    color: var(--text-light);
+    color: var(--ink);
     opacity: 0.7;
     letter-spacing: 0.06em;
 }
@@ -2710,7 +2806,7 @@ draw-three-target.self-target:hover {
     flex: 0 0 auto; /* Prevent items from shrinking */
     width: 300px; /* Adjust as needed */
     min-width: 300px;
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(var(--surface-rgb), 0.9);
     border-radius: 15px;
     padding: 1.5rem;
     border: 1px solid rgba(204, 51, 80, 0.2);
@@ -2740,7 +2836,7 @@ draw-three-target.self-target:hover {
 .player-name {
     font-size: 1.4rem;
     font-weight: 700;
-    color: white;
+    color: var(--ink);
     text-align: center;
     margin-bottom: 1rem;
     font-family: 'Cairo Play', sans-serif;
@@ -2758,13 +2854,14 @@ draw-three-target.self-target:hover {
 .status-badge {
     padding: 0.5rem 1.2rem;
     border-radius: 20px;
+    color: var(--on-accent);
     font-size: 0.9rem;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     min-width: 100px;
     text-align: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.2);
 }
 
 .status-badge.active { 
@@ -2788,13 +2885,13 @@ draw-three-target.self-target:hover {
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(15, 52, 96, 0.3);
+    background: rgba(var(--surface-2-rgb), 0.3);
     border-radius: 12px;
     border: 1px solid rgba(204, 51, 80, 0.2);
 }
 
 .score-item {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--shadow-rgb), 0.2);
     padding: 1rem;
     border-radius: 10px;
     display: flex;
@@ -2809,7 +2906,7 @@ draw-three-target.self-target:hover {
 }
 
 .score-label {
-    color: var(--text-light);
+    color: var(--ink);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -2826,7 +2923,7 @@ draw-three-target.self-target:hover {
 
 .bonus-badge {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
-    color: white;
+    color: var(--on-accent);
     padding: 0.5rem 1.2rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -2840,7 +2937,7 @@ draw-three-target.self-target:hover {
 .countdown {
     text-align: center;
     font-size: 1.3rem;
-    color: white;
+    color: var(--ink);
     margin-top: 2rem;
     font-weight: 500;
     background: rgba(204, 51, 80, 0.1);
@@ -2895,7 +2992,7 @@ draw-three-target.self-target:hover {
   height: 100%;
   min-width: 100vw;
   min-height: 100vh;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(var(--scrim-rgb), calc(0.95 * var(--scrim-mul)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2907,7 +3004,7 @@ draw-three-target.self-target:hover {
 }
 
 .select-card-popup .popup-content {
-  background: var(--secondary);
+  background: var(--surface);
   padding: 2.5rem;
   border-radius: 15px;
   max-width: 800px;
@@ -2922,7 +3019,7 @@ draw-three-target.self-target:hover {
 }
 
 .select-card-popup h3 {
-  color: white;
+  color: var(--ink);
   text-align: center;
   margin-bottom: 2rem;
   font-size: 1.8rem;
@@ -2941,7 +3038,7 @@ draw-three-target.self-target:hover {
   grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 0.8rem;
   padding: 1rem;
-  background: rgba(15, 52, 96, 0.2);
+  background: rgba(var(--surface-2-rgb), 0.2);
   border-radius: 8px;
   border: 1px solid rgba(204, 51, 80, 0.1);
 }
@@ -2963,11 +3060,11 @@ draw-three-target.self-target:hover {
 
 .select-card-popup .card-button:hover {
   transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 12px rgba(var(--shadow-rgb), 0.3);
 }
 
 .select-card-popup .card-button.regular {
-  background: white !important;
+  background: var(--primary) !important;
   color: var(--text-dark) !important;
   border: 2px solid var(--secondary);
 }
@@ -2976,14 +3073,14 @@ draw-three-target.self-target:hover {
   position: absolute;
   bottom: 4px;
   right: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
+  background: rgba(var(--shadow-rgb), 0.7);
+  color: var(--on-accent);
   font-size: 0.8rem;
   padding: 2px 6px;
   border-radius: 8px;
   line-height: 1;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 .select-card-popup .card-section {
@@ -2995,7 +3092,7 @@ draw-three-target.self-target:hover {
   font-size: 1.2rem;
   margin-bottom: 1rem;
   padding: 0.5rem;
-  background: rgba(15, 52, 96, 0.5);
+  background: rgba(var(--surface-2-rgb), 0.5);
   border-radius: 8px;
   text-align: center;
 }
@@ -3031,7 +3128,7 @@ draw-three-target.self-target:hover {
 .select-card-popup h3 span.emoji {
     display: inline-block;
     margin-right: 10px;
-    color: white !important;
+    color: var(--ink) !important;
     background: none !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
@@ -3044,7 +3141,7 @@ draw-three-target.self-target:hover {
 .freeze-popup h3,
 .draw-three-popup h3,
 .remove-card-popup h3 {
-    color: white !important;
+    color: var(--ink) !important;
     background: none !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
@@ -3148,14 +3245,14 @@ h3 span.emoji {
   cursor: pointer;
   transition: all 0.3s ease;
   margin: 0 auto;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(var(--ink-rgb), 0.1);
+  box-shadow: 0 4px 8px rgba(var(--shadow-rgb), 0.2);
   font-family: 'Roboto', sans-serif;
 }
 
 .select-card-popup .card-button:hover {
   transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 12px rgba(var(--shadow-rgb), 0.3);
 }
 
 .select-card-popup .card-button.regular {
@@ -3172,14 +3269,14 @@ h3 span.emoji {
   position: absolute;
   bottom: 4px;
   right: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
+  background: rgba(var(--shadow-rgb), 0.7);
+  color: var(--on-accent);
   font-size: 0.8rem;
   padding: 2px 6px;
   border-radius: 8px;
   line-height: 1;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(var(--shadow-rgb), 0.2);
   -webkit-backdrop-filter: var(--material-thin);
   backdrop-filter: var(--material-thin);
 }
@@ -3190,8 +3287,8 @@ h3 span.emoji {
     bottom: 25px; /* Increased from 20px to create more space */
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
+    background: rgba(var(--ink-rgb), 0.15);
+    color: var(--ink);
     border: 2px solid rgba(204, 51, 80, 0.5);
     border-radius: 30px;
     padding: 12px 24px;
@@ -3202,7 +3299,7 @@ h3 span.emoji {
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Roboto', sans-serif;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(var(--shadow-rgb), 0.2);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -3230,12 +3327,12 @@ h3 span.emoji {
 .card:not(.special) {
     font-weight: bold;
     border: 2px solid var(--secondary);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(var(--shadow-rgb), 0.2);
 }
 
 .card:not(.special):hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.3);
 }
 
 /* Game notifications (swap announcements and other non-blocking messages) */
@@ -3248,10 +3345,10 @@ h3 span.emoji {
     max-width: min(90%, 480px);
     padding: 0.9rem 1.4rem;
     border-radius: 10px;
-    background: var(--secondary);
-    color: var(--text-light);
+    background: var(--surface);
+    color: var(--ink);
     border: 2px solid var(--highlight);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.4);
     font-weight: 500;
     text-align: center;
     animation: notificationIn 0.3s ease-out;
@@ -3285,7 +3382,7 @@ h3 span.emoji {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(var(--scrim-rgb), calc(0.85 * var(--scrim-mul)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3294,7 +3391,7 @@ h3 span.emoji {
 }
 
 .history-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     width: 100%;
     max-width: 560px;
     height: min(80vh, 700px);
@@ -3305,7 +3402,7 @@ h3 span.emoji {
     padding: 0;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 40px rgba(var(--shadow-rgb), 0.5);
     -webkit-backdrop-filter: var(--material-thick);
     backdrop-filter: var(--material-thick);
 }
@@ -3315,7 +3412,7 @@ h3 span.emoji {
     top: 0.75rem;
     right: 0.75rem;
     background: var(--highlight);
-    color: var(--text-light);
+    color: var(--ink);
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -3360,7 +3457,7 @@ h3 span.emoji {
 
 .history-empty {
     text-align: center;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
     padding: 2rem 1rem;
     font-size: 0.95rem;
 }
@@ -3368,7 +3465,7 @@ h3 span.emoji {
 .history-round-divider {
     position: sticky;
     top: 0;
-    background: var(--secondary);
+    background: var(--surface);
     color: var(--highlight);
     font-size: 0.8rem;
     font-weight: 700;
@@ -3387,8 +3484,8 @@ h3 span.emoji {
     padding: 0.5rem 0.6rem;
     margin: 0.25rem 0;
     border-radius: 8px;
-    background: rgba(15, 52, 96, 0.35);
-    border-left: 3px solid rgba(255, 255, 255, 0.12);
+    background: rgba(var(--surface-2-rgb), 0.35);
+    border-left: 3px solid rgba(var(--ink-rgb), 0.12);
     font-size: 0.9rem;
     line-height: 1.35;
 }
@@ -3403,7 +3500,7 @@ h3 span.emoji {
 /* Normal inline flow, not flex - the line is a sentence with card chips sitting
    inside it, so it has to wrap like prose. */
 .history-entry .history-text {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(var(--ink-rgb), 0.85);
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -3411,7 +3508,7 @@ h3 span.emoji {
 
 .history-player {
     font-weight: 700;
-    color: var(--text-light);
+    color: var(--ink);
 }
 
 .history-good {
@@ -3440,9 +3537,9 @@ h3 span.emoji {
 .history-entry.action-round-end,
 .history-entry.action-reshuffle,
 .history-entry.action-left {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
     font-style: italic;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(var(--ink-rgb), 0.7);
 }
 
 /* Card chips inside a log line, matching the colours used on the board */
@@ -3459,7 +3556,7 @@ h3 span.emoji {
     font-size: 0.85rem;
     background: var(--primary);
     color: var(--text-dark);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 2px 6px rgba(var(--shadow-rgb), 0.35);
     vertical-align: middle;
 }
 
@@ -3477,7 +3574,7 @@ h3 span.emoji {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(var(--scrim-rgb), calc(0.9 * var(--scrim-mul)));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3487,14 +3584,14 @@ h3 span.emoji {
 
 .disconnect-popup .popup-content,
 .connection-lost-popup .popup-content {
-    background: var(--secondary);
+    background: var(--surface);
     border: 2px solid var(--highlight);
     border-radius: 16px;
     padding: 2rem 1.5rem;
     width: 100%;
     max-width: 480px;
     text-align: center;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 10px 40px rgba(var(--shadow-rgb), 0.6);
 }
 
 .disconnect-popup h2,
@@ -3515,7 +3612,7 @@ h3 span.emoji {
 
 .disconnect-lead,
 .connection-lost-popup p {
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(var(--ink-rgb), 0.75);
     font-size: 0.95rem;
     line-height: 1.5;
     margin: 0 0 1.25rem;
@@ -3534,7 +3631,7 @@ h3 span.emoji {
     gap: 0.75rem;
     flex-wrap: wrap;
     justify-content: center;
-    background: rgba(15, 52, 96, 0.55);
+    background: rgba(var(--surface-2-rgb), 0.55);
     border: 1px solid rgba(204, 51, 80, 0.35);
     border-radius: 12px;
     padding: 0.75rem;
@@ -3542,7 +3639,7 @@ h3 span.emoji {
 
 .disconnect-name {
     font-weight: 700;
-    color: var(--text-light);
+    color: var(--ink);
     font-size: 1.05rem;
 }
 
@@ -3550,7 +3647,7 @@ h3 span.emoji {
     /* Fixed width so the row does not jitter as the seconds tick over. */
     min-width: 5.5rem;
     font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
     font-size: 0.85rem;
 }
 
@@ -3564,7 +3661,7 @@ h3 span.emoji {
 }
 
 .disconnect-hint {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(var(--ink-rgb), 0.5);
     font-size: 0.8rem;
     line-height: 1.4;
     margin: 0;
@@ -3579,7 +3676,7 @@ h3 span.emoji {
 
 .away-indicator {
     background: var(--highlight);
-    color: var(--text-light);
+    color: var(--on-accent);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -3593,7 +3690,7 @@ h3 span.emoji {
     top: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--secondary);
+    background: var(--surface);
     border: 2px solid var(--highlight);
     border-radius: 12px;
     padding: 0.85rem 1.25rem;
@@ -3603,7 +3700,7 @@ h3 span.emoji {
     gap: 0.2rem;
     text-align: center;
     max-width: min(92vw, 420px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 24px rgba(var(--shadow-rgb), 0.5);
     animation: notificationIn 0.3s ease;
 }
 
@@ -3613,7 +3710,7 @@ h3 span.emoji {
 }
 
 .restart-notice span {
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(var(--ink-rgb), 0.75);
     font-size: 0.8rem;
     line-height: 1.4;
 }
@@ -3642,7 +3739,7 @@ h3 span.emoji {
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
 }
 
 .lobby-form input {
@@ -3651,8 +3748,8 @@ h3 span.emoji {
     padding: 0.9rem 1rem;
     border: 2px solid rgba(204, 51, 80, 0.35);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-light);
+    background: rgba(var(--ink-rgb), 0.08);
+    color: var(--ink);
     /* 16px minimum: anything smaller and iOS Safari zooms the page on focus. */
     font-size: 1rem;
     font-family: inherit;
@@ -3660,13 +3757,13 @@ h3 span.emoji {
 }
 
 .lobby-form input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(var(--ink-rgb), 0.35);
 }
 
 .lobby-form input:focus {
     outline: none;
     border-color: var(--highlight);
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(var(--ink-rgb), 0.14);
 }
 
 /* Codes are five characters and read as a unit, so they get the spacing to match. */
@@ -3686,14 +3783,14 @@ h3 span.emoji {
 
 .lobby-button.quiet {
     background: transparent;
-    color: var(--text-light);
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: var(--ink);
+    border: 2px solid rgba(var(--ink-rgb), 0.35);
     box-shadow: none;
 }
 
 .lobby-button.quiet:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(var(--ink-rgb), 0.08);
+    border-color: rgba(var(--ink-rgb), 0.6);
     box-shadow: none;
 }
 
@@ -3702,7 +3799,7 @@ h3 span.emoji {
     align-items: center;
     gap: 0.75rem;
     margin: 0.25rem 0;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(var(--ink-rgb), 0.4);
     font-size: 0.75rem;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -3713,12 +3810,12 @@ h3 span.emoji {
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(var(--ink-rgb), 0.15);
 }
 
 .lobby-footer {
     margin: 1.25rem 0 0;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(var(--ink-rgb), 0.45);
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     line-height: 1.6;
@@ -3728,14 +3825,14 @@ h3 span.emoji {
    it — loud enough to look clickable, quiet enough not to compete with the
    buttons, which are the thing anybody actually came here to press. */
 .lobby-footer a {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(var(--ink-rgb), 0.7);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
 .lobby-footer a:hover,
 .lobby-footer a:focus-visible {
-    color: #fff;
+    color: var(--ink);
 }
 
 .lobby-error {
@@ -3744,7 +3841,7 @@ h3 span.emoji {
     border-radius: 10px;
     background: rgba(204, 51, 80, 0.15);
     border: 1px solid rgba(204, 51, 80, 0.45);
-    color: #ffd7de;
+    color: var(--highlight-text-soft);
     font-size: 0.85rem;
     line-height: 1.4;
     text-align: left;
@@ -3765,7 +3862,7 @@ h3 span.emoji {
 }
 
 .field-hint {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(var(--ink-rgb), 0.45);
     font-size: 0.75rem;
     line-height: 1.4;
 }
@@ -3816,6 +3913,15 @@ h3 span.emoji {
     --card-face: linear-gradient(135deg, #cc3350 0%, #9b59b6 50%, #3498db 100%);
     --card-edge: #cc3350;
     --card-ink: #fff;
+}
+
+/* A white card on a white light-mode panel has only its navy edge to say where
+   it ends; a little shadow underneath lifts it off. `none` in dark mode. */
+.card[data-card-type="number"],
+.history-card[data-card-type="number"],
+.card-button[data-card-type="number"],
+.htp-c[data-card-type="number"] {
+    box-shadow: var(--number-card-shadow);
 }
 
 
@@ -4021,7 +4127,7 @@ h3 span.emoji {
     }
 
     .player.current-turn {
-        border: 2px solid var(--cream) !important;
+        border: 2px solid var(--turn) !important;
         animation: border-pulse 2s infinite;
     }
 
@@ -4035,7 +4141,7 @@ h3 span.emoji {
     }
 
     .card-grid.special {
-        background: rgba(15, 52, 96, 0.2);
+        background: rgba(var(--surface-2-rgb), 0.2);
     }
 
     .cards-section {
@@ -4478,8 +4584,8 @@ h3 span.emoji {
 }
 
 @keyframes turn-breathe {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 243, 214, .18); }
-    50%      { box-shadow: 0 0 0 5px rgba(255, 243, 214, .06); }
+    0%, 100% { box-shadow: 0 0 0 3px rgba(var(--turn-rgb), .18); }
+    50%      { box-shadow: 0 0 0 5px rgba(var(--turn-rgb), .06); }
 }
 
 @keyframes toast-in {
@@ -4682,7 +4788,7 @@ h3 span.emoji {
     .deck-stats-container,
     .waiting-screen,
     .popup-content {
-        background: var(--secondary);
+        background: var(--surface);
     }
 }
 
@@ -4701,7 +4807,7 @@ h3 span.emoji {
     .popup-content,
     .score-box,
     .card {
-        background: var(--secondary);
+        background: var(--surface);
         border-color: currentColor;
     }
 }
@@ -4812,8 +4918,8 @@ h3 span.emoji {
         padding: 0.4rem 0.6rem;
         margin: 0;
         border-radius: 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        background: var(--secondary);
+        border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
+        background: var(--surface);
         /* One row. The old layout wrapped a fourth button onto a second row and
            spent 36px of every screen on it. style.css also pins a 72px
            min-height that has nothing to do with the content. */
@@ -4823,7 +4929,7 @@ h3 span.emoji {
         box-sizing: border-box;
     }
 
-    /* Both of these are opaque on a phone - the header takes var(--secondary) just
+    /* Both of these are opaque on a phone - the header takes var(--surface) just
        above, the control bar is 98% - so the frosted glass behind them draws nothing
        whatsoever. All it does is ask the phone to composite two full-width blur layers
        on every frame of every animation. The desktop bars stay frosted; they are
@@ -4932,10 +5038,10 @@ h3 span.emoji {
         margin: 0;
         box-sizing: border-box;
         border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.38);
-        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(var(--ink-rgb), 0.38);
+        background: rgba(var(--ink-rgb), 0.05);
         box-shadow: none;
-        color: var(--text-light);
+        color: var(--ink);
         font-family: 'Roboto', sans-serif;
         font-size: 1rem;
         white-space: nowrap;
@@ -4957,8 +5063,8 @@ h3 span.emoji {
     }
 
     .header-right #settingsButton.is-open {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.6);
+        background: rgba(var(--ink-rgb), 0.1);
+        border-color: rgba(var(--ink-rgb), 0.6);
     }
 
     .deck-button[aria-expanded="true"] {
@@ -5006,7 +5112,7 @@ h3 span.emoji {
         gap: 6px;
         /* The same edge as the chip and the gear beside it, so the three read as
            one set; a fainter line here made the strip look like a different box. */
-        border: 1px solid rgba(255, 255, 255, 0.38);
+        border: 1px solid rgba(var(--ink-rgb), 0.38);
         border-radius: 10px;
         font-size: 0.76rem;
     }
@@ -5027,22 +5133,22 @@ h3 span.emoji {
         font-weight: 700;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        background: rgba(255, 255, 255, 0.04);
-        color: rgba(255, 255, 255, 0.65);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(var(--ink-rgb), 0.04);
+        color: rgba(var(--ink-rgb), 0.65);
+        border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
     }
 
     .turn-strip .turn-pip {
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.4);
+        background: rgba(var(--ink-rgb), 0.4);
         flex: none;
     }
 
     .turn-strip.is-mine {
         background: rgba(204, 51, 80, 0.16);
-        color: #ffb3c0;
+        color: var(--highlight-text);
         border-bottom-color: rgba(204, 51, 80, 0.3);
     }
 
@@ -5090,7 +5196,7 @@ h3 span.emoji {
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        border-bottom: 1px solid rgba(var(--ink-rgb), 0.07);
     }
 
     .opponent-rail::-webkit-scrollbar { display: none; }
@@ -5102,9 +5208,9 @@ h3 span.emoji {
         width: 88px;
         padding: 7px 9px;
         border-radius: 11px;
-        background: var(--accent);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: var(--text-light);
+        background: var(--surface-2);
+        border: 1px solid rgba(var(--ink-rgb), 0.1);
+        color: var(--ink);
         font-family: inherit;
         text-align: left;
         cursor: pointer;
@@ -5160,7 +5266,7 @@ h3 span.emoji {
         flex: 1;
         height: 3px;
         border-radius: 2px;
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(var(--ink-rgb), 0.16);
     }
 
     .opp-pips i.on { background: var(--highlight); }
@@ -5277,8 +5383,8 @@ h3 span.emoji {
         gap: 10px;
         padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
         margin: 0;
-        background: var(--secondary);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--surface);
+        border-top: 1px solid rgba(var(--ink-rgb), 0.1);
         width: 100%;
         box-sizing: border-box;
         /* Not the 60px an older breakpoint still asks for. With border-box, a phone that
@@ -5335,7 +5441,7 @@ h3 span.emoji {
         align-items: stretch;
         padding: 0;
         margin: 0;
-        background: rgba(8, 8, 18, 0.66);
+        background: rgba(var(--scrim-rgb), calc(0.66 * var(--scrim-mul)));
         opacity: 1;
         pointer-events: auto;
         animation: scrim-in var(--dur-fast) var(--ease-out);
@@ -5352,9 +5458,9 @@ h3 span.emoji {
         margin: 0;
         padding: 10px 12px calc(18px + env(safe-area-inset-bottom));
         border-radius: 20px 20px 0 0;
-        background: var(--secondary);
+        background: var(--surface);
         border: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-top: 1px solid rgba(var(--ink-rgb), 0.12);
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -5375,7 +5481,7 @@ h3 span.emoji {
         width: 36px;
         height: 4px;
         border-radius: 2px;
-        background: rgba(255, 255, 255, 0.22);
+        background: rgba(var(--ink-rgb), 0.22);
         margin: 0 auto 2px;
         flex: none;
     }
@@ -5453,7 +5559,7 @@ h3 span.emoji {
         z-index: 950;
         display: flex;
         align-items: flex-end;
-        background: rgba(8, 8, 18, 0.66);
+        background: rgba(var(--scrim-rgb), calc(0.66 * var(--scrim-mul)));
     }
 
     .player-sheet .popup-content {
@@ -5464,9 +5570,9 @@ h3 span.emoji {
         overscroll-behavior: contain;
         padding: 10px 12px calc(18px + env(safe-area-inset-bottom));
         border-radius: 20px 20px 0 0;
-        background: var(--secondary);
+        background: var(--surface);
         border: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-top: 1px solid rgba(var(--ink-rgb), 0.12);
         transform: none;
         left: auto;
         top: auto;
@@ -5476,7 +5582,7 @@ h3 span.emoji {
         width: 36px;
         height: 4px;
         border-radius: 2px;
-        background: rgba(255, 255, 255, 0.22);
+        background: rgba(var(--ink-rgb), 0.22);
         margin: 0 auto 10px;
     }
 
@@ -5736,7 +5842,7 @@ h3 span.emoji {
         overflow-x: hidden;
         overflow-y: auto;
         border-bottom: 0;
-        border-right: 1px solid rgba(255, 255, 255, 0.07);
+        border-right: 1px solid rgba(var(--ink-rgb), 0.07);
         padding: 8px;
     }
 
@@ -5834,9 +5940,9 @@ h3 span.emoji {
 
 .popup-peeking .view-game-button {
     pointer-events: auto;
-    background: var(--secondary);
+    background: var(--surface);
     border-color: var(--highlight);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 6px 18px rgba(var(--shadow-rgb), 0.45);
 }
 
 /* While peeking, this pill is the only thing on screen you can touch - it is the
@@ -5924,7 +6030,7 @@ h3 span.emoji {
     /* The same box the players list and the settings wear, so the two
        columns start with matching corners. */
     .waiting-screen .share-section {
-        background: rgba(0, 0, 0, 0.2);
+        background: rgba(var(--shadow-rgb), 0.2);
         padding: 1rem;
         border-radius: 10px;
         box-sizing: border-box;
@@ -5974,7 +6080,7 @@ h3 span.emoji {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--shadow-rgb), 0.2);
     padding: var(--space-4);
     border-radius: var(--radius-md);
     margin: var(--space-4) 0;
@@ -6016,8 +6122,8 @@ h3 span.emoji {
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
     border: 2px solid rgba(204, 51, 80, 0.25);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-light);
+    background: rgba(var(--ink-rgb), 0.06);
+    color: var(--ink);
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 700;
@@ -6034,7 +6140,7 @@ button.setting-option {
 
 button.setting-option:hover {
     border-color: rgba(204, 51, 80, 0.6);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
 }
 
 button.setting-option:active {
@@ -6049,14 +6155,14 @@ button.setting-option:active {
 .setting-sub {
     font-size: 0.7rem;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
 }
 
 .setting-blurb {
     margin: 0;
     font-size: 0.78rem;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
 }
 
 /* Says what game you are in without costing a row of its own. */
@@ -6083,7 +6189,7 @@ button.setting-option:active {
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3);
-    background: rgba(22, 33, 62, 0.9);
+    background: rgba(var(--surface-rgb), 0.9);
     border: 1px solid rgba(204, 51, 80, 0.2);
     border-radius: var(--radius-sm);
 }
@@ -6100,14 +6206,14 @@ button.setting-option:active {
 }
 
 .award-title {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--ink-rgb), 0.6);
     font-size: 0.72rem;
     letter-spacing: 0.07em;
     text-transform: uppercase;
 }
 
 .award-holder {
-    color: var(--text-light);
+    color: var(--ink);
     font-weight: 700;
     overflow-wrap: anywhere;
 }
@@ -6126,7 +6232,7 @@ button.setting-option:active {
 }
 
 .award-value span {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(var(--ink-rgb), 0.5);
     font-size: 0.68rem;
     line-height: 1.2;
 }
@@ -6153,7 +6259,7 @@ button.setting-option:active {
     text-align: center;
     font-size: 0.7rem;
     letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(var(--ink-rgb), 0.35);
 }
 
 /* ---------------------------------------------------------------------------
@@ -6172,13 +6278,13 @@ button.setting-option:active {
 /* The gear is chrome, not an action, so it does not wear the pink the play
    buttons use. */
 #settingsButton {
-    background: var(--accent);
+    background: var(--surface-2);
     box-shadow: none;
 }
 
 #settingsButton:hover:not(:disabled),
 #settingsButton.is-open {
-    background: #14487f;
+    background: rgba(var(--ink-rgb), 0.16);
 }
 
 /* With the menu shut there is nothing else to say the game is muted - the
@@ -6192,7 +6298,7 @@ button.setting-option:active {
     height: 8px;
     border-radius: 50%;
     background: var(--warning);
-    border: 2px solid var(--secondary);
+    border: 2px solid var(--surface);
     box-sizing: content-box;
 }
 
@@ -6212,10 +6318,10 @@ button.setting-option:active {
     z-index: var(--z-popup);
     width: 266px;
     max-width: calc(100vw - 24px);
-    background: var(--secondary);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--surface);
+    border: 1px solid rgba(var(--ink-rgb), 0.14);
     border-radius: var(--radius-md, 12px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 12px 32px rgba(var(--shadow-rgb), 0.45);
     overflow: hidden;
     text-align: left;
 }
@@ -6226,8 +6332,8 @@ button.setting-option:active {
     margin: 0;
     padding: 0.55rem 0.9rem;
     background: rgba(204, 51, 80, 0.12);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+    color: rgba(var(--ink-rgb), 0.8);
     font-size: 0.75rem;
     letter-spacing: 0.03em;
 }
@@ -6240,8 +6346,8 @@ button.setting-option:active {
     padding: 0.75rem 0.9rem;
     background: transparent;
     border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--text-light);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
+    color: var(--ink);
     font-family: inherit;
     font-size: 0.9rem;
     text-align: left;
@@ -6255,7 +6361,7 @@ button.setting-option:active {
 
 .settings-item:hover,
 .settings-item:focus-visible {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(var(--ink-rgb), 0.07);
 }
 
 .settings-icon {
@@ -6278,7 +6384,7 @@ button.setting-option:active {
 
 .settings-hint {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(var(--ink-rgb), 0.55);
     line-height: 1.3;
 }
 
@@ -6288,32 +6394,39 @@ button.setting-option:active {
     padding: 0.15rem 0.5rem;
     border-radius: 999px;
     background: var(--success);
-    color: var(--text-light);
+    color: var(--on-accent);
 }
 
 .settings-state.is-off {
-    background: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(var(--ink-rgb), 0.18);
+    color: rgba(var(--ink-rgb), 0.7);
+}
+
+/* A value that is neither on nor off - the Theme row says System, Light or Dark. */
+.settings-state.is-neutral {
+    background: rgba(var(--ink-rgb), 0.1);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
 }
 
 /* The two that end or unwind the game. Kept behind a labelled divider so neither
    is ever the neighbour of a harmless one. */
 .settings-group {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(var(--ink-rgb), 0.12);
 }
 
 .settings-group-title {
     margin: 0;
     padding: 0.4rem 0.9rem;
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.4);
+    background: rgba(var(--ink-rgb), 0.04);
+    color: rgba(var(--ink-rgb), 0.4);
     font-size: 0.65rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .settings-item.is-danger .settings-label {
-    color: #ff8a80;
+    color: var(--highlight-text);
 }
 
 /* ---------------------------------------------------------------------------
@@ -6332,11 +6445,11 @@ button.setting-option:active {
     width: 100%;
     flex: 0 0 auto;
     padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
     border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
     border-radius: 0;
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(var(--ink-rgb), 0.75);
     font-family: 'Roboto', sans-serif;
     font-size: 0.82rem;
     text-align: left;
@@ -6349,7 +6462,7 @@ button.setting-option:active {
 
 .last-action:hover,
 .last-action:focus-visible {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--ink-rgb), 0.1);
 }
 
 .last-action-icon {
@@ -6373,11 +6486,11 @@ button.setting-option:active {
     flex: 0 0 auto;
     font-size: 1.1rem;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(var(--ink-rgb), 0.35);
 }
 
 .last-action:hover .last-action-more {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(var(--ink-rgb), 0.7);
 }
 
 /* A move you were not watching for should catch your eye for one second and
@@ -6388,7 +6501,7 @@ button.setting-option:active {
 }
 
 @keyframes last-action-flash {
-    0%, 100% { background: rgba(255, 255, 255, 0.05); }
+    0%, 100% { background: rgba(var(--ink-rgb), 0.05); }
     50%      { background: rgba(204, 51, 80, 0.22); }
 }
 
@@ -6427,7 +6540,7 @@ button.setting-option:active {
     align-items: center;
     justify-content: center;
     padding: var(--space-4);
-    background: rgba(8, 10, 22, 0.72);
+    background: rgba(var(--scrim-rgb), calc(0.72 * var(--scrim-mul)));
     -webkit-backdrop-filter: var(--material-thin);
     backdrop-filter: var(--material-thin);
 }
@@ -6440,12 +6553,12 @@ button.setting-option:active {
     padding: var(--space-3) var(--space-4) var(--space-4);
     box-sizing: border-box;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(var(--ink-rgb), 0.09);
     border-radius: var(--radius-xl);
     background:
         radial-gradient(120% 70% at 50% -10%, rgba(204, 51, 80, 0.18), transparent 62%),
-        linear-gradient(160deg, #1a1a2e, #16213e);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+        linear-gradient(160deg, var(--surface-0), var(--surface));
+    box-shadow: 0 24px 60px rgba(var(--shadow-rgb), 0.55);
 }
 
 /* Top bar: back, chapters, close */
@@ -6468,8 +6581,8 @@ button.setting-option:active {
     justify-content: center;
     border: 0;
     border-radius: var(--radius-circle);
-    background: rgba(255, 255, 255, 0.09);
-    color: rgba(255, 255, 255, 0.75);
+    background: rgba(var(--ink-rgb), 0.09);
+    color: rgba(var(--ink-rgb), 0.75);
     font-size: 1.4rem;
     line-height: 1;
     cursor: pointer;
@@ -6480,7 +6593,7 @@ button.setting-option:active {
 
 .htp-back:hover,
 .htp-close:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(var(--ink-rgb), 0.16);
 }
 
 .htp-back:active,
@@ -6515,7 +6628,7 @@ button.setting-option:active {
     border: 0;
     border-radius: var(--radius-pill);
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(var(--ink-rgb), 0.5);
     font-family: inherit;
     font-size: 0.8rem;
     font-weight: 500;
@@ -6527,12 +6640,12 @@ button.setting-option:active {
 }
 
 .htp-chapter:hover {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(var(--ink-rgb), 0.85);
 }
 
 .htp-chapter.is-on {
     background: rgba(204, 51, 80, 0.9);
-    color: var(--text-light);
+    color: var(--on-accent);
     box-shadow: 0 3px 12px rgba(204, 51, 80, 0.32);
 }
 
@@ -6546,9 +6659,9 @@ button.setting-option:active {
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(var(--ink-rgb), 0.08);
     border-radius: var(--radius-lg);
-    background: linear-gradient(150deg, rgba(204, 51, 80, 0.14), rgba(15, 52, 96, 0.5));
+    background: linear-gradient(150deg, rgba(204, 51, 80, 0.14), rgba(var(--surface-2-rgb), 0.5));
     opacity: 1;
     transition: opacity var(--dur-fast) var(--ease-out);
 }
@@ -6565,11 +6678,11 @@ button.setting-option:active {
     flex: 0 0 auto;
     width: 56px;
     height: 79px;
-    border: 1px solid rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(var(--shadow-rgb), 0.2);
     border-radius: var(--radius-sm);
     font-size: 1.4rem;
     font-weight: 700;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: 0 6px 16px rgba(var(--shadow-rgb), 0.4), inset 0 1px 0 rgba(var(--ink-rgb), 0.3);
 }
 
 .htp-c.sm {
@@ -6630,7 +6743,7 @@ button.setting-option:active {
     border: 1px solid rgba(204, 51, 80, 0.3);
     border-radius: var(--radius-pill);
     background: rgba(204, 51, 80, 0.16);
-    color: #ff8ea1;
+    color: var(--highlight-text);
     font-size: 0.72rem;
     font-weight: 500;
     letter-spacing: 0.02em;
@@ -6643,18 +6756,18 @@ button.setting-option:active {
     line-height: 1.1;
     /* Display sizes read too loose at their default tracking. */
     letter-spacing: -0.025em;
-    color: var(--text-light);
+    color: var(--ink);
 }
 
 .htp-body {
     margin: 0;
     font-size: 0.95rem;
     line-height: 1.62;
-    color: rgba(255, 255, 255, 0.68);
+    color: rgba(var(--ink-rgb), 0.68);
 }
 
 .htp-body b {
-    color: var(--text-light);
+    color: var(--ink);
     font-weight: 500;
 }
 
@@ -6673,7 +6786,7 @@ button.setting-option:active {
     border-left: 2px solid rgba(204, 51, 80, 0.55);
     font-size: 0.83rem;
     line-height: 1.55;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(var(--ink-rgb), 0.5);
 }
 
 /* Foot */
@@ -6696,7 +6809,7 @@ button.setting-option:active {
     width: 6px;
     height: 6px;
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.24);
+    background: rgba(var(--ink-rgb), 0.24);
     transition: width var(--dur-base) var(--ease-out),
                 background var(--dur-base) var(--ease-out);
 }
@@ -6712,7 +6825,7 @@ button.setting-option:active {
     border: 0;
     border-radius: var(--radius-pill);
     background: var(--card-gradient);
-    color: var(--text-light);
+    color: var(--on-accent);
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 500;
@@ -6731,7 +6844,7 @@ button.setting-option:active {
     text-align: center;
     font-size: 0.65rem;
     letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.22);
+    color: rgba(var(--ink-rgb), 0.22);
 }
 
 /* The shared close animation targets .popup-content, which this sheet does not
@@ -6859,10 +6972,10 @@ button.setting-option:active {
         margin: 0;
         box-sizing: border-box;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.38);
-        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(var(--ink-rgb), 0.38);
+        background: rgba(var(--ink-rgb), 0.05);
         box-shadow: none;
-        color: var(--text-light);
+        color: var(--ink);
         font-family: 'Roboto', sans-serif;
         font-size: 1rem;
         white-space: nowrap;
@@ -6888,8 +7001,8 @@ button.setting-option:active {
     .header-center .last-action:focus-visible,
     .header-right #settingsButton:hover:not(:disabled),
     .header-right #settingsButton.is-open {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.6);
+        background: rgba(var(--ink-rgb), 0.1);
+        border-color: rgba(var(--ink-rgb), 0.6);
     }
 
     /* The gear is a .game-button, so it already lifts 2px on hover like every
@@ -6938,7 +7051,7 @@ button.setting-option:active {
         padding: 0 14px;
         /* The same edge as the chip and the gear beside it, so the three read as
            one set; a fainter line here made the strip look like a different box. */
-        border: 1px solid rgba(255, 255, 255, 0.38);
+        border: 1px solid rgba(var(--ink-rgb), 0.38);
         border-radius: 12px;
         font-size: 0.86rem;
     }
@@ -6962,7 +7075,7 @@ button.setting-option:active {
         margin: 0;
         padding: 88px 24px 24px;
         box-sizing: border-box;
-        background: rgba(8, 8, 18, 0.62);
+        background: rgba(var(--scrim-rgb), calc(0.62 * var(--scrim-mul)));
         animation: scrim-in var(--dur-fast) var(--ease-out);
     }
 
@@ -6979,8 +7092,8 @@ button.setting-option:active {
         gap: 12px;
         border-radius: 16px;
         border: 1px solid rgba(204, 51, 80, 0.28);
-        background: var(--secondary);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        background: var(--surface);
+        box-shadow: 0 24px 60px rgba(var(--shadow-rgb), 0.5);
         animation: deck-dialog-in var(--dur-base) var(--ease-back);
     }
 
@@ -7349,7 +7462,7 @@ button.setting-option:active {
     .opponent-rail .card-grid.special {
         grid-template-columns: repeat(auto-fit, 24px);
         padding-top: 8px;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-top: 1px solid rgba(var(--ink-rgb), 0.12);
     }
 
     /* The base rules pin a card at 45x63 with more specificity than the grid

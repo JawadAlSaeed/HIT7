@@ -188,6 +188,7 @@ const initializeButtons = () => {
 document.addEventListener('DOMContentLoaded', () => {
     initializeButtons();
     initSound();
+    initTheme();
     initMobileChrome();
     checkUrlParams();
 });
@@ -2712,6 +2713,13 @@ function wireSettingsMenu() {
         if (soundEnabled) playSound('buttonClick');
     };
 
+    const theme = document.getElementById('settingsTheme');
+    if (theme) theme.onclick = () => {
+        playSound('buttonClick');
+        const order = ['system', 'light', 'dark'];
+        setTheme(order[(order.indexOf(themeChoice) + 1) % order.length]);
+    };
+
     const tutorial = document.getElementById('settingsTutorial');
     if (tutorial) tutorial.onclick = () => {
         playSound('buttonClick');
@@ -3924,6 +3932,81 @@ function syncSoundButton() {
 
     const button = document.getElementById('settingsButton');
     if (button) button.classList.toggle('is-muted', !soundEnabled);
+}
+
+// ---------------------------------------------------------------------------
+// Theme: System, Light or Dark
+// ---------------------------------------------------------------------------
+
+// 'system' stamps nothing on <html> and lets the stylesheet follow the OS through
+// prefers-color-scheme. 'light' and 'dark' are stamped as data-theme, which the
+// stylesheet's token blocks key off. index.html stamps the saved choice inline
+// before the stylesheet loads so the first paint is right; this is the same rule
+// again, for changes made from the menu.
+const THEME_KEY = 'hit7-theme';
+let themeChoice = 'system';
+
+const THEME_ROWS = {
+    system: { icon: '🌗', label: 'System' },
+    light:  { icon: '☀️', label: 'Light' },
+    dark:   { icon: '🌙', label: 'Dark' }
+};
+
+// The page colour at the very top, for the status bar. Kept in step with
+// --surface-0 in style.css.
+const THEME_BAR_COLOR = { light: '#eceff5', dark: '#1a1a2e' };
+
+const systemDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+function effectiveTheme() {
+    if (themeChoice === 'light' || themeChoice === 'dark') return themeChoice;
+    return systemDark && !systemDark.matches ? 'light' : 'dark';
+}
+
+function applyTheme() {
+    const root = document.documentElement;
+    if (themeChoice === 'light' || themeChoice === 'dark') root.dataset.theme = themeChoice;
+    else delete root.dataset.theme;
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', THEME_BAR_COLOR[effectiveTheme()]);
+
+    syncThemeItem();
+}
+
+function setTheme(choice) {
+    themeChoice = THEME_ROWS[choice] ? choice : 'system';
+    try {
+        if (themeChoice === 'system') localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, themeChoice);
+    } catch (e) {
+        // Private browsing can refuse storage; the choice still holds for this page.
+    }
+    applyTheme();
+}
+
+function syncThemeItem() {
+    const row = THEME_ROWS[themeChoice];
+    const icon = document.getElementById('settingsThemeIcon');
+    if (icon) icon.textContent = row.icon;
+    const state = document.getElementById('settingsThemeState');
+    if (state) state.textContent = row.label;
+    const item = document.getElementById('settingsTheme');
+    if (item) item.setAttribute('aria-label', `Theme: ${row.label}. Press to change`);
+}
+
+function initTheme() {
+    try {
+        const saved = localStorage.getItem(THEME_KEY);
+        themeChoice = THEME_ROWS[saved] ? saved : 'system';
+    } catch (e) {
+        themeChoice = 'system';
+    }
+    // On System, the OS flipping between light and dark changes the status bar too.
+    if (systemDark && systemDark.addEventListener) {
+        systemDark.addEventListener('change', () => { if (themeChoice === 'system') applyTheme(); });
+    }
+    applyTheme();
 }
 
 function initSound() {

@@ -16,7 +16,7 @@
 //      table. Pictures and sounds, which do not change the rules, go the other way
 //      round because they are the slow part of a first load.
 
-const VERSION = 'v10';
+const VERSION = 'v11';
 const SHELL_CACHE = `hit7-shell-${VERSION}`;
 const ASSET_CACHE = `hit7-assets-${VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
@@ -32,7 +32,7 @@ const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
 // what must never be kept is the connection underneath it, which is every other path
 // beginning /socket.io/.
 const SOCKET_IO_CLIENT = '/socket.io/socket.io.js';
-const SHELL = ['/', '/index.html', '/client.js', '/style.css', SOCKET_IO_CLIENT];
+const SHELL = ['/', '/index.html', '/theme-boot.js', '/client.js', '/style.css', SOCKET_IO_CLIENT];
 
 self.addEventListener('install', event => {
   event.waitUntil(

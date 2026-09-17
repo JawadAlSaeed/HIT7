@@ -29,6 +29,10 @@
              makes env(safe-area-inset-top) report 0, so the padding rules that do exist
              quietly become no-ops rather than doubling up. -->
         <meta name="theme-color" content="#1a1a2e">
+        <!-- Theme, before the stylesheet: a saved Light or Dark choice is stamped on
+             <html> so the first paint is already the right colour. A separate file
+             because the CSP forbids inline scripts. -->
+        <script src="/theme-boot.js"></script>
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -163,6 +167,17 @@
                                     <span class="settings-label">Sound</span>
                                 </span>
                                 <span class="settings-state" id="settingsSoundState">On</span>
+                            </button>
+
+                            <!-- Cycles System, Light, Dark. Stays open when pressed, like
+                                 Sound, so you can see the page change under it. -->
+                            <button class="settings-item" role="menuitem" type="button"
+                                    id="settingsTheme">
+                                <span class="settings-icon" id="settingsThemeIcon">🌗</span>
+                                <span class="settings-text">
+                                    <span class="settings-label">Theme</span>
+                                </span>
+                                <span class="settings-state is-neutral" id="settingsThemeState">System</span>
                             </button>
 
                             <button class="settings-item" role="menuitem" type="button"
